@@ -1,0 +1,1421 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+    Search, Filter, Download, DollarSign, CreditCard, Smartphone,
+    Calendar, CheckCircle, Clock, XCircle, ArrowUpRight, ArrowDownLeft, Eye,
+    FileText, Printer, Trash2, ChevronLeft, ChevronRight, Play, TrendingUp, Wallet, MessageCircle, Paperclip, ExternalLink, RefreshCw
+} from 'lucide-react';
+import { Card, Table, Button, Input, Select, KPICard, Modal } from '../components/UI';
+import { Payment, PaymentMethod } from '../types';
+import api from '../utils/api';
+import { useToast } from '../components/ToastContext';
+import { useCurrency } from '../components/CurrencyContext';
+
+import { useAuth } from '../hooks/useAuth';
+import { generateInvoicePDF, getInvoicePDFFile } from '../utils/pdfGenerator';
+import { generateReceiptHtml } from '../utils/receiptGenerator';
+import { uploadToCloudinary } from '../utils/cloudinary';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../redux/store';
+import { fetchPayments, fetchSpecialists, invalidatePaymentCache } from '../redux/slices/paymentSlice';
+import { fetchSettings } from '../redux/slices/settingSlice';
+
+
+interface PaymentsProps {
+    paymentMethods?: PaymentMethod[];
+    fraudProtection?: boolean;
+}
+
+const StatCard = ({ title, value, icon: Icon, trend, color, secondaryColor, onClick }: any) => (
+    <motion.div
+        whileHover={{ y: -5, scale: 1.02 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+            background: `linear-gradient(135deg, ${color} 0%, ${secondaryColor} 100%)`,
+            borderRadius: '1.5rem',
+            padding: '1.25rem',
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '120px',
+            boxShadow: `0 10px 20px ${color}33`,
+            position: 'relative',
+            overflow: 'hidden',
+            border: 'none',
+            cursor: onClick ? 'pointer' : 'default'
+        }}
+        onClick={onClick}
+    >
+        {/* Decorative background circle */}
+        <div style={{
+            position: 'absolute',
+            bottom: '-20%',
+            right: '-10%',
+            width: '10rem',
+            height: '10rem',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.1)',
+            zIndex: 0
+        }} />
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, opacity: 0.9, marginBottom: '0.25rem' }}>{title}</p>
+                <h3 style={{ fontSize: '1.875rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</h3>
+            </div>
+            <div style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(4px)',
+                padding: '0.75rem',
+                borderRadius: '1rem',
+                border: '1px solid rgba(255, 255, 255, 0.3)'
+            }}>
+                <Icon size={24} strokeWidth={2.5} />
+            </div>
+        </div>
+
+        <div style={{ position: 'relative', zIndex: 1, marginTop: '1rem' }}>
+            {trend && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '2rem',
+                    width: 'fit-content',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                    <ArrowUpRight size={14} />
+                    {trend}
+                </div>
+            )}
+        </div>
+    </motion.div>
+);
+
+const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtection = false }) => {
+    const dispatch = useDispatch<AppDispatch>();
+    const { payments, stats, pagination, loading: paymentsLoading, specialists } = useSelector((state: RootState) => state.payments);
+    const { settings } = useSelector((state: RootState) => state.settings); // Use global settings
+
+    const navigate = useNavigate();
+    const { user, isStaff } = useAuth();
+    const { showToast } = useToast();
+    const { formatPrice, currency, symbol } = useCurrency();
+
+    const maskPhone = (phone: string | undefined | null) => {
+        if (!phone || phone === 'N/A') return 'N/A';
+        if (phone.length <= 4) return phone;
+        return phone.slice(0, phone.length - 4) + '****';
+    };
+
+    // Removed local payments, stats, cashiers, settings state
+    // const [payments, setPayments] = useState<Payment[]>([]);
+    // const [stats, setStats] = useState({...});
+    // const [loading, setLoading] = useState(true);
+    // const [settings, setSettings] = useState<any>(null);
+
+    const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [previewAttachment, setPreviewAttachment] = useState<{ url: string, name: string } | null>(null);
+
+    // Filters
+    const getToday = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    const [dateRange, setDateRange] = useState({ start: getToday(), end: getToday() });
+    const [minAmount, setMinAmount] = useState('');
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('ALL');
+    const [status, setStatus] = useState('ALL');
+    const [selectedSpecialist, setSelectedSpecialist] = useState('ALL');
+    // const [cashiers, setCashiers] = useState<string[]>([]);
+
+    // Use Redux pagination or local override? 
+    // Let's stick to local page control triggering Redux fetch
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const isFirstLoad = React.useRef(true);
+    // Debounce min amount changes
+
+    const handleExport = () => {
+        if (payments.length === 0) return showToast('No data to export', 'error');
+
+        const headers = ['Date', 'ID', 'Customer', 'Specialist', 'Amount', 'Method', 'Status', 'Type', 'Phone'];
+        const rows = payments.map(p => {
+            const phone = p.appointment?.customer?.mobile || (p.sale as any)?.customer?.mobile || '';
+            return [
+                new Date(p.createdAt).toLocaleDateString(),
+                p.transactionId || p.id,
+                p.appointment?.customer?.name || (p.sale as any)?.customer?.name || 'Walk-in',
+                p.appointment?.stylist?.name || p.sale?.specialist?.name || '-',
+                p.amount,
+                p.paymentMethod,
+                p.paymentStatus,
+                p.paymentType,
+                (isStaff && fraudProtection) ? maskPhone(phone) : phone
+            ];
+        });
+
+        const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `payments_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handlePrintReceipt = () => {
+        if (!selectedPayment) return;
+
+        const receiptHtml = generateReceiptHtml({
+            storeName: settings?.salonName || 'Lumière Salon',
+            storeAddress: settings?.salonAddress || '',
+            storePhone: settings?.salonPhone || '',
+            invoiceNumber: selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id,
+            date: new Date(selectedPayment.createdAt).toLocaleString(),
+            customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in',
+            items: selectedPayment.sale?.items || [
+                {
+                    name: selectedPayment.appointment?.service?.name || 'General Service',
+                    quantity: 1,
+                    price: selectedPayment.amount
+                }
+            ],
+            subtotal: (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) || selectedPayment.amount,
+            discount: (selectedPayment.sale as any)?.discount || 0,
+            total: selectedPayment.amount,
+            paymentMethod: selectedPayment.paymentMethod,
+            cashierName: selectedPayment.cashierName || 'Admin',
+            currencySymbol: settings?.currency === 'INR' || currency === 'INR' ? '₹' : (settings?.currency ? getSymbol(settings.currency) : symbol)
+        });
+
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        if (printWindow) {
+            printWindow.document.write(receiptHtml);
+            printWindow.document.close();
+        }
+    };
+
+    useEffect(() => {
+        setCurrentPage(1); // Reset to page 1 when filters change
+    }, [dateRange, paymentMethod, status, minAmount, customerSearch, selectedSpecialist]);
+
+    const getSymbol = (curr: string) => {
+        switch (curr) {
+            case 'INR': return '₹';
+            case 'USD': return '$';
+            case 'EUR': return '€';
+            case 'GBP': return '£';
+            case 'SGD': return '$';
+            default: return curr;
+        }
+    };
+
+    const formatDate = (date: string) => {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    // Initial Fetch (Cashiers & Settings)
+    useEffect(() => {
+        dispatch(fetchSettings());
+        dispatch(fetchSpecialists());
+    }, [dispatch]);
+
+    const getInvoiceData = () => {
+        if (!selectedPayment) return null;
+
+        const invoiceNum = selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id;
+
+        return {
+            salonName: settings?.salonName || 'Lumière Salon',
+            salonAddress: settings?.salonAddress || '',
+            salonPhone: settings?.salonPhone || '',
+            invoiceNumber: invoiceNum,
+            date: formatDate(selectedPayment.createdAt),
+            customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in Customer',
+            customerPhone: selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile || '',
+            items: selectedPayment.sale?.items || [
+                {
+                    name: selectedPayment.appointment?.service?.name || 'General Service',
+                    quantity: 1,
+                    price: selectedPayment.amount
+                }
+            ],
+            subtotal: (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) || selectedPayment.amount,
+            discount: (selectedPayment.sale as any)?.discount || 0,
+            total: selectedPayment.amount,
+            paymentMethod: selectedPayment.paymentMethod,
+            cashierName: selectedPayment.cashierName || 'Admin',
+            currencySymbol: settings?.currency === 'INR' || currency === 'INR' ? 'Rs.' : (settings?.currency ? getSymbol(settings.currency) : symbol)
+        };
+    };
+
+    const handleDownloadPDF = () => {
+        const data = getInvoiceData();
+        if (data) generateInvoicePDF(data);
+    };
+
+    const loadPayments = () => {
+        const params: any = {
+            page: currentPage,
+            limit: 10
+        };
+        if (dateRange.start) params.startDate = dateRange.start;
+        if (dateRange.end) params.endDate = dateRange.end;
+        if (paymentMethod !== 'ALL') params.paymentMethod = paymentMethod;
+        if (status !== 'ALL') params.status = status;
+        if (selectedSpecialist !== 'ALL') params.specialist = selectedSpecialist;
+        if (customerSearch) params.customerSearch = customerSearch;
+        if (minAmount) params.minAmount = Number(minAmount);
+
+        dispatch(fetchPayments(params));
+    };
+
+    useEffect(() => {
+        loadPayments();
+    }, [dateRange, paymentMethod, status, currentPage, minAmount, customerSearch, selectedSpecialist]); // Added missing dependencies
+
+    // Also trigger load on Refresh button
+    const fetchPaymentsHandler = () => {
+        dispatch(invalidatePaymentCache());
+        dispatch(fetchSpecialists());
+        loadPayments();
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'COMPLETED': return 'bg-emerald-100 text-emerald-700';
+            case 'PENDING': return 'bg-amber-100 text-amber-700';
+            case 'FAILED': return 'bg-red-100 text-red-700';
+            case 'REFUNDED': return 'bg-purple-100 text-purple-700';
+            case 'PARTIAL': return 'bg-blue-100 text-blue-700';
+            case 'DRAFT': return 'bg-slate-200 text-slate-700';
+            case 'CANCELLED': return 'bg-red-100 text-red-800 font-bold';
+            default: return 'bg-slate-100 text-slate-700';
+        }
+    };
+
+    const columns = [
+        {
+            header: 'Date',
+            accessor: (row: Payment) => (
+                <div className="font-bold text-slate-800 dark:text-slate-100">
+                    {new Date(row.createdAt).toLocaleDateString()}
+                </div>
+            )
+        },
+        {
+            header: 'Invoice #',
+            accessor: (row: Payment) => (
+                <div className="text-xs font-mono text-slate-600 font-medium">
+                    {/* Prioritize Invoice Number field, fallback to saleNumber only if needed (for legacy data) */}
+                    {row.sale?.invoiceNumber || row.invoiceNumber || (row.sale?.saleNumber?.startsWith('INV') ? row.sale?.saleNumber : '-')}
+                </div>
+            )
+        },
+        {
+            header: 'Customer',
+            accessor: (row: Payment) => {
+                const hasCombo = row.sale?.items?.some((item: any) => item.type === 'combo');
+                return (
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <div className="font-medium text-slate-800 dark:text-slate-100">
+                                {row.appointment?.customer?.name || (row.sale as any)?.customer?.name || 'Walk-in'}
+                            </div>
+                            {hasCombo && (
+                                <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-orange-100 text-orange-600 uppercase tracking-wider">Combo</span>
+                            )}
+                        </div>
+                        {/* Display Sale Number if available */}
+                        {row.sale?.saleNumber && (
+                            <div className="text-[11px] text-indigo-600 font-medium">
+                                {row.sale.saleNumber}
+                            </div>
+                        )}
+                        <div className="text-xs text-slate-500">
+                            {/* {(row.appointment?.service?.name && `Appt: ${row.appointment.service.name}`)} */}
+                            {(row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile) && (
+                                <span className="ml-1 opacity-60">• {(isStaff && fraudProtection) ? maskPhone(row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile) : (row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile)}</span>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+        },
+        {
+            header: 'Amount',
+            accessor: (row: Payment) => (
+                <div className="font-bold text-slate-800 dark:text-slate-100">
+                    {formatPrice(row.amount)}
+                </div>
+            )
+        },
+        {
+            header: 'Specialist',
+            accessor: (row: Payment) => (
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                    {row.appointment?.stylist?.name || row.sale?.specialist?.name || '-'}
+                </div>
+            )
+        },
+        {
+            header: 'Method',
+            accessor: (row: Payment) => {
+                // Extract custom method from notes if available
+                let displayMethod = row.paymentMethod?.toUpperCase() || 'UNKNOWN';
+
+                if (row.notes && (row.notes as string).includes('Method:')) {
+                    const match = (row.notes as string).match(/Method:\s*([^|]+)/);
+                    if (match && match[1]) {
+                        displayMethod = match[1].trim().toUpperCase();
+                    }
+                }
+
+                // Check for Voucher/Redemption (Zero amount completed sales)
+                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN') &&
+                    row.amount === 0 &&
+                    (row.sale?.saleStatus === 'COMPLETED' || row.paymentStatus === 'COMPLETED')) {
+                    displayMethod = 'VOUCHER';
+                }
+
+                const method = displayMethod;
+
+                // Handle different payment methods with specific colors
+                const getMethodStyles = (m: string) => {
+                    switch (m) {
+                        case 'CASH':
+                            return { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0', icon: <DollarSign size={12} /> };
+                        case 'GPAY':
+                        case 'GOOGLEPAY':
+                            return { bg: '#eef2ff', text: '#4338ca', border: '#e0e7ff', icon: <Smartphone size={12} /> };
+                        case 'PHONEPE':
+                        case 'PHONEPA':
+                            return { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe', icon: <Smartphone size={12} /> };
+                        case 'PAYTM':
+                            return { bg: '#e0f2fe', text: '#0369a1', border: '#bae6fd', icon: <Smartphone size={12} /> };
+                        case 'RAZORPAY':
+                            return { bg: '#eff6ff', text: '#1d4ed8', border: '#dbeafe', icon: <CreditCard size={12} /> };
+                        case 'UPI':
+                            return { bg: '#ecfeff', text: '#0891b2', border: '#cffafe', icon: <Smartphone size={12} /> };
+                        case 'VOUCHER':
+                            return { bg: '#fce7f3', text: '#be185d', border: '#fbcfe8', icon: <Wallet size={12} /> };
+                        default:
+                            return { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0', icon: <CreditCard size={12} /> };
+                    }
+                };
+
+                const styles = getMethodStyles(method);
+
+                // Friendly Label Mapping
+                const getLabel = (m: string) => {
+                    if (m === 'GOOGLEPAY' || m === 'GPAY') return 'GPay';
+                    if (m === 'PHONEPE' || m === 'PHONEPA') return 'PhonePe';
+                    if (m === 'PAYTM') return 'Paytm';
+                    return m;
+                };
+
+                return (
+                    <div className="flex items-center">
+                        <span
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border"
+                            style={{
+                                backgroundColor: styles.bg,
+                                color: styles.text,
+                                borderColor: styles.border
+                            }}
+                        >
+                            {styles.icon}
+                            {getLabel(method)}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        // {
+        //     header: 'Sale Status',
+        //     accessor: (row: Payment) => {
+        //         const displayStatus = row.isPendingSale ? 'PENDING' : (row.sale?.saleStatus || row.paymentStatus);
+        //         return (
+        //             <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(displayStatus)}`}>
+        //                 {displayStatus}
+        //             </span>
+        //         );
+        //     }
+        // },
+        {
+            header: 'Actions',
+            accessor: (row: Payment) => (
+                <div style={{ display: 'flex', gap: '0.5rem' }} >
+                    {
+                        (row.sale && (row.sale as any).balanceAmount > 0) && (
+                            <Button
+                                variant="ghost"
+                                icon={<Play size={16} />}
+                                style={{
+                                    backgroundColor: '#dbeafe', // blue-100
+                                    color: '#1d4ed8', // blue-700
+                                    border: '1px solid #bfdbfe',
+                                    padding: '0.4rem 0.75rem',
+                                    borderRadius: '0.625rem',
+                                    transition: 'all 0.2s'
+                                }}
+                                className="hover:bg-blue-200"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const partialData = {
+                                        customerId: row.appointment?.customer?.id || (row.sale as any)?.customer?.id,
+                                        customerName: row.appointment?.customer?.name || (row.sale as any)?.customer?.name,
+                                        customerPhone: row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile,
+                                        paidAmount: row.sale?.paidAmount ?? row.amount,
+                                        items: (row.sale as any)?.items || [],
+                                        transactionId: row.transactionId || row.id,
+                                        saleId: row.sale?.id,
+                                        saleNumber: (row.sale as any)?.saleNumber,
+                                        autoCheckout: true
+                                    };
+                                    const appId = (user as any)?.app_id || 'salon';
+                                    const businessName = (user as any)?.businessName || 'admin';
+                                    navigate(`/${appId}/${businessName}/sales`, { state: { partialPaymentData: partialData } });
+                                }}
+                            >
+                                Continue
+                            </Button>
+                        )
+                    }
+                    < Button
+                        variant="ghost"
+                        icon={< Eye size={16} />}
+                        style={{
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
+                            border: '1px solid #e2e8f0',
+                            padding: '0.4rem 0.75rem',
+                            borderRadius: '0.625rem',
+                            transition: 'all 0.2s'
+                        }}
+                        className="hover:bg-slate-200 hover:text-slate-900"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPayment(row);
+                            setIsModalOpen(true);
+                        }}
+                    >
+                        View
+                    </Button >
+                </div >
+            )
+        }
+    ];
+
+    const actions = [
+        {
+            icon: <Download size={18} />,
+            label: 'Export',
+            onClick: handleExport,
+            variant: 'outline' as const
+        }
+    ];
+
+
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500" style={{ position: 'relative' }}>
+            <div className="flex justify-end items-center">
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <Button
+                        onClick={fetchPaymentsHandler}
+                        variant="primary"
+                        icon={<RefreshCw size={18} className={paymentsLoading ? 'animate-spin' : ''} />}
+                    >
+                        Refresh
+                    </Button>
+                    <Button onClick={handleExport} icon={<Download size={18} />} variant="outline">
+                        Export CSV
+                    </Button>
+                </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid md-grid-cols-2 lg-grid-cols-4 gap-4 md:gap-6">
+                <StatCard
+                    title="Total Revenue"
+                    value={formatPrice(stats.totalRevenue)}
+                    icon={TrendingUp}
+                    trend="+12% vs last month"
+                    color="#4F46E5" // Indigo 600
+                    secondaryColor="#9333EA" // Purple 600
+                />
+                <StatCard
+                    title="Cash Collected"
+                    value={formatPrice(stats.totalCash)}
+                    icon={Wallet}
+                    trend="Physical sales"
+                    color="#059669" // Emerald 600
+                    secondaryColor="#10B981" // Emerald 500
+                />
+                <StatCard
+                    title="Digital Payments"
+                    value={formatPrice(stats.totalDigital)}
+                    icon={CreditCard}
+                    trend="PhonePe, Grab.."
+                    color="#2563EB" // Blue 600
+                    secondaryColor="#3B82F6" // Blue 500
+                />
+                <StatCard
+                    title="Balance Amount"
+                    value={
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                            <span>{formatPrice(stats.totalBalanceAmount)}</span>
+                            <span style={{ fontSize: '1rem', opacity: 0.8 }}>({stats.totalBalanceCount})</span>
+                        </div>
+                    }
+                    icon={Clock}
+                    color="#f59e0b" // Amber 500
+                    secondaryColor="#fbbf24" // Amber 400
+                    trend="Balance Collection"
+                    onClick={() => {
+                        setStatus('PARTIAL');
+                        setCurrentPage(1);
+                        // Force fetch if status didn't change (rare but possible)
+                        // loadPayments(); // useEffect with status as dependency will handle this
+                    }}
+                />
+            </div>
+
+            {/* Filters */}
+            <Card style={{ padding: '1.25rem' }}>
+                <div className="flex flex-wrap items-end" style={{ gap: '6px 6px' }}>
+                    <div className="space-y-1 min-w-[140px]">
+                        <label className="text-xs font-semibold text-slate-500 block">Search</label>
+                        <Input
+                            type="text"
+                            placeholder="Search by name, mobile, invoice or sale #"
+                            value={customerSearch}
+                            onChange={(e) => setCustomerSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-1 min-w-[110px]">
+                        <label className="text-xs font-semibold text-slate-500 block">Start Date</label>
+                        <Input
+                            type="date"
+                            value={dateRange.start}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                        />
+                    </div>
+                    <div className="space-y-1 min-w-[110px]">
+                        <label className="text-xs font-semibold text-slate-500 block">End Date</label>
+                        <Input
+                            type="date"
+                            value={dateRange.end}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                        />
+                    </div>
+                    <div className="space-y-1 min-w-[180px]">
+                        <label className="text-xs font-semibold text-slate-500 block">Amount</label>
+                        <Select
+                            // label prop removed
+                            value={minAmount}
+                            onChange={(e) => setMinAmount(e.target.value)}
+                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                            options={[
+                                { value: '', label: 'Any Amount' },
+                                { value: '100', label: '100+' },
+                                { value: '250', label: '250+' },
+                                { value: '500', label: '500+' },
+                                { value: '1000', label: '1000+' },
+                                { value: '2000', label: '2000+' },
+                                { value: '5000', label: '5000+' },
+                                { value: '10000', label: '10000+' }
+                            ]}
+                        />
+                    </div>
+                    <div className="space-y-1 min-w-[180px]">
+                        <label className="text-xs font-semibold text-slate-500 block">Method</label>
+                        <Select
+                            // label prop removed
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                            options={[
+                                { value: 'ALL', label: 'All Methods' },
+                                ...paymentMethods.map(m => ({
+                                    value: m.id.toUpperCase(),
+                                    label: m.name
+                                }))
+                            ]}
+                        />
+                    </div>
+                    <div className="space-y-1 min-w-[150px]">
+                        <label className="text-xs font-semibold text-slate-500 block">Status</label>
+                        <Select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                            options={[
+                                { value: 'ALL', label: 'All Statuses' },
+                                { value: 'COMPLETED', label: 'Completed' },
+                                { value: 'PARTIAL', label: 'Partial' },
+                                { value: 'DEPOSIT', label: 'Deposit (Advance)' },
+                                { value: 'PENDING', label: 'Pending' },
+                                { value: 'FAILED', label: 'Failed' },
+                                { value: 'REFUNDED', label: 'Refunded' }
+                            ]}
+                        />
+                    </div>
+                    <div className="space-y-1 min-w-[110px]">
+                        <label className="text-xs font-semibold text-slate-500 block">Specialist</label>
+                        <Select
+                            value={selectedSpecialist}
+                            onChange={(e) => setSelectedSpecialist(e.target.value)}
+                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                            options={[
+                                { value: 'ALL', label: 'All Specialists' },
+                                ...specialists.map(c => ({
+                                    value: c,
+                                    label: c
+                                }))
+                            ]}
+                        />
+                    </div>
+                    <div className="space-y-1 flex-1 flex flex-col items-end">
+                        <label className="text-xs font-semibold text-slate-500 block" style={{ visibility: 'hidden' }}>Actions</label>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <Button
+                                onClick={() => {
+                                    setCurrentPage(1);
+                                    loadPayments();
+                                }}
+                                variant="primary"
+                                className="font-medium"
+                                style={{
+                                    height: '44px',
+                                    padding: '0 20px'
+                                }}
+                                icon={<Search size={16} />}
+                            >
+                                Search
+                            </Button>
+
+                            <Button
+                                onClick={() => {
+                                    setDateRange({ start: getToday(), end: getToday() });
+                                    setMinAmount('');
+                                    setCustomerSearch('');
+                                    setPaymentMethod('ALL');
+                                    setStatus('ALL');
+                                    setSelectedSpecialist('ALL');
+                                }}
+                                variant="ghost"
+                                className="font-medium"
+                                style={{
+                                    backgroundColor: '#e2e8f0', // slate-200
+                                    color: '#475569', // slate-600
+                                    borderColor: '#cbd5e1', // slate-300
+                                    height: '44px',
+                                    padding: '0 20px'
+                                }}
+                                icon={<Trash2 size={16} />}
+                            >
+                                Reset
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+
+            {/* Payments Table */}
+            < div className="space-y-4" >
+                {/* {paymentsLoading && payments.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-indigo-500 animate-pulse bg-indigo-50/50 px-3 py-1.5 rounded-full w-fit">
+                        <RefreshCw size={12} className="animate-spin" />
+                        Updating data...
+                    </div>
+                )} */}
+                <Table
+                    columns={columns}
+                    data={(() => {
+                        // [LAST-RESORT VISUAL SAFEGUARD]
+                        // If minAmount is set, filter out any rows that somehow escaped the backend filter
+                        const min = minAmount ? Number(minAmount) : 0;
+                        if (min > 0) {
+                            return payments.filter(p => (p.amount >= min));
+                        }
+                        return payments;
+                    })()}
+                    isLoading={paymentsLoading}
+                    onRowClick={(row) => {
+                        setSelectedPayment(row);
+                        setIsModalOpen(true);
+                    }}
+                />
+
+                {/* Pagination Footer */}
+                <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="text-sm text-slate-500 font-medium">
+                        Showing <span className="text-slate-900 dark:text-white font-bold">{payments.length}</span> of <span className="text-slate-900 dark:text-white font-bold">{pagination.totalCount}</span> transactions
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-xs text-slate-400 font-bold uppercase tracking-widest hidden md:block">
+                            Page {pagination.currentPage} of {pagination.totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                className="w-10 h-10 p-0 rounded-xl flex items-center justify-center"
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1 || paymentsLoading}
+                            >
+                                <ChevronLeft size={18} />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-10 h-10 p-0 rounded-xl flex items-center justify-center font-bold"
+                                disabled={true}
+                            >
+                                {currentPage}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-10 h-10 p-0 rounded-xl flex items-center justify-center"
+                                onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+                                disabled={currentPage === pagination.totalPages || paymentsLoading}
+                            >
+                                <ChevronRight size={18} />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div >
+
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title="Transaction Details"
+            >
+                {selectedPayment && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                        {/* Info Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{
+                                padding: '0.5rem',
+                                borderRadius: 'var(--radius-xl)',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.2rem'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
+                                    <FileText size={14} />
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>IDENTIFIERS</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {/* Helper to find appointment info */}
+                                    {(() => {
+                                        const saleAppointment = (selectedPayment.sale as any)?.appointment;
+                                        const directAppointment = selectedPayment.appointment;
+                                        const appointment = directAppointment || saleAppointment;
+                                        const apptId = selectedPayment.appointmentId || saleAppointment?.id;
+
+                                        return (
+                                            <>
+                                                {/* Row 1: Transaction ID | Booking Time */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Transaction ID</p>
+                                                        <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', wordBreak: 'break-all', margin: 0 }}>
+                                                            {(selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Booking Time</p>
+                                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
+                                                            {appointment?.startTime ? new Date(appointment.startTime).toLocaleString(undefined, {
+                                                                timeStyle: 'short',
+                                                                dateStyle: 'medium'
+                                                            }) : 'Direct Sale'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Row 2: Invoice Number | Transaction Date & Time */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Invoice Number</p>
+                                                        <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)', fontSize: '0.75rem', margin: 0 }}>
+                                                            {selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.invoiceNumber || 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Trans. Date & Time</p>
+                                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
+                                                            {new Date(selectedPayment.createdAt).toLocaleString(undefined, {
+                                                                dateStyle: 'medium',
+                                                                timeStyle: 'short'
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Row 3: Customer | Appointment ID */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Customer</p>
+                                                        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}>
+                                                            {appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Appointment ID</p>
+                                                        <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.65rem', wordBreak: 'break-all', margin: 0 }}>
+                                                            {apptId || 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
+                            <div style={{
+                                padding: '0.5rem',
+                                borderRadius: 'var(--radius-xl)',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.1rem'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
+                                    <CreditCard size={14} />
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, uppercase: 'true', letterSpacing: '0.1em' }}>PAYMENT INFO</span>
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Method</p>
+                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentMethod}</p>
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Collection Type</p>
+                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentType}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Customer & Cashier */}
+                        {/* <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{
+                                padding: '1rem',
+                                borderRadius: 'var(--radius-xl)',
+                                backgroundColor: 'var(--bg-hover)',
+                                border: '1px solid var(--border-light)'
+                            }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Customer</p>
+                                <p style={{ fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>
+                                    {selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in'}
+                                </p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.15rem', margin: 0 }}>
+                                    {(isStaff && fraudProtection) ? maskPhone(selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile) : (selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile || 'No contact info')}
+                                </p>
+                            </div>
+                            <div style={{
+                                padding: '1rem',
+                                borderRadius: 'var(--radius-xl)',
+                                backgroundColor: 'var(--bg-hover)',
+                                border: '1px solid var(--border-light)'
+                            }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Processed By</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{
+                                        width: '1.5rem',
+                                        height: '1.5rem',
+                                        borderRadius: 'var(--radius-full)',
+                                        backgroundColor: 'var(--primary-light)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 800,
+                                        color: 'var(--primary)'
+                                    }}>
+                                        {(selectedPayment.cashierName || 'A')[0]}
+                                    </div>
+                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>
+                                        {selectedPayment.cashierName || 'Admin'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div> */}
+
+                        {/* Attachments */}
+                        {selectedPayment.sale && selectedPayment.sale.attachments && selectedPayment.sale.attachments.length > 0 && (
+                            <div style={{
+                                borderRadius: 'var(--radius-xl)',
+                                border: '1px solid var(--border)',
+                                overflow: 'hidden',
+                                backgroundColor: 'var(--bg-card)'
+                            }}>
+                                <div style={{
+                                    padding: '0.75rem 1.25rem',
+                                    backgroundColor: 'var(--bg-hover)',
+                                    borderBottom: '1px solid var(--border)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <Paperclip size={14} className="text-slate-500" />
+                                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Attachments</p>
+                                </div>
+                                <div style={{
+                                    padding: '1.25rem',
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '1rem'
+                                }}>
+                                    {selectedPayment.sale.attachments.map((att: any, idx: number) => {
+                                        const isImage = att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ||
+                                            att.url?.toLowerCase().includes('image/upload');
+
+                                        return (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.5rem',
+                                                width: isImage ? '120px' : '100%'
+                                            }}>
+                                                {isImage && (
+                                                    <div
+                                                        onClick={() => setPreviewAttachment(att)}
+                                                        style={{
+                                                            width: '120px',
+                                                            height: '100px',
+                                                            borderRadius: 'var(--radius-lg)',
+                                                            overflow: 'hidden',
+                                                            border: '1px solid var(--border)',
+                                                            cursor: 'pointer',
+                                                            backgroundColor: 'var(--bg-hover)',
+                                                            position: 'relative',
+                                                            transition: 'transform 0.2s'
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                    >
+                                                        <img
+                                                            src={att.url}
+                                                            alt={att.name}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            backgroundColor: 'rgba(0,0,0,0.1)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            opacity: 0,
+                                                            transition: 'opacity 0.2s'
+                                                        }}
+                                                            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                                            onMouseOut={(e) => e.currentTarget.style.opacity = '0'}
+                                                        >
+                                                            <Eye size={24} color="white" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                                    <a
+                                                        href={att.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:underline flex items-center gap-1 text-xs font-medium truncate"
+                                                        style={{ textDecoration: 'none', maxWidth: isImage ? '80px' : 'none' }}
+                                                    >
+                                                        {att.name || `Attachment ${idx + 1}`} <ExternalLink size={10} />
+                                                    </a>
+                                                    {/* <button
+                                                        onClick={() => setPreviewAttachment(att)}
+                                                        style={{
+                                                            background: 'var(--primary-light)',
+                                                            border: 'none',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: 'var(--primary)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            borderRadius: 'var(--radius-full)',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        title="Preview Attachment"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button> */}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Order Summary */}
+                        <div style={{
+                            borderRadius: 'var(--radius-xl)',
+                            border: '1px solid var(--border)',
+                            overflow: 'hidden',
+                            backgroundColor: 'var(--bg-card)'
+                        }}>
+                            <div style={{
+                                padding: '0.75rem 1.25rem',
+                                backgroundColor: 'var(--bg-hover)',
+                                borderBottom: '1px solid var(--border)'
+                            }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Order Summary</p>
+                            </div>
+
+                            <div style={{ padding: '1.25rem', maxHeight: '200px', overflowY: 'auto' }}>
+                                {selectedPayment.sale ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {(selectedPayment.sale.items || []).map((item: any, idx: number) => {
+                                            const isRedemption = item.price === 0 || item.redeemedQuantity > 0;
+                                            return (
+                                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{item.name}</p>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>Qty: {item.quantity}</span>
+                                                            {item.specialistName && (
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>• {item.specialistName}</span>
+                                                            )}
+                                                            {item.type === 'combo' && (
+                                                                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ffedd5', color: '#ea580c', textTransform: 'uppercase' }}>Combo</span>
+                                                            )}
+                                                            {isRedemption && (
+                                                                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ecfdf5', color: '#059669', textTransform: 'uppercase' }}>Redeemed</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
+                                                        {isRedemption ? 'FREE' : formatPrice(item.price * item.quantity)}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : selectedPayment.appointment ? (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{selectedPayment.appointment.service?.name}</p>
+                                            {selectedPayment.appointment.stylist?.name && (
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, margin: 0 }}>Stylist: {selectedPayment.appointment.stylist.name}</p>
+                                            )}
+                                        </div>
+                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{formatPrice(selectedPayment.amount)}</p>
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-gray)', fontStyle: 'italic', margin: 0 }}>No items found</p>
+                                )}
+                            </div>
+
+                            <div style={{
+                                padding: '1.25rem',
+                                backgroundColor: 'var(--bg-hover)',
+                                borderTop: '1px solid var(--border)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem'
+                            }}>
+                                {selectedPayment.sale && (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                            <span style={{ color: 'var(--text-gray)' }}>Subtotal</span>
+                                            <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
+                                                {formatPrice((selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0))}
+                                            </span>
+                                        </div>
+                                        {((selectedPayment.sale as any).discount > 0) && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                <span style={{ color: 'var(--text-gray)' }}>Discount</span>
+                                                <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice((selectedPayment.sale as any).discount)}</span>
+                                            </div>
+                                        )}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
+                                            <span style={{ color: 'var(--text-gray)', fontWeight: 600 }}>Balance Due</span>
+                                            <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
+                                                {(() => {
+                                                    const sub = (selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+                                                    const disc = (selectedPayment.sale as any).discount || 0;
+                                                    const total = sub - disc;
+                                                    const paid = (selectedPayment.sale as any).paidAmount || 0;
+                                                    const balance = total - paid;
+                                                    return formatPrice(Math.max(0, balance));
+                                                })()}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    paddingTop: '0.75rem',
+                                    marginTop: '0.25rem',
+                                    borderTop: '1px solid var(--border)'
+                                }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 ? 'Transaction Amount' : 'Net Amount'}
+                                        </span>
+                                        {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 && (
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-gray)', fontWeight: 600 }}>
+                                                Total Paid: {formatPrice((selectedPayment.sale as any).paidAmount || 0)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>{formatPrice(selectedPayment.amount)}</span>
+                                </div>
+
+                                {/* Split Payment Breakdown */}
+                                {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 && (
+                                    <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+                                        <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Related Payments</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {selectedPayment.sale.payments.map((p, idx) => (
+                                                <div key={idx} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                    padding: '0.5rem', background: p.id === selectedPayment.id ? 'var(--bg-hover)' : 'transparent',
+                                                    borderRadius: '0.5rem', border: p.id === selectedPayment.id ? '1px solid var(--border)' : 'none'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)' }}>{p.paymentMethod}</span>
+                                                        {p.id === selectedPayment.id && <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 700 }}>CURRENT</span>}
+                                                    </div>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(p.amount)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                style={{ height: '3rem', borderRadius: 'var(--radius-xl)' }}
+                                icon={<Printer size={18} />}
+                                onClick={handlePrintReceipt}
+                            >
+                                Receipt
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                style={{
+                                    height: '3rem',
+                                    borderRadius: 'var(--radius-xl)',
+                                    borderColor: 'var(--primary)',
+                                    color: 'var(--primary)',
+                                    backgroundColor: 'rgba(35, 76, 106, 0.05)'
+                                }}
+                                icon={<FileText size={18} />}
+                                onClick={handleDownloadPDF}
+                            >
+                                Invoice PDF
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                style={{
+                                    height: '3rem',
+                                    borderRadius: 'var(--radius-xl)',
+                                    borderColor: '#25D366',
+                                    color: '#25D366',
+                                    backgroundColor: 'rgba(37, 211, 102, 0.05)'
+                                }}
+                                icon={<MessageCircle size={18} />}
+                                onClick={async () => {
+                                    if (!selectedPayment) return;
+                                    if (isStaff && fraudProtection) {
+                                        showToast('WhatsApp messaging is disabled during Fraud Protection.', 'info');
+                                        return;
+                                    }
+                                    const customer = selectedPayment.appointment?.customer || (selectedPayment.sale as any)?.customer;
+                                    const customerName = customer?.name || 'Customer';
+
+                                    // Check both phone (Prisma default for Customer) and mobile (Prisma default for User/Stylist)
+                                    let mobile = customer?.phone || customer?.mobile;
+
+                                    // If no mobile found (e.g. Walk-In), prompt the user to enter one
+                                    if (!mobile) {
+                                        const manualMobile = window.prompt("No mobile number found for this customer. Please enter mobile number to send WhatsApp:");
+                                        if (manualMobile) {
+                                            mobile = manualMobile;
+                                        } else {
+                                            return; // User cancelled
+                                        }
+                                    }
+
+                                    try {
+                                        showToast('Preparing invoice and opening WhatsApp...', 'info');
+
+                                        // 1. Generate PDF Blob
+                                        const data = getInvoiceData();
+                                        if (!data) return;
+                                        const file = getInvoicePDFFile(data);
+
+                                        // 2. Upload to Cloudinary
+                                        // Use 'raw' resource type for PDFs to ensure direct, stable delivery as a document
+                                        const invoiceNum = data.invoiceNumber || 'Invoice_Download';
+                                        const pdfUrl = await uploadToCloudinary(file, 'raw', invoiceNum);
+
+                                        // 3. Construct message with link
+                                        const message = `Hi ${customerName}, thank you for visiting ${settings?.salonName || 'our salon'}! 🌸\n\n` +
+                                            `Your invoice *${invoiceNum}* for *${formatPrice(selectedPayment.amount)}* is ready.\n\n` +
+                                            `📥 *Download your invoice here:*\n${pdfUrl}\n\n` +
+                                            `We look forward to seeing you again! ✨`;
+
+                                        const encodedMessage = encodeURIComponent(message);
+                                        window.open(`https://web.whatsapp.com/send?phone=${mobile}&text=${encodedMessage}`, '_blank');
+                                    } catch (error: any) {
+                                        console.error('WhatsApp Error:', error);
+                                        showToast(error.message || 'Failed to prepare invoice PDF', 'error');
+                                    }
+                                }}
+                            >
+                                WhatsApp
+                            </Button>
+                            {selectedPayment.sale && (selectedPayment.sale as any).balanceAmount > 0 && (
+                                <Button
+                                    variant="primary"
+                                    className="flex-1"
+                                    style={{ height: '3rem', borderRadius: 'var(--radius-xl)', backgroundColor: '#4f46e5' }}
+                                    icon={<Play size={18} />}
+                                    onClick={() => {
+                                        const partialData = {
+                                            customerId: selectedPayment.appointment?.customer?.id || (selectedPayment.sale as any)?.customer?.id,
+                                            customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name,
+                                            customerPhone: selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile,
+                                            paidAmount: (selectedPayment.sale as any)?.paidAmount || selectedPayment.amount,
+                                            items: (selectedPayment.sale as any)?.items || [],
+                                            transactionId: selectedPayment.transactionId || selectedPayment.id,
+                                            saleId: selectedPayment.sale?.id,
+                                            saleNumber: (selectedPayment.sale as any)?.saleNumber,
+                                            autoCheckout: true
+                                        };
+                                        const appId = (user as any)?.app_id || 'salon';
+                                        const businessName = (user as any)?.businessName || 'admin';
+                                        navigate(`/${appId}/${businessName}/sales`, { state: { partialPaymentData: partialData } });
+                                    }}
+                                >
+                                    Continue
+                                </Button>
+                            )}
+                            <Button
+                                variant="primary"
+                                className="flex-1"
+                                style={{ height: '3rem', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-colored)' }}
+                                onClick={() => setIsModalOpen(false)}
+                            >
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Attachment Preview Modal */}
+            {/* <Modal
+                isOpen={!!previewAttachment}
+                onClose={() => setPreviewAttachment(null)}
+                title={`Preview: ${previewAttachment?.name || 'Attachment'}`}
+                maxWidth="900px"
+            >
+                <div style={{
+                    minHeight: '400px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'var(--bg-hover)',
+                    borderRadius: 'var(--radius-lg)',
+                    overflow: 'hidden',
+                    position: 'relative'
+                }}>
+                    {previewAttachment ? (
+                        previewAttachment.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ||
+                            previewAttachment.url?.toLowerCase().includes('image/upload') ? (
+                            <img
+                                src={previewAttachment.url}
+                                alt={previewAttachment.name}
+                                style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '70vh',
+                                    objectFit: 'contain'
+                                }}
+                            />
+                        ) : previewAttachment.url?.toLowerCase().endsWith('.pdf') ||
+                            previewAttachment.url?.toLowerCase().includes('raw/upload') ? (
+                            <iframe
+                                src={previewAttachment.url}
+                                title={previewAttachment.name}
+                                style={{
+                                    width: '100%',
+                                    height: '70vh',
+                                    border: 'none'
+                                }}
+                            />
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                <FileText size={48} style={{ color: 'var(--text-gray)', marginBottom: '1rem' }} />
+                                <p style={{ color: 'var(--text-dark)', fontWeight: 600 }}>This file type cannot be previewed</p>
+                                <Button
+                                    variant="primary"
+                                    onClick={() => window.open(previewAttachment.url, '_blank')}
+                                    style={{ marginTop: '1rem' }}
+                                >
+                                    Open in New Tab
+                                </Button>
+                            </div>
+                        )
+                    ) : (
+                        <LoadingSpinner />
+                    )}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                    <Button variant="outline" onClick={() => setPreviewAttachment(null)}>
+                        Close Preview
+                    </Button>
+                </div>
+            </Modal> */}
+        </div>
+    );
+};
+
+export default Payments;

@@ -1,0 +1,278 @@
+=================================================================
+COMPLETE INVENTORY.TSX FIXES - ALL IN ONE FILE
+=================================================================
+
+PROBLEM: Edit Product, Receive Goods, and Adjust Inventory buttons don't work
+CAUSE: They have no onClick handlers or only update local state without backend calls
+
+=================================================================
+FIX #1: ADD EDIT PRODUCT HANDLER (after handleCreateProduct, around line 122)
+=================================================================
+
+const handleEditProduct = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!editProduct) return;
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/v1/inventory/${editProduct.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: editProduct.name,
+        category: editProduct.category,
+        sku: editProduct.sku,
+        price: editProduct.price,
+        stock: editProduct.stock
+      })
+    });
+
+    if (response.ok) {
+      const updatedProduct = await response.json();
+      setProducts(prev => prev.map(p => 
+        p.id === editProduct.id ? updatedProduct : p
+      ));
+      alert('Product updated successfully!');
+      setIsEditModalOpen(false);
+      setEditProduct(null);
+    } else {
+      const error = await response.json();
+      alert(error.error || 'Failed to update product');
+    }
+  } catch (error) {
+    console.error('Error updating product:', error);
+    alert('Error updating product');
+  }
+};
+
+=================================================================
+FIX #2: UPDATE EDIT BUTTON (around line 275-281)
+=================================================================
+
+FIND THIS:
+          <button 
+            title="Edit Product"
+            style={{ color: 'var(--text-gray)', border: 'none', background: 'none', cursor: 'pointer', padding: '0.25rem' }} 
+            className="hover:text-primary"
+          >
+            <Edit2 size={16} />
+          </button>
+
+REPLACE WITH:
+          <button 
+            title="Edit Product"
+            onClick={() => { setEditProduct(row); setIsEditModalOpen(true); }}
+            style={{ color: 'var(--text-gray)', border: 'none', background: 'none', cursor: 'pointer', padding: '0.25rem' }} 
+            className="hover:text-primary"
+          >
+            <Edit2 size={16} />
+          </button>
+
+=================================================================
+FIX #3: REPLACE handleReceiveStock (around line 137-154)
+=================================================================
+
+FIND THIS:
+  const handleReceiveStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct || !actionQty) return;
+
+    const qty = parseInt(actionQty);
+    if (isNaN(qty) || qty <= 0) return;
+
+    const newStock = selectedProduct.stock + qty;
+
+    setProducts(prev => prev.map(p => 
+      p.id === selectedProduct.id 
+        ? { ...p, stock: newStock } 
+        : p
+    ));
+
+    addHistoryEntry(selectedProduct, 'received', qty, newStock, remarks || 'Stock received');
+    closeModal();
+  };
+
+REPLACE WITH:
+  const handleReceiveStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct || !actionQty) return;
+
+    const qty = parseInt(actionQty);
+    if (isNaN(qty) || qty <= 0) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/inventory/${selectedProduct.id}/stock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: qty, type: 'add' })
+      });
+
+      if (response.ok) {
+        const updatedProduct = await response.json();
+        setProducts(prev => prev.map(p => 
+          p.id === selectedProduct.id ? updatedProduct : p
+        ));
+        addHistoryEntry(selectedProduct, 'received', qty, updatedProduct.stock, remarks || 'Stock received');
+        alert('Stock received successfully!');
+        closeModal();
+      } else {
+        alert('Failed to update stock');
+      }
+    } catch (error) {
+      console.error('Error receiving stock:', error);
+      alert('Error updating stock');
+    }
+  };
+
+=================================================================
+FIX #4: REPLACE handleAdjustStock (around line 156-180)
+=================================================================
+
+FIND THIS:
+  const handleAdjustStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct || !actionQty || !remarks) return;
+
+    const qty = parseInt(actionQty);
+    if (isNaN(qty) || qty <= 0) return;
+
+    const newStock = adjustType === 'add' ? selectedProduct.stock + qty : Math.max(0, selectedProduct.stock - qty);
+
+    setProducts(prev => prev.map(p => {
+      if (p.id === selectedProduct.id) {
+        return { ...p, stock: newStock };
+      }
+      return p;
+    }));
+
+    addHistoryEntry(
+      selectedProduct, 
+      adjustType === 'add' ? 'adjustment_add' : 'adjustment_remove', 
+      qty, 
+      newStock, 
+      remarks
+    );
+    closeModal();
+  };
+
+REPLACE WITH:
+  const handleAdjustStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct || !actionQty || !remarks) return;
+
+    const qty = parseInt(actionQty);
+    if (isNaN(qty) || qty <= 0) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/inventory/${selectedProduct.id}/stock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: qty, type: adjustType })
+      });
+
+      if (response.ok) {
+        const updatedProduct = await response.json();
+        setProducts(prev => prev.map(p => 
+          p.id === selectedProduct.id ? updatedProduct : p
+        ));
+        addHistoryEntry(
+          selectedProduct, 
+          adjustType === 'add' ? 'adjustment_add' : 'adjustment_remove', 
+          qty, 
+          updatedProduct.stock, 
+          remarks
+        );
+        alert('Stock adjusted successfully!');
+        closeModal();
+      } else {
+        alert('Failed to adjust stock');
+      }
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+      alert('Error adjusting stock');
+    }
+  };
+
+=================================================================
+FIX #5: ADD EDIT PRODUCT MODAL (before closing </div>, around line 660)
+=================================================================
+
+ADD THIS BEFORE THE FINAL </div>:
+
+      {/* EDIT PRODUCT MODAL */}
+      <Modal 
+        isOpen={isEditModalOpen} 
+        onClose={() => { setIsEditModalOpen(false); setEditProduct(null); }} 
+        title="Edit Product"
+      >
+        {editProduct && (
+          <form className="space-y-6" onSubmit={handleEditProduct}>
+            <div className="grid md-grid-cols-2">
+              <div style={{ gridColumn: 'span 2' }}>
+                <Input 
+                  label="Product Name" 
+                  placeholder="e.g. Daily Shine Shampoo"
+                  value={editProduct.name}
+                  onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <Select 
+                label="Category" 
+                options={[
+                  { value: 'hair', label: 'Hair Care' },
+                  { value: 'skin', label: 'Skin Care' },
+                  { value: 'styling', label: 'Styling' },
+                  { value: 'acc', label: 'Accessories' }
+                ]}
+                value={editProduct.category}
+                onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })}
+              />
+              
+              <Input 
+                label="SKU / Barcode" 
+                placeholder="SCAN-0000"
+                value={editProduct.sku}
+                onChange={(e) => setEditProduct({ ...editProduct, sku: e.target.value })}
+                required
+              />
+              
+              <Input 
+                label="Price ($)" 
+                type="number" 
+                step="0.01"
+                value={editProduct.price.toString()}
+                onChange={(e) => setEditProduct({ ...editProduct, price: parseFloat(e.target.value) })}
+                required
+              />
+              <Input 
+                label="Stock" 
+                type="number"
+                value={editProduct.stock.toString()}
+                onChange={(e) => setEditProduct({ ...editProduct, stock: parseInt(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button type="button" variant="ghost" onClick={() => { setIsEditModalOpen(false); setEditProduct(null); }}>Cancel</Button>
+              <Button type="submit">Update Product</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+=================================================================
+SUMMARY OF CHANGES
+=================================================================
+
+✅ Edit Product: Added onClick handler + modal + handleEditProduct function
+✅ Receive Goods: Changed to async, calls PATCH /inventory/:id/stock with type:'add'
+✅ Adjust Inventory: Changed to async, calls PATCH /inventory/:id/stock with type:'add'/'remove'
+
+All three now:
+- Call backend APIs
+- Update database
+- Refresh local state from server response
+- Show success/error messages
+- Persist data across page refreshes

@@ -1,0 +1,157 @@
+========================================
+EDIT PRODUCT - SIMPLE 3-STEP GUIDE
+========================================
+
+Open: saloon-admin-fe/pages/Inventory.tsx
+
+========================================
+STEP 1: Add onClick to Edit Button
+========================================
+
+LOCATION: Line 276 (right after title="Edit Product")
+
+FIND THIS (around line 275-281):
+          <button 
+            title="Edit Product"
+            style={{ color: 'var(--text-gray)', border: 'none', background: 'none', cursor: 'pointer', padding: '0.25rem' }} 
+            className="hover:text-primary"
+          >
+            <Edit2 size={16} />
+          </button>
+
+CHANGE TO:
+          <button 
+            title="Edit Product"
+            onClick={() => { setEditProduct(row); setIsEditModalOpen(true); }}
+            style={{ color: 'var(--text-gray)', border: 'none', background: 'none', cursor: 'pointer', padding: '0.25rem' }} 
+            className="hover:text-primary"
+          >
+            <Edit2 size={16} />
+          </button>
+
+========================================
+STEP 2: Add handleEditProduct Function
+========================================
+
+LOCATION: After line 122 (right after the handleCreateProduct function ends with };)
+
+PASTE THIS CODE:
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProduct) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/inventory/${editProduct.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editProduct.name,
+          category: editProduct.category,
+          sku: editProduct.sku,
+          price: editProduct.price,
+          stock: editProduct.stock
+        })
+      });
+
+      if (response.ok) {
+        const updatedProduct = await response.json();
+        setProducts(prev => prev.map(p => 
+          p.id === editProduct.id ? updatedProduct : p
+        ));
+        alert('Product updated successfully!');
+        setIsEditModalOpen(false);
+        setEditProduct(null);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to update product');
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+      alert('Error updating product');
+    }
+  };
+
+========================================
+STEP 3: Add Edit Product Modal
+========================================
+
+LOCATION: Before the LAST </div> (around line 660, before the component closes)
+
+PASTE THIS CODE:
+
+      {/* EDIT PRODUCT MODAL */}
+      <Modal 
+        isOpen={isEditModalOpen} 
+        onClose={() => { setIsEditModalOpen(false); setEditProduct(null); }} 
+        title="Edit Product"
+      >
+        {editProduct && (
+          <form className="space-y-6" onSubmit={handleEditProduct}>
+            <div className="grid md-grid-cols-2">
+              <div style={{ gridColumn: 'span 2' }}>
+                <Input 
+                  label="Product Name" 
+                  placeholder="e.g. Daily Shine Shampoo"
+                  value={editProduct.name}
+                  onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <Select 
+                label="Category" 
+                options={[
+                  { value: 'hair', label: 'Hair Care' },
+                  { value: 'skin', label: 'Skin Care' },
+                  { value: 'styling', label: 'Styling' },
+                  { value: 'acc', label: 'Accessories' }
+                ]}
+                value={editProduct.category}
+                onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })}
+              />
+              
+              <Input 
+                label="SKU / Barcode" 
+                placeholder="SCAN-0000"
+                value={editProduct.sku}
+                onChange={(e) => setEditProduct({ ...editProduct, sku: e.target.value })}
+                required
+              />
+              
+              <Input 
+                label="Price ($)" 
+                type="number" 
+                step="0.01"
+                value={editProduct.price.toString()}
+                onChange={(e) => setEditProduct({ ...editProduct, price: parseFloat(e.target.value) })}
+                required
+              />
+              <Input 
+                label="Stock" 
+                type="number"
+                value={editProduct.stock.toString()}
+                onChange={(e) => setEditProduct({ ...editProduct, stock: parseInt(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <Button type="button" variant="ghost" onClick={() => { setIsEditModalOpen(false); setEditProduct(null); }}>Cancel</Button>
+              <Button type="submit">Update Product</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+========================================
+DONE! Save the file and test:
+========================================
+
+1. Click the Edit icon (pencil) on any product
+2. Modal should open with product data
+3. Change any field
+4. Click "Update Product"
+5. Product updates in database!
+
+========================================

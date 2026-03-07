@@ -1,0 +1,72 @@
+// INSTRUCTIONS: Replace the handleReceiveStock and handleAdjustStock functions 
+// in Inventory.tsx (around lines 137-180) with these versions:
+
+// Replace handleReceiveStock (line 137-154)
+const handleReceiveStock = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!selectedProduct || !actionQty) return;
+
+  const qty = parseInt(actionQty);
+  if (isNaN(qty) || qty <= 0) return;
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/v1/inventory/${selectedProduct.id}/stock`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: qty, type: 'add' })
+    });
+
+    if (response.ok) {
+      const updatedProduct = await response.json();
+      setProducts(prev => prev.map(p => 
+        p.id === selectedProduct.id ? updatedProduct : p
+      ));
+      addHistoryEntry(selectedProduct, 'received', qty, updatedProduct.stock, remarks || 'Stock received');
+      alert('Stock received successfully!');
+      closeModal();
+    } else {
+      alert('Failed to update stock');
+    }
+  } catch (error) {
+    console.error('Error receiving stock:', error);
+    alert('Error updating stock');
+  }
+};
+
+// Replace handleAdjustStock (line 156-180)
+const handleAdjustStock = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!selectedProduct || !actionQty || !remarks) return;
+
+  const qty = parseInt(actionQty);
+  if (isNaN(qty) || qty <= 0) return;
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/v1/inventory/${selectedProduct.id}/stock`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: qty, type: adjustType })
+    });
+
+    if (response.ok) {
+      const updatedProduct = await response.json();
+      setProducts(prev => prev.map(p => 
+        p.id === selectedProduct.id ? updatedProduct : p
+      ));
+      addHistoryEntry(
+        selectedProduct, 
+        adjustType === 'add' ? 'adjustment_add' : 'adjustment_remove', 
+        qty, 
+        updatedProduct.stock, 
+        remarks
+      );
+      alert('Stock adjusted successfully!');
+      closeModal();
+    } else {
+      alert('Failed to adjust stock');
+    }
+  } catch (error) {
+    console.error('Error adjusting stock:', error);
+    alert('Error adjusting stock');
+  }
+};
