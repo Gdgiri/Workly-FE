@@ -8,11 +8,16 @@ import {
     ChevronDown,
     Save,
     Loader2,
-    ClipboardList
+    ClipboardList,
+    PenTool,
+    X,
+    Trash2
 } from 'lucide-react';
 import { Button, Input } from './UI';
 import api from '../utils/api';
 import { useToast } from './ToastContext';
+import { uploadToCloudinary } from '../utils/cloudinary';
+import SignaturePad from './SignaturePad';
 
 interface ChecklistFormProps {
     templateId: string;
@@ -34,6 +39,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [existingSubmission, setExistingSubmission] = useState<any>(null);
+    const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         fetchData();
@@ -403,7 +409,320 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
                                     <ChevronDown size={18} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8' }} />
                                 </div>
                             )}
+
+                            {/* Number Input */}
+                            {item.type === 'number' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <input
+                                        type="number"
+                                        disabled={readOnly}
+                                        value={responses[item.id] || ''}
+                                        onChange={(e) => handleInputChange(item.id, e.target.value)}
+                                        placeholder="0"
+                                        style={{
+                                            width: '120px',
+                                            padding: '0.875rem 1rem',
+                                            border: '1.5px solid #e2e8f0',
+                                            borderRadius: '0.75rem',
+                                            fontSize: '0.925rem',
+                                            background: readOnly ? '#f8fafc' : 'white',
+                                            outline: 'none',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                                    />
+                                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#64748b' }}>Units</span>
+                                </div>
+                            )}
+
+                            {/* Multiple Choice */}
+                            {item.type === 'multiple_choice' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {item.options?.map((opt: string) => {
+                                        const currentVal = responses[item.id] || [];
+                                        const isChecked = Array.isArray(currentVal) ? currentVal.includes(opt) : currentVal === opt;
+                                        return (
+                                            <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: readOnly ? 'default' : 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    disabled={readOnly}
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        const newVal = e.target.checked
+                                                            ? [...(Array.isArray(currentVal) ? currentVal : []), opt]
+                                                            : (Array.isArray(currentVal) ? currentVal.filter(v => v !== opt) : []);
+                                                        handleInputChange(item.id, newVal);
+                                                    }}
+                                                    style={{ width: '18px', height: '18px', cursor: readOnly ? 'default' : 'pointer', accentColor: 'var(--primary)' }}
+                                                />
+                                                <span style={{ fontSize: '0.925rem', color: '#334155', fontWeight: 500 }}>{opt}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Single Choice */}
+                            {item.type === 'single_choice' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {item.options?.map((opt: string) => (
+                                        <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: readOnly ? 'default' : 'pointer' }}>
+                                            <input
+                                                type="radio"
+                                                name={item.id}
+                                                disabled={readOnly}
+                                                checked={responses[item.id] === opt}
+                                                onChange={() => handleInputChange(item.id, opt)}
+                                                style={{ width: '18px', height: '18px', cursor: readOnly ? 'default' : 'pointer', accentColor: 'var(--primary)' }}
+                                            />
+                                            <span style={{ fontSize: '0.925rem', color: '#334155', fontWeight: 500 }}>{opt}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Date / Time */}
+                            {item.type === 'date' && (
+                                <div style={{ position: 'relative', width: '220px' }}>
+                                    <input
+                                        type="datetime-local"
+                                        disabled={readOnly}
+                                        value={responses[item.id] || ''}
+                                        onChange={(e) => handleInputChange(item.id, e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.875rem 1rem',
+                                            border: '1.5px solid #e2e8f0',
+                                            borderRadius: '0.75rem',
+                                            fontSize: '0.875rem',
+                                            background: readOnly ? '#f8fafc' : 'white',
+                                            outline: 'none',
+                                            color: '#1e293b'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* File Upload with Multiple Image Support */}
+                            {item.type === 'file_upload' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    {/* Grid of uploaded images */}
+                                    {Array.isArray(responses[item.id]) && responses[item.id].length > 0 && (
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                            gap: '1rem'
+                                        }}>
+                                            {responses[item.id].map((url: string, index: number) => (
+                                                <div key={index} style={{
+                                                    position: 'relative',
+                                                    aspectRatio: '1',
+                                                    borderRadius: '1rem',
+                                                    overflow: 'hidden',
+                                                    border: '1.5px solid #e2e8f0',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                                                    transition: 'all 0.2s'
+                                                }}>
+                                                    {url.startsWith('http') ? (
+                                                        <img
+                                                            src={url}
+                                                            alt={`Upload ${index + 1}`}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '0.5rem' }}>
+                                                            <FileText size={24} color="#94a3b8" />
+                                                            <div style={{ fontSize: '0.625rem', fontWeight: 600, color: '#64748b', textAlign: 'center', marginTop: '0.25rem', wordBreak: 'break-all' }}>{url}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {!readOnly && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const newUrls = [...responses[item.id]];
+                                                                newUrls.splice(index, 1);
+                                                                handleInputChange(item.id, newUrls);
+                                                            }}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '0.5rem',
+                                                                right: '0.5rem',
+                                                                background: 'rgba(239, 68, 68, 0.9)',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '50%',
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: 'pointer',
+                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                                zIndex: 10
+                                                            }}
+                                                        >
+                                                            <X size={14} strokeWidth={3} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Upload trigger area */}
+                                    <label style={{
+                                        border: '2px dashed #e2e8f0',
+                                        borderRadius: '1rem',
+                                        padding: (Array.isArray(responses[item.id]) && responses[item.id].length > 0) ? '1.5rem' : '3rem 2rem',
+                                        textAlign: 'center',
+                                        background: uploadingFields[item.id] ? '#f1f5f9' : '#f8fafc',
+                                        cursor: (readOnly || uploadingFields[item.id]) ? 'default' : 'pointer',
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.75rem',
+                                        position: 'relative',
+                                        opacity: uploadingFields[item.id] ? 0.7 : 1,
+                                        minHeight: (Array.isArray(responses[item.id]) && responses[item.id].length > 0) ? '120px' : 'auto'
+                                    }}>
+                                        {uploadingFields[item.id] ? (
+                                            <Loader2 className="animate-spin" size={28} color="var(--primary)" />
+                                        ) : (
+                                            <Camera size={32} color="#94a3b8" />
+                                        )}
+                                        <div style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 600 }}>
+                                            {uploadingFields[item.id] ? 'Uploading...' : (Array.isArray(responses[item.id]) && responses[item.id].length > 0 ? 'Add more photos' : 'Click to upload photos')}
+                                        </div>
+
+                                        {!readOnly && !uploadingFields[item.id] && (
+                                            <input
+                                                type="file"
+                                                multiple
+                                                disabled={readOnly || uploadingFields[item.id]}
+                                                style={{ position: 'absolute', opacity: 0, inset: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                                                onChange={async (e) => {
+                                                    const files = Array.from(e.target.files || []);
+                                                    if (files.length === 0) return;
+
+                                                    setUploadingFields(prev => ({ ...prev, [item.id]: true }));
+                                                    try {
+                                                        const uploadPromises = files.map((file: File) =>
+                                                            uploadToCloudinary(file, 'auto', `${appointmentId}_${item.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`)
+                                                        );
+                                                        const urls = await Promise.all(uploadPromises);
+
+                                                        const currentResponses = Array.isArray(responses[item.id]) ? responses[item.id] : (responses[item.id] ? [responses[item.id]] : []);
+                                                        handleInputChange(item.id, [...currentResponses, ...urls]);
+                                                        showToast(`Successfully uploaded ${urls.length} files`, 'success');
+                                                    } catch (error: any) {
+                                                        console.error('Upload failed:', error);
+                                                        showToast(error.message || 'Failed to upload one or more files', 'error');
+                                                    } finally {
+                                                        setUploadingFields(prev => ({ ...prev, [item.id]: false }));
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    </label>
+                                </div>
+                            )}
+
+                            {/* Signature */}
+                            {item.type === 'signature' && (
+                                <div style={{
+                                    border: '2px solid #e2e8f0',
+                                    borderRadius: '1rem',
+                                    padding: '1rem',
+                                    background: 'white',
+                                    minHeight: '200px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}>
+                                    <SignaturePad
+                                        readOnly={readOnly}
+                                        existingSignatureUrl={responses[item.id]}
+                                        onSave={async (blob) => {
+                                            setUploadingFields(prev => ({ ...prev, [item.id]: true }));
+                                            try {
+                                                const url = await uploadToCloudinary(blob, 'image', `signature_${appointmentId}_${item.id}`);
+                                                handleInputChange(item.id, url);
+                                                showToast('Signature saved', 'success');
+                                            } catch (error: any) {
+                                                console.error('Signature upload failed:', error);
+                                                showToast('Failed to save signature', 'error');
+                                            } finally {
+                                                setUploadingFields(prev => ({ ...prev, [item.id]: false }));
+                                            }
+                                        }}
+                                        onClear={() => handleInputChange(item.id, null)}
+                                    />
+
+                                    {uploadingFields[item.id] && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background: 'rgba(255,255,255,0.7)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 20
+                                        }}>
+                                            <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+                                        </div>
+                                    )}
+
+                                    {readOnly && responses[item.id] && (
+                                        <div style={{ position: 'absolute', top: '1rem', right: '1rem', opacity: 0.1 }}>
+                                            <CheckCircle size={60} color="var(--primary)" />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
+                        {/* Layout: Section Header */}
+                        {item.type === 'section_header' && (
+                            <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>{item.label}</h3>
+                                <div style={{ height: '3px', background: 'linear-gradient(90deg, var(--primary) 0%, transparent 100%)', marginTop: '0.5rem', borderRadius: '2px', width: '60px' }} />
+                            </div>
+                        )}
+
+                        {/* Layout: Divider */}
+                        {item.type === 'divider' && (
+                            <div style={{ margin: '1rem 0' }}>
+                                <hr style={{ border: 'none', borderTop: '2px solid #f1f5f9' }} />
+                            </div>
+                        )}
+
+                        {/* Layout: Info Text */}
+                        {item.type === 'info_text' && (
+                            <div style={{
+                                background: '#f0f9ff',
+                                padding: '1.25rem',
+                                borderRadius: '1rem',
+                                borderLeft: '4px solid #0ea5e9',
+                                display: 'flex',
+                                gap: '1rem',
+                                alignItems: 'flex-start'
+                            }}>
+                                <AlertCircle size={20} color="#0ea5e9" style={{ marginTop: '2px' }} />
+                                <div>
+                                    <h4 style={{ fontSize: '0.925rem', fontWeight: 700, color: '#0369a1', margin: '0 0 0.25rem 0' }}>{item.label}</h4>
+                                    <p style={{ fontSize: '0.875rem', color: '#075985', margin: 0, lineHeight: 1.5 }}>{item.helperText}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Layout: Spacer */}
+                        {item.type === 'spacer' && (
+                            <div style={{ height: '40px' }} />
+                        )}
 
                         {/* Remarks Section - Only shows when needed or when viewing history */}
                         {((item.type === 'pass_fail' && responses[item.id] === 'Fail') || item.requireRemarks || (remarks[item.id] && readOnly)) && (

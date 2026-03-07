@@ -10,7 +10,7 @@ import { Button } from '../components/UI';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 
-type QuestionType = 'short_text' | 'long_text' | 'yes_no' | 'pass_fail' | 'number' | 'dropdown' | 'file_upload' | 'section_header' | 'divider' | 'multiple_choice' | 'single_choice' | 'date' | 'signature';
+type QuestionType = 'short_text' | 'long_text' | 'yes_no' | 'pass_fail' | 'number' | 'dropdown' | 'file_upload' | 'section_header' | 'divider' | 'multiple_choice' | 'single_choice' | 'date' | 'signature' | 'info_text' | 'spacer';
 
 interface ChecklistItem {
     id: string;
@@ -221,25 +221,29 @@ export const ChecklistBuilder: React.FC = () => {
                     <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', letterSpacing: '0.05em' }}>QUESTION TYPES</h3>
                 </div>
 
-                <div style={{ overflowY: 'auto', padding: '0', flex: 1 }}>
-                    <DraggableItem icon={<AlignLeft size={16} />} label="Short Text" onClick={() => handleAddItem('short_text')} />
-                    <DraggableItem icon={<AlignJustify size={16} />} label="Long Text" onClick={() => handleAddItem('long_text')} />
-                    <DraggableItem icon={<CheckCircle size={16} />} label="Yes / No" onClick={() => handleAddItem('yes_no')} />
-                    <DraggableItem icon={<CheckSquare size={16} />} label="Pass / Fail / N/A" onClick={() => handleAddItem('pass_fail')} />
-                    <DraggableItem icon={<Hash size={16} />} label="Number" onClick={() => handleAddItem('number')} />
-                    <DraggableItem icon={<ChevronDown size={16} />} label="Dropdown" onClick={() => handleAddItem('dropdown')} />
-                    <DraggableItem icon={<ListChecks size={16} />} label="Multiple Choice" onClick={() => handleAddItem('multiple_choice')} />
-                    <DraggableItem icon={<CircleDot size={16} />} label="Single Choice" onClick={() => handleAddItem('single_choice')} />
-                    <DraggableItem icon={<Upload size={16} />} label="File Upload" onClick={() => handleAddItem('file_upload')} />
-                    <DraggableItem icon={<Calendar size={16} />} label="Date / Time" onClick={() => handleAddItem('date')} />
-                    <DraggableItem icon={<PenTool size={16} />} label="Signature" onClick={() => handleAddItem('signature')} />
+                <div className="custom-scrollbar" style={{ padding: '0.5rem 1rem 2rem', overflowY: 'auto', flex: 1 }}>
+                    <div style={{ fontSize: '0.675rem', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', marginBottom: '1rem', paddingLeft: '0.5rem' }}>BASIC FIELDS</div>
+                    <DraggableItem icon={<AlignLeft size={16} color="#6366F1" />} label="Short Text" onClick={() => handleAddItem('short_text')} />
+                    <DraggableItem icon={<AlignJustify size={16} color="#6366F1" />} label="Long Text" onClick={() => handleAddItem('long_text')} />
+                    <DraggableItem icon={<Hash size={16} color="#6366F1" />} label="Number" onClick={() => handleAddItem('number')} />
 
-                    <div style={{ padding: '2rem 1.25rem 1rem' }}>
-                        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', letterSpacing: '0.05em' }}>LAYOUT & ADVANCED</h3>
-                    </div>
+                    <div style={{ fontSize: '0.675rem', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', margin: '2rem 0 1rem', paddingLeft: '0.5rem' }}>CHOICE FIELDS</div>
+                    <DraggableItem icon={<ChevronDown size={16} color="#EC4899" />} label="Dropdown" onClick={() => handleAddItem('dropdown')} />
+                    <DraggableItem icon={<ListChecks size={16} color="#EC4899" />} label="Multiple Choice" onClick={() => handleAddItem('multiple_choice')} />
+                    <DraggableItem icon={<CircleDot size={16} color="#EC4899" />} label="Single Choice" onClick={() => handleAddItem('single_choice')} />
+                    <DraggableItem icon={<CheckSquare size={16} color="#10B981" />} label="Yes / No" onClick={() => handleAddItem('yes_no')} />
+                    <DraggableItem icon={<CheckCircle size={16} color="#10B981" />} label="Pass / Fail" onClick={() => handleAddItem('pass_fail')} />
 
-                    <DraggableItem icon={<LayoutTemplate size={16} />} label="Section Header" onClick={() => handleAddItem('section_header')} />
-                    <DraggableItem icon={<Minus size={16} />} label="Divider" onClick={() => handleAddItem('divider')} />
+                    <div style={{ fontSize: '0.675rem', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', margin: '2rem 0 1rem', paddingLeft: '0.5rem' }}>ADVANCED FIELDS</div>
+                    <DraggableItem icon={<Upload size={16} color="#F59E0B" />} label="File Upload" onClick={() => handleAddItem('file_upload')} />
+                    <DraggableItem icon={<Calendar size={16} color="#F59E0B" />} label="Date / Time" onClick={() => handleAddItem('date')} />
+                    <DraggableItem icon={<PenTool size={16} color="#F59E0B" />} label="Signature" onClick={() => handleAddItem('signature')} />
+
+                    <div style={{ fontSize: '0.675rem', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', margin: '2rem 0 1rem', paddingLeft: '0.5rem' }}>LAYOUT ELEMENTS</div>
+                    <DraggableItem icon={<LayoutTemplate size={16} color="#64748B" />} label="Section Header" onClick={() => handleAddItem('section_header')} />
+                    <DraggableItem icon={<MessageSquare size={16} color="#64748B" />} label="Info Text" onClick={() => handleAddItem('info_text')} />
+                    <DraggableItem icon={<Minus size={16} color="#64748B" />} label="Divider" onClick={() => handleAddItem('divider')} />
+                    <DraggableItem icon={<ArrowDown size={16} color="#64748B" />} label="Vertical Spacer" onClick={() => handleAddItem('spacer')} />
                 </div>
             </div>
 
@@ -613,9 +617,12 @@ export const ChecklistBuilder: React.FC = () => {
                                                         </div>
                                                     )}
                                                     {item.type === 'signature' && (
-                                                        <div style={{ border: '1px solid #CBD5E1', padding: '2rem', borderRadius: '0.5rem', textAlign: 'center', background: '#F8FAFC', color: '#94A3B8' }}>
-                                                            <span style={{ fontSize: '0.75rem' }}>Sign Here</span>
+                                                        <div style={{ border: '1.5px solid #E2E8F0', borderRadius: '1rem', padding: '1.5rem', background: 'white', minHeight: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1' }}>
+                                                            <PenTool size={20} />
                                                         </div>
+                                                    )}
+                                                    {item.type === 'spacer' && (
+                                                        <div style={{ height: '40px' }} />
                                                     )}
                                                 </>
                                             )}
