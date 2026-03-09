@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Card } from '../UI';
+import { Skeleton } from '../Skeleton';
 import { User, Receipt } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCurrency } from '../CurrencyContext';
@@ -38,9 +39,9 @@ export const CashierSummaryCard: React.FC<CashierSummaryCardProps> = ({ sales, l
             <div className="space-y-4">
                 {loading ? (
                     [1, 2, 3].map(i => (
-                        <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800 animate-pulse">
-                            <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                            <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                        <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                            <Skeleton width="100px" height="1rem" />
+                            <Skeleton width="60px" height="1rem" />
                         </div>
                     ))
                 ) : summary.length === 0 ? (

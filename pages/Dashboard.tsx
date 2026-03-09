@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Users, DollarSign, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { KPICard, Card, Button } from '../components/UI';
+import { Skeleton } from '../components/Skeleton';
 import { WeeklyCalendar } from '../components/WeeklyCalendar';
 import { useToast } from '../components/ToastContext';
 import { useCurrency } from '../components/CurrencyContext';
@@ -307,42 +308,49 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleRefresh = () => {
-    fetchSummary();
-    fetchAppointments();
-    fetchSales();
-    fetchPayments();
-    fetchInventory();
+  const handleRefresh = async () => {
+    // Priority: Summary first
+    await fetchSummary();
+
+    // Others in background
+    Promise.all([
+      fetchAppointments(),
+      fetchSales(),
+      fetchPayments(),
+      fetchInventory()
+    ]);
   };
 
   useEffect(() => {
-    fetchSummary();
-    fetchAppointments();
-    fetchSales();
-    fetchPayments();
-    fetchInventory();
+    // Initial Load - Critical First
+    const init = async () => {
+      // 1. Fetch Summary immediately for KPIs
+      await fetchSummary();
+
+      // 2. Fetch non-critical data in background
+      fetchAppointments();
+      fetchSales();
+      fetchPayments();
+      fetchInventory();
+    };
+    init();
   }, []);
 
-  // Calculate Metrics when filter or data changes
-  useEffect(() => {
-    // We need both appointments and sales to calculate some metrics,
-    // but we can calculate what we have progressively.
+  // ─── OPTIMIZED METRICS CALCULATION ─────────────────────────────────────────
+  const metrics = useMemo(() => {
     const { start, end } = getFilterDateRange(filterType, customRange.start, customRange.end);
 
-    // Filter Appointments by Date Range
+    // 1. Filter Appointments
     const filteredAppointments = allAppointments.filter((apt: any) => {
       let aptDateStr = '';
       if (apt.date) aptDateStr = getLocalDateString(new Date(apt.date));
       else if (apt.startTime) aptDateStr = getLocalDateString(new Date(apt.startTime));
-
       const aptDate = new Date(aptDateStr);
       aptDate.setHours(0, 0, 0, 0);
-
       return aptDate >= start && aptDate <= end && apt.status !== 'CANCELLED';
     });
 
-    // Filter Sales by Date Range — only count COMPLETED sales with actual revenue
-    // Excludes: CANCELLED, DRAFT, REFUNDED, and zero-amount redemptions (vouchers/packages)
+    // 2. Filter Sales
     const filteredSales = allSalesCache.filter((sale: any) => {
       const saleDate = new Date(new Date(sale.createdAt).setHours(0, 0, 0, 0));
       return (
@@ -353,13 +361,13 @@ const Dashboard: React.FC = () => {
       );
     });
 
-    // Filter Payments by Date Range
+    // 3. Filter Payments
     const filteredPayments = allPaymentsCache.filter((payment: any) => {
       const paymentDate = new Date(new Date(payment.createdAt).setHours(0, 0, 0, 0));
       return paymentDate >= start && paymentDate <= end && payment.paymentStatus !== 'FAILED' && payment.paymentStatus !== 'REFUNDED';
     });
 
-    // Calculate Counts
+    // 4. Calculate Current Period Totals
     const aptCount = filteredAppointments.length;
     const salesCount = filteredSales.length;
     const uniqueSpecialists = new Set(
@@ -368,7 +376,6 @@ const Dashboard: React.FC = () => {
         .filter((val: any) => val && val !== 'null' && val !== 'undefined' && val !== 'Unassigned' && val !== 'Walk-in')
     ).size;
 
-    // Use payment records (same as Transaction page) so both screens match
     const revenue = filteredPayments.reduce((sum: number, payment: any) =>
       payment.paymentStatus === 'COMPLETED' ? sum + (payment.amount || 0) : sum, 0
     );
@@ -376,7 +383,7 @@ const Dashboard: React.FC = () => {
       apt.status === 'PENDING' || apt.status === 'CONFIRMED'
     ).length;
 
-    // Comparison calculations
+    // 5. Comparison Calculations
     let comparisons: any = undefined;
     if (isCompareEnabled) {
       const { start: prevStart, end: prevEnd, label } = getPreviousDateRange(start, end, comparisonType, customCompareRange);
@@ -446,45 +453,26 @@ const Dashboard: React.FC = () => {
       };
     }
 
-    setDashboardData(prev => ({
-      ...prev,
-      todayAppointments: aptCount,
-      todaySalesCount: salesCount,
-      staffWorking: uniqueSpecialists,
-      revenueToday: revenue,
-      pendingRequests: pending,
-      activeSales: filteredSales, // Store for CashierSummary
-      filteredSales: filteredSales,
-      filteredPayments: filteredPayments, // Store filtered payments for CashierSummary
-      comparisons
-    }));
-
-    // Update Revenue Chart based on Filter
-    generateRevenueChart(allSalesCache, start, end, filterType);
-
-  }, [filterType, customRange, allAppointments, allSalesCache, allPaymentsCache, isCompareEnabled, comparisonType, customCompareRange]);
-
-  const generateRevenueChart = (sales: any[], start: Date, end: Date, type: FilterType) => {
+    // 6. Generate Revenue Chart Data
     const formatDateKey = (d: Date) => d.toISOString().split('T')[0];
+    let chartData: any[] = [];
 
-    if (type === 'yearly') {
+    if (filterType === 'yearly') {
       const monthlyData = Array(12).fill(0);
-      sales.forEach(sale => {
+      allSalesCache.forEach(sale => {
         const d = new Date(sale.createdAt);
         if (d >= start && d <= end && sale.saleStatus !== 'CANCELLED') {
           monthlyData[d.getMonth()] += (sale.paidAmount || 0);
         }
       });
 
-      const chartData = monthlyData.map((val, idx) => ({
+      chartData = monthlyData.map((val, idx) => ({
         date: new Date(start.getFullYear(), idx, 1).toLocaleDateString('en-US', { month: 'short' }),
         revenue: val
       }));
-      setRevenueData(chartData);
-
     } else {
       const dayDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-      const chartPoints = [];
+      const chartPoints: any[] = [];
 
       for (let i = 0; i <= dayDiff; i++) {
         const d = new Date(start);
@@ -494,7 +482,7 @@ const Dashboard: React.FC = () => {
         chartPoints.push({ key, label, revenue: 0 });
       }
 
-      sales.forEach(sale => {
+      allSalesCache.forEach(sale => {
         const d = new Date(sale.createdAt);
         if (d >= start && d <= end && sale.saleStatus !== 'CANCELLED') {
           const key = formatDateKey(d);
@@ -503,9 +491,42 @@ const Dashboard: React.FC = () => {
         }
       });
 
-      setRevenueData(chartPoints.map(p => ({ date: p.label, revenue: p.revenue })));
+      chartData = chartPoints.map(p => ({ date: p.label, revenue: p.revenue }));
     }
-  };
+
+    return {
+      aptCount,
+      salesCount,
+      uniqueSpecialists,
+      revenue,
+      pending,
+      filteredSales,
+      filteredPayments,
+      comparisons,
+      chartData,
+      start,
+      end
+    };
+  }, [filterType, customRange, allAppointments, allSalesCache, allPaymentsCache, isCompareEnabled, comparisonType, customCompareRange]);
+
+  // Effect to sync metrics to dashboardData and chart (triggers only when metrics object changes)
+  useEffect(() => {
+    setDashboardData(prev => ({
+      ...prev,
+      todayAppointments: metrics.aptCount,
+      todaySalesCount: metrics.salesCount,
+      staffWorking: metrics.uniqueSpecialists,
+      revenueToday: metrics.revenue,
+      pendingRequests: metrics.pending,
+      activeSales: metrics.filteredSales,
+      filteredSales: metrics.filteredSales,
+      filteredPayments: metrics.filteredPayments,
+      comparisons: metrics.comparisons
+    }));
+
+    setRevenueData(metrics.chartData);
+  }, [metrics]);
+
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -620,6 +641,7 @@ const Dashboard: React.FC = () => {
           icon={Calendar}
           color="text-pink-500"
           comparison={dashboardData.comparisons?.appointments}
+          loading={statsLoading}
         />
         <KPICard
           title={`${getFilterLabel()} Sales`}
@@ -627,6 +649,7 @@ const Dashboard: React.FC = () => {
           icon={Users}
           color="#8b5cf6"
           comparison={dashboardData.comparisons?.sales}
+          loading={statsLoading}
         />
         <KPICard
           title={`${getFilterLabel()} Revenue`}
@@ -634,6 +657,7 @@ const Dashboard: React.FC = () => {
           icon={DollarSign}
           color="#22c55e"
           comparison={dashboardData.comparisons?.revenue}
+          loading={statsLoading}
         />
         <KPICard
           title="Pending Requests"
@@ -641,22 +665,35 @@ const Dashboard: React.FC = () => {
           icon={Clock}
           color="#f97316"
           comparison={dashboardData.comparisons?.pending}
+          loading={statsLoading}
         />
       </motion.div>
 
       <motion.div variants={itemVariants} className="dashboard-grid-2">
         <div>
-          <RevenueChart data={revenueData} title="Revenue History" />
+          {statsLoading && revenueData.length === 0 ? (
+            <Card title="Revenue History">
+              <Skeleton width="100%" height="300px" style={{ borderRadius: '1rem' }} />
+            </Card>
+          ) : (
+            <RevenueChart data={revenueData} title="Revenue History" />
+          )}
         </div>
         <div>
-          <TopServicesChart data={serviceData} />
+          {statsLoading && serviceData.length === 0 ? (
+            <Card title="Top Services">
+              <Skeleton width="100%" height="300px" style={{ borderRadius: '1rem' }} />
+            </Card>
+          ) : (
+            <TopServicesChart data={serviceData} />
+          )}
         </div>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid lg-grid-cols-4" style={{ gap: '1.5rem' }}>
-        <PendingPaymentsCard pendingPayments={dashboardData.pendingPayments || []} />
-        <CashierSummaryCard sales={dashboardData.filteredPayments || []} loading={false} />
-        <InventoryAlertsCard lowStockAlerts={dashboardData.lowStockAlerts || []} loading={false} />
+        <PendingPaymentsCard pendingPayments={dashboardData.pendingPayments || []} loading={statsLoading} />
+        <CashierSummaryCard sales={dashboardData.filteredPayments || []} loading={paymentsLoading} />
+        <InventoryAlertsCard lowStockAlerts={dashboardData.lowStockAlerts || []} loading={inventoryLoading} />
         <NewCustomersCard customers={dashboardData.newCustomersToday || []} loading={statsLoading} />
       </motion.div>
 
@@ -664,13 +701,21 @@ const Dashboard: React.FC = () => {
         {/* Main Calendar View */}
         <div>
           <Card title="Detailed Schedule" className="w-full scrollbar-hide" style={{ height: '750px', overflowY: 'auto' }}>
-            <WeeklyCalendar appointments={allAppointments} />
+            {appointmentsLoading && allAppointments.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <Skeleton key={i} width="100%" height="50px" style={{ borderRadius: '0.5rem' }} />
+                ))}
+              </div>
+            ) : (
+              <WeeklyCalendar appointments={allAppointments} />
+            )}
           </Card>
         </div>
 
         {/* Top Specialists Only */}
         <div>
-          <TopStylists data={specialistData} />
+          <TopStylists data={specialistData} loading={statsLoading} />
         </div>
       </motion.div>
       {/* <div style={{

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../redux/store';
 import { fetchCustomers, invalidateCustomerCache } from '../redux/slices/customerSlice';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,19 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const { showToast } = useToast();
     const { symbol } = useCurrency();
     const { isStaff } = useAuth();
+    const { user } = useSelector((state: RootState) => state.auth);
+    const { appId: appIdParam, businessName: businessNameParam } = useParams<{ appId: string; businessName: string }>();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Robust extraction of business info
+    const businessName = businessNameParam || (user as any)?.businessName || localStorage.getItem('businessName') || '';
+    const appId = appIdParam || (user as any)?.appName || localStorage.getItem('appId') || '';
+
+    // Save to localStorage for survival across reloads/navs if needed
+    useEffect(() => {
+        if (businessName) localStorage.setItem('businessName', businessName);
+        if (appId) localStorage.setItem('appId', appId);
+    }, [businessName, appId]);
 
     const maskPhone = (phone: string | undefined) => {
         if (!phone) return 'N/A';
@@ -45,7 +59,15 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     // const [customers, setCustomers] = useState<Customer[]>([]); // Removed local state
     // const [loading, setLoading] = useState(false); // Removed local state
     const [isInitialLoading, setIsInitialLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const isModalOpen = searchParams.get('modal') === 'add-customer';
+    const setIsModalOpen = (open: boolean) => {
+        if (open) {
+            searchParams.set('modal', 'add-customer');
+        } else {
+            searchParams.delete('modal');
+        }
+        setSearchParams(searchParams);
+    };
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [customerAppointments, setCustomerAppointments] = useState<Appointment[]>([]);
@@ -783,7 +805,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                 </div>
             </div>
 
-            <Table columns={columns} data={paginatedCustomers} />
+            <Table columns={columns} data={paginatedCustomers} isLoading={customersLoading} skeletonCount={10} />
 
             {/* Enhanced Pagination Controls */}
             {filteredCustomers.length > 0 && (
@@ -1056,7 +1078,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         <Checkbox
                             label={
                                 <span>
-                                    I agree to the <span style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Terms and Conditions</span> and <span style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Privacy Policy</span>
+                                    I agree to the <Link to={`/${appId}/${businessName}/terms-and-conditions`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Terms and Conditions</Link> and <Link to={`/${appId}/${businessName}/privacy-policy`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Privacy Policy</Link>
                                 </span>
                             }
                             checked={acceptedTerms}

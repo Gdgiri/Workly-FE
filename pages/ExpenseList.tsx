@@ -10,6 +10,7 @@ import { fetchExpenses, deleteExpense, createExpense, updateExpense, Expense } f
 // But first let's check expenseSlice to be sure.
 
 import { Card, Button, Input, Table, Modal, Select, KPICard } from '../components/UI';
+import { Skeleton } from '../components/Skeleton';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useToast } from '../components/ToastContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
@@ -225,6 +226,7 @@ const ExpenseList: React.FC = () => {
                             icon={Wallet}
                             color="#6366f1"
                             variant="colored"
+                            loading={loading}
                         />
 
                         <KPICard
@@ -233,6 +235,7 @@ const ExpenseList: React.FC = () => {
                             icon={Zap}
                             color="#f59e0b"
                             variant="colored"
+                            loading={loading}
                         />
 
                         <KPICard
@@ -241,12 +244,15 @@ const ExpenseList: React.FC = () => {
                             icon={Hash}
                             color="#8b5cf6"
                             variant="colored"
+                            loading={loading}
                         />
 
                         {/* Category Distribution Chart */}
                         <Card style={{ padding: '1rem' }}>
                             <div style={{ width: '100%', height: 100 }}>
-                                {chartData.length > 0 ? (
+                                {loading && chartData.length === 0 ? (
+                                    <Skeleton width="100%" height="80px" />
+                                ) : chartData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../UI';
+import { Skeleton } from '../Skeleton';
 import { Package, AlertCircle, ArrowRight, Zap, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -54,7 +55,7 @@ export const InventoryAlertsCard: React.FC<InventoryAlertsCardProps> = ({ lowSto
                 {loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {[1, 2, 3].map(i => (
-                            <div key={i} style={{ height: '4rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-xl)', animation: 'pulse 2s infinite' }} />
+                            <Skeleton key={i} width="100%" height="4rem" style={{ borderRadius: 'var(--radius-xl)' }} />
                         ))}
                     </div>
                 ) : displayProducts.length === 0 ? (

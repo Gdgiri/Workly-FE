@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link, useParams, useSearchParams } from 'react-router-dom';
 import { Search, Plus, Minus, User, UserPlus, CreditCard, ShoppingBag, UserCog, Package, Ticket, X, AlertTriangle, CheckCircle, Smartphone, DollarSign, Wallet, Paperclip, Printer, ChevronDown } from 'lucide-react';
 import { Card, Button, Input, Modal, Select, Checkbox } from '../components/UI';
 import { PaymentMethod, CartItem, ComboPackage, Voucher, VoucherClaim, Customer, Stylist } from '../types';
@@ -22,6 +22,7 @@ import { fetchPackages } from '../redux/slices/packageSlice';
 import { fetchPayments, invalidatePaymentCache } from '../redux/slices/paymentSlice';
 import { fetchCustomers, createCustomer, invalidateCustomerCache } from '../redux/slices/customerSlice';
 import { fetchSettings } from '../redux/slices/settingSlice';
+import { Skeleton } from '../components/Skeleton';
 
 interface SalesProps {
   paymentMethods: PaymentMethod[];
@@ -81,6 +82,19 @@ const Sales: React.FC<SalesProps> = ({
   const { formatPrice, currency, symbol } = useCurrency();
   const { showToast } = useToast();
   const { user, isStaff, isAdmin } = useAuth(); // Get user, isStaff and isAdmin from auth hook
+  const { appId: appIdParam, businessName: businessNameParam } = useParams<{ appId: string; businessName: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Robust extraction of business info
+  const businessName = businessNameParam || (user as any)?.businessName || localStorage.getItem('businessName') || '';
+  const appId = appIdParam || (user as any)?.appName || localStorage.getItem('appId') || '';
+
+  // Save to localStorage for survival
+  useEffect(() => {
+    if (businessName) localStorage.setItem('businessName', businessName);
+    if (appId) localStorage.setItem('appId', appId);
+  }, [businessName, appId]);
+
   const isIndianBeautyArt = user?.businessName?.toLowerCase() === 'indianbeautyart';
   const shouldHideFeatures = isIndianBeautyArt && (isAdmin || isStaff);
   const location = useLocation();
@@ -288,7 +302,15 @@ const Sales: React.FC<SalesProps> = ({
 
   // Customer State
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
-  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const isAddCustomerModalOpen = searchParams.get('modal') === 'add-customer';
+  const setIsAddCustomerModalOpen = (open: boolean) => {
+    if (open) {
+      searchParams.set('modal', 'add-customer');
+    } else {
+      searchParams.delete('modal');
+    }
+    setSearchParams(searchParams);
+  };
 
   // New Customer State
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
@@ -2138,7 +2160,11 @@ const Sales: React.FC<SalesProps> = ({
                 width: '100%',
                 flexWrap: 'wrap', // Wrap to next line
               }}>
-                {categories.map(cat => (
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} width="80px" height="1.8rem" style={{ borderRadius: '2rem' }} />
+                  ))
+                ) : categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
@@ -2169,134 +2195,178 @@ const Sales: React.FC<SalesProps> = ({
 
           {/* Item Grid */}
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridAutoRows: 'max-content', gap: '0.55rem', paddingBottom: '0.8rem' }}>
-            {filteredItems.map(item => {
-              // NEW: Aggregate logic to show total available redemptions across all packages
-              const allMatchingUsageItems = customerPackages.flatMap(pkg => {
-                const items = pkg.usageDetails?.filter((u: any) =>
-                  (u.itemId === item.id || u.name === item.name) && u.remainingQuantity > 0
-                ) || [];
-                return items.map((u: any) => ({ ...u, packageId: pkg.id }));
-              });
-
-              const totalRemaining = allMatchingUsageItems.reduce((sum, u) => sum + u.remainingQuantity, 0);
-
-              // For card display, we still need ONE package to target when clicking "Redeem"
-              // We'll pick the first one with balance
-              const usageItem = allMatchingUsageItems.length > 0 ? allMatchingUsageItems[0] : null;
-              const matchingPkg = usageItem ? customerPackages.find(p => p.id === usageItem.packageId) : null;
-
-              return (
-                <motion.div
-                  key={item.id}
-                  className="dark:bg-slate-900 dark:border-slate-700"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.06)' }}
-                  transition={{ duration: 0.2 }}
-                  onClick={() => {
-                    if (matchingPkg && usageItem) {
-                      // REDEMPTION LOGIC - Works for all tabs (Services, Products, Combos)
-                      const itemToAdd = {
-                        id: usageItem.itemId || item.id || 'temp-' + Math.random(),
-                        name: usageItem.name || item.name,
-                        price: 0,
-                      };
-                      addToCart(itemToAdd, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : 'service', {
-                        packageId: matchingPkg.id,
-                        itemId: usageItem.itemId || usageItem.name
-                      });
-                      // Toast removed - notification is handled in updateQuantity when exceeding free limit
-                    } else {
-                      // NORMAL PURCHASE LOGIC - No package match
-                      addToCart(item, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : activeTab === 'vouchers' ? 'voucher' : 'combo');
-                    }
-                  }}
+            {loading ? (
+              // Loading Skeletons
+              Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
                   style={{
                     background: 'var(--bg-card)',
                     borderRadius: '1rem',
                     padding: '0.6rem',
                     border: '1px solid var(--border)',
-                    cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    height: '100%',
+                    gap: '0.5rem',
+                    height: '110px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'visible' // Ensure badge can still be seen if slightly offset
                   }}
                 >
-
-                  {/* Badge UI - Show when item can be redeemed from package */}
-                  {matchingPkg && usageItem && (
-                    <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 10 }}>
-                      <div
-                        style={{
-                          background: 'rgba(16, 185, 129, 0.2)',
-                          color: 'var(--success)',
-                          borderRadius: '2rem',
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.65rem',
-                          fontWeight: 800,
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1)',
-                        }}
-                      >
-                        Redeem ({totalRemaining})
-                      </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Skeleton width="70%" height="1.2rem" />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
+                    <Skeleton width="32px" height="32px" variant="rectangular" style={{ borderRadius: '0.5rem' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                      <Skeleton width="40px" height="0.8rem" />
+                      <Skeleton width="60px" height="1.1rem" />
                     </div>
-                  )}
+                  </div>
+                </div>
+              ))
+            ) : filteredItems.length > 0 ? (
+              filteredItems.map(item => {
+                // NEW: Aggregate logic to show total available redemptions across all packages
+                const allMatchingUsageItems = customerPackages.flatMap(pkg => {
+                  const items = pkg.usageDetails?.filter((u: any) =>
+                    (u.itemId === item.id || u.name === item.name) && u.remainingQuantity > 0
+                  ) || [];
+                  return items.map((u: any) => ({ ...u, packageId: pkg.id }));
+                });
 
+                const totalRemaining = allMatchingUsageItems.reduce((sum, u) => sum + u.remainingQuantity, 0);
 
+                // For card display, we still need ONE package to target when clicking "Redeem"
+                // We'll pick the first one with balance
+                const usageItem = allMatchingUsageItems.length > 0 ? allMatchingUsageItems[0] : null;
+                const matchingPkg = usageItem ? customerPackages.find(p => p.id === usageItem.packageId) : null;
 
-                  {/* Card Content - Horizontal Layout: Top: Name | Duration, Bottom: Image | Amount */}
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.5rem' }}>
-                    {/* Top Row: Name only */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                      <h4 className="text-slate-900 dark:text-slate-100" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.3, flex: 1, textAlign: 'left' }}>
-                        {item.name}
-                      </h4>
-                    </div>
+                return (
+                  <motion.div
+                    key={item.id}
+                    className="dark:bg-slate-900 dark:border-slate-700"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.06)' }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => {
+                      if (matchingPkg && usageItem) {
+                        // REDEMPTION LOGIC - Works for all tabs (Services, Products, Combos)
+                        const itemToAdd = {
+                          id: usageItem.itemId || item.id || 'temp-' + Math.random(),
+                          name: usageItem.name || item.name,
+                          price: 0,
+                        };
+                        addToCart(itemToAdd, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : 'service', {
+                          packageId: matchingPkg.id,
+                          itemId: usageItem.itemId || usageItem.name
+                        });
+                        // Toast removed - notification is handled in updateQuantity when exceeding free limit
+                      } else {
+                        // NORMAL PURCHASE LOGIC - No package match
+                        addToCart(item, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : activeTab === 'vouchers' ? 'voucher' : 'combo');
+                      }
+                    }}
+                    style={{
+                      background: 'var(--bg-card)',
+                      borderRadius: '1rem',
+                      padding: '0.6rem',
+                      border: '1px solid var(--border)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      height: '100%',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'visible' // Ensure badge can still be seen if slightly offset
+                    }}
+                  >
 
-                    {/* Bottom Row: Image (left) | Duration & Amount (right) */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
-                      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-                        <ServiceAvatar
-                          name={item.name}
-                          imgUrl={(item as any).imgUrl}
-                          size={32}
-                          shape="rectangle"
-                        />
+                    {/* Badge UI - Show when item can be redeemed from package */}
+                    {matchingPkg && usageItem && (
+                      <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 10 }}>
+                        <div
+                          style={{
+                            background: 'rgba(16, 185, 129, 0.2)',
+                            color: 'var(--success)',
+                            borderRadius: '2rem',
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1)',
+                          }}
+                        >
+                          Redeem ({totalRemaining})
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                        <p className="text-slate-600 dark:text-slate-400" style={{ margin: 0, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                          {activeTab === 'services'
-                            ? `${(item as any).duration} mins`
-                            : activeTab === 'products'
-                              ? `${(item as any).stock} in stock`
-                              : activeTab === 'vouchers'
-                                ? (
-                                  <>
-                                    {/* Expiry: {new Date((item as any).expiryDate).toLocaleDateString()}
+                    )}
+
+
+
+                    {/* Card Content - Horizontal Layout: Top: Name | Duration, Bottom: Image | Amount */}
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.5rem' }}>
+                      {/* Top Row: Name only */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <h4 className="text-slate-900 dark:text-slate-100" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.3, flex: 1, textAlign: 'left' }}>
+                          {item.name}
+                        </h4>
+                      </div>
+
+                      {/* Bottom Row: Image (left) | Duration & Amount (right) */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
+                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                          <ServiceAvatar
+                            name={item.name}
+                            imgUrl={(item as any).imgUrl}
+                            size={32}
+                            shape="rectangle"
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                          <p className="text-slate-600 dark:text-slate-400" style={{ margin: 0, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                            {activeTab === 'services'
+                              ? `${(item as any).duration} mins`
+                              : activeTab === 'products'
+                                ? `${(item as any).stock} in stock`
+                                : activeTab === 'vouchers'
+                                  ? (
+                                    <>
+                                      {/* Expiry: {new Date((item as any).expiryDate).toLocaleDateString()}
                                     <br /> */}
-                                    Value: {formatPrice((item as any).value)}
-                                  </>
-                                )
-                                : `${(item as any).items.length} items`
-                          }
-                        </p>
-                        <div className="text-slate-900 dark:text-white" style={{ fontWeight: 800, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
-                          {formatPrice(activeTab === 'vouchers' ? (item as any).sellingPrice : item.price)}
+                                      Value: {formatPrice((item as any).value)}
+                                    </>
+                                  )
+                                  : `${(item as any).items.length} items`
+                            }
+                          </p>
+                          <div className="text-slate-900 dark:text-white" style={{ fontWeight: 800, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
+                            {formatPrice(activeTab === 'vouchers' ? (item as any).sellingPrice : item.price)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              );
-            }
+                  </motion.div>
+                );
+              })
+            ) : (
+              <div style={{
+                gridColumn: '1 / -1',
+                padding: '3rem',
+                textAlign: 'center',
+                background: 'var(--bg-card)',
+                borderRadius: '1rem',
+                border: '1px solid var(--border)',
+                color: 'var(--text-gray)'
+              }}>
+                <ShoppingBag size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                <p style={{ fontWeight: 600 }}>No items found</p>
+                <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Try changing your category or search term</p>
+              </div>
             )}
           </div>
         </div>
@@ -2326,7 +2396,25 @@ const Sales: React.FC<SalesProps> = ({
             gap: '0.1rem'
           }}>
 
-            {selectedCustomer ? (
+            {customersLoading ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--bg-hover)',
+                padding: '0.65rem 0.875rem',
+                borderRadius: '1rem',
+                border: '1px solid var(--border)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                  <Skeleton width="32px" height="32px" style={{ borderRadius: '10px' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Skeleton width="120px" height="1rem" />
+                    <Skeleton width="80px" height="0.75rem" />
+                  </div>
+                </div>
+              </div>
+            ) : selectedCustomer ? (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -2396,7 +2484,7 @@ const Sales: React.FC<SalesProps> = ({
                       style={{
                         width: '100%',
                         height: '2.5rem',
-                        padding: '0 1rem 0 2.75rem',
+                        padding: '0 2.5rem 0 2.75rem',
                         fontSize: '0.875rem',
                         border: '1px solid var(--border)',
                         borderRadius: '1rem',
@@ -2417,6 +2505,35 @@ const Sales: React.FC<SalesProps> = ({
                         e.currentTarget.style.boxShadow = 'none';
                       }}
                     />
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsCustomerDropdownOpen(!isCustomerDropdownOpen);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-gray)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0.25rem',
+                        borderRadius: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <ChevronDown size={18} style={{
+                        transform: isCustomerDropdownOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                      }} />
+                    </button>
                   </div>
 
                   {/* Action Group */}
@@ -2520,7 +2637,7 @@ const Sales: React.FC<SalesProps> = ({
 
 
                 {/* Customer Dropdown */}
-                {isCustomerDropdownOpen && customerSearchTerm && (
+                {isCustomerDropdownOpen && (
                   <div
                     style={{
                       position: 'absolute',
@@ -2528,135 +2645,170 @@ const Sales: React.FC<SalesProps> = ({
                       left: 0,
                       right: 0,
                       marginTop: '0.5rem',
-                      background: 'var(--bg-card)',
+                      background: 'white',
                       borderRadius: '1rem',
-                      boxShadow: 'var(--shadow-xl)',
+                      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
                       border: '1px solid var(--border-light)',
                       zIndex: 100,
-                      maxHeight: '240px',
-                      overflowY: 'auto',
-                      overflowX: 'hidden',
-                      padding: '0.5rem'
+                      maxHeight: '400px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
                     }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {/* Customer List */}
-                    {filteredCustomers.length > 0 && (
-                      <>
-                        <div style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          color: 'var(--text-light)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          padding: '0.5rem 1rem 0.25rem'
-                        }}>
-                          Customers
-                        </div>
-                        {filteredCustomers.map(c => (
-                          <div
-                            key={c.id}
-                            onClick={() => handleSelectCustomer(c)}
+                    {/* Persistent Search Box Inside Dropdown */}
+                    <div style={{
+                      padding: '0.75rem',
+                      borderBottom: '1px solid var(--border-light)',
+                      background: 'var(--bg-body)',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10
+                    }}>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)' }} />
+                        <input
+                          type="text"
+                          placeholder="Type to filter..."
+                          autoFocus
+                          value={customerSearchTerm}
+                          onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                          style={{
+                            width: '100%',
+                            height: '2.25rem',
+                            padding: '0 0.75rem 0 2.25rem',
+                            fontSize: '0.85rem',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: '0.75rem',
+                            outline: 'none',
+                            background: 'white',
+                            color: 'var(--text-dark)'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ overflowY: 'auto', padding: '0.5rem', flex: 1 }}>
+                      {/* Customer List */}
+                      {filteredCustomers.length > 0 && (
+                        <>
+                          <div style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: 'var(--text-light)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            padding: '0.5rem 1rem 0.25rem'
+                          }}>
+                            Customers
+                          </div>
+                          {filteredCustomers.map(c => (
+                            <div
+                              key={c.id}
+                              onClick={() => handleSelectCustomer(c)}
+                              style={{
+                                padding: '0.75rem 1rem',
+                                borderRadius: '0.75rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                transition: 'all 0.15s ease',
+                                marginBottom: '0.25rem'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-hover)';
+                                const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
+                                if (icon) icon.style.opacity = '1';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
+                                if (icon) icon.style.opacity = '0';
+                              }}
+                            >
+                              <div>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{c.name}</p>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                  {(isStaff && fraudProtection) ? maskPhone(c.phone) : c.phone}
+                                </p>
+                              </div>
+                              <CheckCircle className="check-icon" size={16} style={{ color: 'var(--primary)', opacity: 0, transition: 'opacity 0.2s' }} />
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* No Customers Found Message */}
+                      {filteredCustomers.length === 0 && (
+                        <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
+                          <p style={{ margin: 0, fontSize: '0.85rem', marginBottom: '0.5rem' }}>No matching customers.</p>
+                          <button
+                            onClick={() => setIsAddCustomerModalOpen(true)}
                             style={{
-                              padding: '0.75rem 1rem',
-                              borderRadius: '0.75rem',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--primary)',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
                               cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              transition: 'all 0.15s ease',
-                              marginBottom: '0.25rem'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'var(--bg-hover)';
-                              const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
-                              if (icon) icon.style.opacity = '1';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
-                              const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
-                              if (icon) icon.style.opacity = '0';
+                              textDecoration: 'underline'
                             }}
                           >
-                            <div>
-                              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{c.name}</p>
-                              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>
-                                {(isStaff && fraudProtection) ? maskPhone(c.phone) : c.phone}
-                              </p>
-                            </div>
-                            <CheckCircle className="check-icon" size={16} style={{ color: 'var(--primary)', opacity: 0, transition: 'opacity 0.2s' }} />
-                          </div>
-                        ))}
-                      </>
-                    )}
+                            Add new customer?
+                          </button>
+                        </div>
+                      )}
 
-                    {/* No Customers Found Message */}
-                    {filteredCustomers.length === 0 && (
-                      <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
-                        <p style={{ margin: 0, fontSize: '0.85rem', marginBottom: '0.5rem' }}>No matching customers.</p>
-                        <button
-                          onClick={() => setIsAddCustomerModalOpen(true)}
+                      {/* Quick Walk-in Option - Always at Bottom */}
+                      {!shouldHideFeatures && (
+                        <div
+                          onClick={() => {
+                            setSelectedCustomerId('WALK_IN');
+                            setCustomerSearchTerm('Walk-in Customer');
+                            setIsCustomerDropdownOpen(false);
+                          }}
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--primary)',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
+                            padding: '0.75rem 1rem',
+                            borderRadius: '0.75rem',
                             cursor: 'pointer',
-                            textDecoration: 'underline'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            transition: 'all 0.15s ease',
+                            marginTop: filteredCustomers.length > 0 ? '0.5rem' : '0',
+                            background: 'var(--bg-hover)',
+                            border: '1px dashed var(--border)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--primary-light)';
+                            e.currentTarget.style.borderColor = 'var(--primary)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--bg-hover)';
+                            e.currentTarget.style.borderColor = 'var(--border)';
                           }}
                         >
-                          Add new customer?
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Quick Walk-in Option - Always at Bottom */}
-                    {!shouldHideFeatures && (
-                      <div
-                        onClick={() => {
-                          setSelectedCustomerId('WALK_IN');
-                          setCustomerSearchTerm('Walk-in Customer');
-                          setIsCustomerDropdownOpen(false);
-                        }}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          borderRadius: '0.75rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          transition: 'all 0.15s ease',
-                          marginTop: filteredCustomers.length > 0 ? '0.5rem' : '0',
-                          background: 'var(--bg-hover)',
-                          border: '1px dashed var(--border)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--primary-light)';
-                          e.currentTarget.style.borderColor = 'var(--primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'var(--bg-hover)';
-                          e.currentTarget.style.borderColor = 'var(--border)';
-                        }}
-                      >
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '8px',
-                          background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white'
-                        }}>
-                          <User size={16} strokeWidth={2.5} />
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}>
+                            <User size={16} strokeWidth={2.5} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Quick Walk-in</p>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>No customer details needed</p>
+                          </div>
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Quick Walk-in</p>
-                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>No customer details needed</p>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
                 {/* Overlay to close dropdown */}
@@ -3069,42 +3221,69 @@ const Sales: React.FC<SalesProps> = ({
                     gap: '0.5rem',
                   }}
                 >
-                  {/* Available Claim Chips */}
                   {(() => {
                     const availableClaims = voucherClaims?.filter(c =>
+                      c.customerId && selectedCustomerId &&
                       c.customerId.toString() === selectedCustomerId.toString() &&
                       (c.status === 'claimed' || c.status === 'partially_redeemed') &&
                       c.balance > 0
                     ) || [];
+
                     if (availableClaims.length > 0) {
                       return (
                         <div style={{
-                          display: 'flex', gap: '0.4rem', flexWrap: 'wrap',
+                          display: 'flex', flexDirection: 'column', gap: '0.4rem',
+                          background: 'rgba(16,185,129,0.08)',
+                          padding: '0.75rem',
+                          borderRadius: '0.6rem',
+                          border: '1px solid rgba(16,185,129,0.3)',
+                          boxShadow: '0 2px 8px rgba(16,185,129,0.1)',
                         }}>
-                          {availableClaims.map(v => (
-                            <button
-                              key={v.id}
-                              onClick={() => handleVoucherClick(v.voucherCode)}
-                              style={{
-                                fontSize: '0.72rem', fontWeight: 700,
-                                padding: '0.25rem 0.55rem',
-                                background: 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)',
-                                color: '#059669',
-                                border: '1px solid rgba(16,185,129,0.28)',
-                                borderRadius: '2rem',
-                                cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '0.3rem',
-                                transition: 'all 0.15s',
-                                whiteSpace: 'nowrap',
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'transparent'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)'; e.currentTarget.style.color = '#059669'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.28)'; }}
-                            >
-                              <Ticket size={11} />
-                              {v.voucherCode}
-                              <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
-                            </button>
-                          ))}
+                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+                            Select Available Voucher
+                          </span>
+                          <div style={{
+                            display: 'flex', gap: '0.4rem', flexWrap: 'wrap',
+                          }}>
+                            {availableClaims.map(v => (
+                              <button
+                                key={v.id}
+                                onClick={() => handleVoucherClick(v.voucherCode)}
+                                style={{
+                                  fontSize: '0.72rem', fontWeight: 700,
+                                  padding: '0.25rem 0.55rem',
+                                  background: cartVoucherCode.includes(v.voucherCode)
+                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                    : 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)',
+                                  color: cartVoucherCode.includes(v.voucherCode) ? '#fff' : '#059669',
+                                  border: '1px solid rgba(16,185,129,0.28)',
+                                  borderRadius: '2rem',
+                                  cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                  transition: 'all 0.15s',
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: cartVoucherCode.includes(v.voucherCode) ? '0 2px 6px rgba(16,185,129,0.3)' : 'none',
+                                }}
+                              >
+                                <Ticket size={11} />
+                                {v.voucherCode}
+                                <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
+                                {cartVoucherCode.includes(v.voucherCode) && (
+                                  <div
+                                    style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      background: 'rgba(255,255,255,0.2)',
+                                      borderRadius: '50%',
+                                      padding: '2px'
+                                    }}
+                                  >
+                                    <X size={10} strokeWidth={3} />
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       );
                     }
@@ -3120,26 +3299,75 @@ const Sales: React.FC<SalesProps> = ({
                       }} />
                       <input
                         type="text"
-                        placeholder="Voucher Code"
+                        placeholder={(() => {
+                          const hasClaims = voucherClaims?.some(c =>
+                            c.customerId && selectedCustomerId &&
+                            c.customerId.toString() === selectedCustomerId.toString() &&
+                            (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                            c.balance > 0
+                          );
+                          return hasClaims ? "Select voucher from above" : "Voucher Code";
+                        })()}
                         value={cartVoucherCode}
                         onChange={(e) => { setCartVoucherCode(e.target.value); setVoucherError(''); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleApplyVoucher(cartVoucherCode); }}
+                        disabled={(() => {
+                          const hasClaims = voucherClaims?.some(c =>
+                            c.customerId && selectedCustomerId &&
+                            c.customerId.toString() === selectedCustomerId.toString() &&
+                            (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                            c.balance > 0
+                          );
+                          return !!hasClaims;
+                        })()}
                         style={{
                           width: '100%',
-                          paddingLeft: '2rem', paddingRight: '0.65rem',
+                          paddingLeft: '2rem', paddingRight: '2rem',
                           paddingTop: '0.42rem', paddingBottom: '0.42rem',
                           borderRadius: '0.6rem',
                           border: voucherError ? '1.5px solid var(--danger)' : '1.5px solid rgba(16,185,129,0.35)',
                           fontSize: '0.82rem', fontWeight: 700,
                           outline: 'none',
-                          background: 'rgba(16,185,129,0.06)',
+                          background: (() => {
+                            const hasClaims = voucherClaims?.some(c =>
+                              c.customerId && selectedCustomerId &&
+                              c.customerId.toString() === selectedCustomerId.toString() &&
+                              (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                              c.balance > 0
+                            );
+                            return hasClaims ? 'rgba(0,0,0,0.03)' : 'rgba(16,185,129,0.06)';
+                          })(),
                           color: '#065F46',
                           transition: 'border-color 0.15s, box-shadow 0.15s',
                           boxSizing: 'border-box',
+                          cursor: (() => {
+                            const hasClaims = voucherClaims?.some(c =>
+                              c.customerId && selectedCustomerId &&
+                              c.customerId.toString() === selectedCustomerId.toString() &&
+                              (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                              c.balance > 0
+                            );
+                            return hasClaims ? 'not-allowed' : 'text';
+                          })(),
                         }}
                         onFocus={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
                         onBlur={e => { e.currentTarget.style.borderColor = voucherError ? 'var(--danger)' : 'rgba(16,185,129,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
                       />
+                      {cartVoucherCode && (
+                        <button
+                          onClick={() => { setCartVoucherCode(''); setVoucherError(''); }}
+                          style={{
+                            position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+                            background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%',
+                            width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: '#666', zIndex: 5
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
                     </div>
                     <button
                       onClick={handleBulkApply}
@@ -3829,7 +4057,7 @@ const Sales: React.FC<SalesProps> = ({
           <Checkbox
             label={
               <span>
-                I agree to the <span style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Terms and Conditions</span> and <span style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Privacy Policy</span>
+                I agree to the <Link to={`/${appId}/${businessName}/terms-and-conditions`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Terms and Conditions</Link> and <Link to={`/${appId}/${businessName}/privacy-policy`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Privacy Policy</Link>
               </span>
             }
             checked={acceptedTerms}

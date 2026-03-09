@@ -10,7 +10,7 @@ import {
     RefreshCw, Send, CheckCircle, Clock, AlertCircle,
     ExternalLink, Phone, ArrowRight, CreditCard, MessageSquare
 } from 'lucide-react';
-import { Button, Card, KPICard, Modal } from '../components/UI';
+import { Button, Card, KPICard, Modal, Skeleton } from '../components/UI';
 
 const MessageLog: React.FC = () => {
     const { formatPrice } = useCurrency();
@@ -94,10 +94,10 @@ const MessageLog: React.FC = () => {
 
             {/* Stats Cards */}
             <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                <KPICard title="Total Messages" value={stats.total.toLocaleString()} icon={Send} color="#6366F1" />
-                <KPICard title="Sent Successful" value={stats.sent.toLocaleString()} icon={CheckCircle} color="#10B981" />
-                <KPICard title="Pending Resend" value={stats.pending.toLocaleString()} icon={Clock} color="#F59E0B" />
-                <KPICard title="Failed Delivery" value={stats.failed.toLocaleString()} icon={AlertCircle} color="#EF4444" />
+                <KPICard title="Total Messages" value={stats.total.toLocaleString()} icon={Send} color="#6366F1" loading={loading} />
+                <KPICard title="Sent Successful" value={stats.sent.toLocaleString()} icon={CheckCircle} color="#10B981" loading={loading} />
+                <KPICard title="Pending Resend" value={stats.pending.toLocaleString()} icon={Clock} color="#F59E0B" loading={loading} />
+                <KPICard title="Failed Delivery" value={stats.failed.toLocaleString()} icon={AlertCircle} color="#EF4444" loading={loading} />
             </div>
 
             {/* Action Toolbar */}
@@ -191,11 +191,69 @@ const MessageLog: React.FC = () => {
 
             {/* Message Cards List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {loading && messages.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center' }}>
-                        <RefreshCw size={32} className="animate-spin" style={{ color: 'var(--primary)', marginBottom: '1rem', margin: '0 auto' }} />
-                        <p style={{ color: 'var(--text-gray)', fontWeight: 600 }}>Syncing messages...</p>
-                    </div>
+                {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <div key={`msg-skeleton-${i}`} style={{
+                            display: 'flex',
+                            background: 'white',
+                            borderRadius: '1rem',
+                            overflow: 'hidden',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                            border: '1px solid var(--border-light)',
+                            opacity: 0.7
+                        }}>
+                            {/* Status Strip Placeholder */}
+                            <div style={{
+                                width: '6px',
+                                background: 'var(--border-light)'
+                            }} />
+
+                            <div style={{ flex: 1, padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {/* Card Header Skeleton */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        <Skeleton width="40px" height="40px" borderRadius="50%" />
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                            <Skeleton width="160px" height="1.1rem" />
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <Skeleton width="100px" height="0.75rem" />
+                                                <Skeleton width="80px" height="0.75rem" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <Skeleton width="80px" height="2rem" borderRadius="9999px" />
+                                        <Skeleton width="90px" height="2rem" borderRadius="9999px" />
+                                    </div>
+                                </div>
+
+                                {/* Chat Bubble Content Skeleton */}
+                                <div style={{
+                                    background: 'var(--bg-body)',
+                                    padding: '1.5rem',
+                                    borderRadius: '0.75rem',
+                                    borderTopLeftRadius: '0',
+                                    marginLeft: '3.5rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.5rem'
+                                }}>
+                                    <Skeleton width="80%" height="1rem" />
+                                    <Skeleton width="30%" height="0.8rem" />
+                                </div>
+
+                                {/* Footer Actions Skeleton */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: '3.5rem' }}>
+                                    <div style={{ display: 'flex', gap: '1.5rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <Skeleton width="40px" height="0.7rem" />
+                                            <Skeleton width="100px" height="1rem" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
                 ) : (
                     <>
                         <AnimatePresence mode="popLayout">

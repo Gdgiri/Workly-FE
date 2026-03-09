@@ -7,6 +7,7 @@ import {
     FileText, Printer, Trash2, ChevronLeft, ChevronRight, Play, TrendingUp, Wallet, MessageCircle, Paperclip, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { Card, Table, Button, Input, Select, KPICard, Modal } from '../components/UI';
+import { Skeleton } from '../components/Skeleton';
 import { Payment, PaymentMethod } from '../types';
 import api from '../utils/api';
 import { useToast } from '../components/ToastContext';
@@ -27,7 +28,7 @@ interface PaymentsProps {
     fraudProtection?: boolean;
 }
 
-const StatCard = ({ title, value, icon: Icon, trend, color, secondaryColor, onClick }: any) => (
+const StatCard = ({ title, value, icon: Icon, trend, color, secondaryColor, onClick, loading }: any) => (
     <motion.div
         whileHover={{ y: -5, scale: 1.02 }}
         initial={{ opacity: 0, y: 20 }}
@@ -64,7 +65,11 @@ const StatCard = ({ title, value, icon: Icon, trend, color, secondaryColor, onCl
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
                 <p style={{ fontSize: '0.875rem', fontWeight: 600, opacity: 0.9, marginBottom: '0.25rem' }}>{title}</p>
-                <h3 style={{ fontSize: '1.875rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</h3>
+                {loading ? (
+                    <Skeleton width="120px" height="2.2rem" style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
+                ) : (
+                    <h3 style={{ fontSize: '1.875rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</h3>
+                )}
             </div>
             <div style={{
                 background: 'rgba(255, 255, 255, 0.2)',
@@ -78,7 +83,9 @@ const StatCard = ({ title, value, icon: Icon, trend, color, secondaryColor, onCl
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, marginTop: '1rem' }}>
-            {trend && (
+            {loading ? (
+                <Skeleton width="100px" height="1.2rem" style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '1rem' }} />
+            ) : trend && (
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -141,6 +148,15 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     // Use Redux pagination or local override? 
     // Let's stick to local page control triggering Redux fetch
     const [currentPage, setCurrentPage] = useState(1);
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(customerSearch);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [customerSearch]);
 
     const isFirstLoad = React.useRef(true);
     // Debounce min amount changes
@@ -281,7 +297,10 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         if (paymentMethod !== 'ALL') params.paymentMethod = paymentMethod;
         if (status !== 'ALL') params.status = status;
         if (selectedSpecialist !== 'ALL') params.specialist = selectedSpecialist;
-        if (customerSearch) params.customerSearch = customerSearch;
+        if (debouncedSearch) {
+            params.customerSearch = debouncedSearch;
+            params.search = debouncedSearch; // Dual-param for better backend compatibility
+        }
         if (minAmount) params.minAmount = Number(minAmount);
 
         dispatch(fetchPayments(params));
@@ -289,7 +308,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
 
     useEffect(() => {
         loadPayments();
-    }, [dateRange, paymentMethod, status, currentPage, minAmount, customerSearch, selectedSpecialist]); // Added missing dependencies
+    }, [dateRange, paymentMethod, status, currentPage, minAmount, debouncedSearch, selectedSpecialist]);
 
     // Also trigger load on Refresh button
     const fetchPaymentsHandler = () => {
@@ -561,6 +580,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     trend="+12% vs last month"
                     color="#4F46E5" // Indigo 600
                     secondaryColor="#9333EA" // Purple 600
+                    loading={paymentsLoading}
                 />
                 <StatCard
                     title="Cash Collected"
@@ -569,6 +589,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     trend="Physical sales"
                     color="#059669" // Emerald 600
                     secondaryColor="#10B981" // Emerald 500
+                    loading={paymentsLoading}
                 />
                 <StatCard
                     title="Digital Payments"
@@ -577,6 +598,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     trend="PhonePe, Grab.."
                     color="#2563EB" // Blue 600
                     secondaryColor="#3B82F6" // Blue 500
+                    loading={paymentsLoading}
                 />
                 <StatCard
                     title="Balance Amount"
@@ -596,6 +618,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         // Force fetch if status didn't change (rare but possible)
                         // loadPayments(); // useEffect with status as dependency will handle this
                     }}
+                    loading={paymentsLoading}
                 />
             </div>
 
@@ -754,13 +777,26 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 <Table
                     columns={columns}
                     data={(() => {
+                        let filtered = [...payments];
+
+                        // Client-side fallback filter to ensure "correct" filtering for current page
+                        if (customerSearch.trim()) {
+                            const term = customerSearch.toLowerCase();
+                            filtered = filtered.filter(p => {
+                                const name = (p.appointment?.customer?.name || (p.sale as any)?.customer?.name || '').toLowerCase();
+                                const phone = (p.appointment?.customer?.mobile || (p.sale as any)?.customer?.mobile || '');
+                                const invoice = (p.sale?.invoiceNumber || p.invoiceNumber || '').toLowerCase();
+                                const saleNum = (p.sale?.saleNumber || '').toLowerCase();
+                                return name.includes(term) || phone.includes(term) || invoice.includes(term) || saleNum.includes(term);
+                            });
+                        }
+
                         // [LAST-RESORT VISUAL SAFEGUARD]
-                        // If minAmount is set, filter out any rows that somehow escaped the backend filter
                         const min = minAmount ? Number(minAmount) : 0;
                         if (min > 0) {
-                            return payments.filter(p => (p.amount >= min));
+                            filtered = filtered.filter(p => (p.amount >= min));
                         }
-                        return payments;
+                        return filtered;
                     })()}
                     isLoading={paymentsLoading}
                     onRowClick={(row) => {

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit2, Mail, Phone, Clock, FileSpreadsheet, UploadCloud, Download, Calendar, LayoutGrid, List as ListIcon, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { MdClose, MdAdd } from 'react-icons/md';
-import { Table, Button, Card, Modal, Input, Select, SearchableSelect } from '../components/UI';
+import { Table, Button, Card, Modal, Input, Select, SearchableSelect, Skeleton } from '../components/UI';
 import { Stylist, Service, Customer, Appointment } from '../types';
 import { useToast } from '../components/ToastContext';
 import { useCurrency } from '../components/CurrencyContext';
@@ -367,7 +367,25 @@ export const ServicesView: React.FC = () => {
       </div> */}
 
           {/* Services Grid with Images */}
-          {filteredServices.length > 0 ? (
+          {loading && services.length === 0 ? (
+            <div className="grid md-grid-cols-2 lg-grid-cols-3 gap-6">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <Card key={`service-skeleton-${i}`} className="p-4" style={{ height: '200px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <Skeleton width="60px" height="60px" borderRadius="12px" />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <Skeleton width="100%" height="1.2rem" />
+                      <Skeleton width="60%" height="0.8rem" />
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Skeleton width="80px" height="2rem" />
+                    <Skeleton width="30px" height="1.5rem" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : filteredServices.length > 0 ? (
             <>
               <div className="grid md-grid-cols-2 lg-grid-cols-3 gap-6">
                 {paginatedServices.map((service, idx) => (
@@ -942,8 +960,9 @@ export const ServicesView: React.FC = () => {
             )}
           </Modal>
         </>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };
 

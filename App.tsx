@@ -42,6 +42,10 @@ import { PendingApproval } from './pages/Auth/PendingApproval';
 // SuperAdmin Pages
 import { BusinessApprovals } from './pages/SuperAdmin/BusinessApprovals';
 
+// Public Pages
+import TermsAndConditions from './pages/Public/TermsAndConditions';
+import PrivacyPolicy from './pages/Public/PrivacyPolicy';
+
 import { ToastProvider, useToast } from './components/ToastContext';
 import { CurrencyProvider } from './components/CurrencyContext';
 
@@ -58,7 +62,10 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Check if current path is an auth route (supports business-specific paths)
+  // Check if current path is a public policy route
+  const isPublicRoute = location.pathname.includes('/terms-and-conditions') ||
+    location.pathname.includes('/privacy-policy');
+
   const isAuthRoute = location.pathname.endsWith('/login') ||
     location.pathname.endsWith('/register') ||
     location.pathname.endsWith('/business-register') ||
@@ -110,9 +117,9 @@ const AppContent: React.FC = () => {
 
 
 
-  // Redirect to login if not authenticated and not on auth route
+  // Redirect to login if not authenticated and not on auth/public route
   useEffect(() => {
-    if (!isAuthenticated && !isAuthRoute) {
+    if (!isAuthenticated && !isAuthRoute && !isPublicRoute) {
       const currentPath = location.pathname;
       if (currentPath.includes('/')) {
         const pathParts = currentPath.split('/').filter(p => p);
@@ -286,8 +293,8 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // --- LOGIN SCREEN & AUTH FLOW ---
-  if (!isAuthenticated && isAuthRoute) {
+  // --- LOGIN SCREEN & AUTH FLOW & PUBLIC PAGES ---
+  if (isPublicRoute || (!isAuthenticated && isAuthRoute)) {
     if (appValidation.loading) {
       return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -313,9 +320,13 @@ const AppContent: React.FC = () => {
         <Route path="/:appId/:businessName/forgotpassword" element={<ForgotPassword onNavigate={handleAuthNavigate} />} />
         <Route path="/:appId/:businessName/resetpassword" element={<ResetPassword onNavigate={handleAuthNavigate} />} />
         <Route path="/:appId/:businessName/auth/callback" element={<AuthCallback />} />
+        <Route path="/:appId/:businessName/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/:appId/:businessName/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/business-register" element={<BusinessRegister />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
+        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Routes>
     );
   }

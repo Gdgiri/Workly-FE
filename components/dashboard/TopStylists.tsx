@@ -11,6 +11,7 @@ interface StylistData {
 interface TopStylistsProps {
     data: StylistData[];
     title?: string;
+    loading?: boolean;
 }
 
 // Reuse the vibrant gradient logic
@@ -29,14 +30,30 @@ const getAvatarColor = (name: string) => {
     return colors[Math.abs(hash) % colors.length];
 };
 
-export const TopStylists: React.FC<TopStylistsProps> = ({ data, title = "Top Performing Specialists" }) => {
+export const TopStylists: React.FC<TopStylistsProps> = ({ data, title = "Top Performing Specialists", loading }) => {
     const maxValue = Math.max(...data.map(d => d.value), 1);
     const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
     return (
         <Card title={title} className="h-full">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {data.length === 0 ? (
+                {loading ? (
+                    [1, 2, 3].map(i => (
+                        <div key={i} className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+                                    <div className="flex flex-col gap-2">
+                                        <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                                        <div className="h-3 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                                    </div>
+                                </div>
+                                <div className="h-5 w-10 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                            </div>
+                            <div className="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                        </div>
+                    ))
+                ) : data.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '3rem 1rem' }}>
                         <div style={{
                             width: '4rem',

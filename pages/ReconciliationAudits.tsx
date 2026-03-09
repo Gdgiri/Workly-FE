@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button } from '../components/UI';
+import { Card, Button, Skeleton } from '../components/UI';
 import { useToast } from '../components/ToastContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useCurrency } from '../components/CurrencyContext';
@@ -173,7 +173,28 @@ const ReconciliationAudits: React.FC = () => {
             {/* Moved into Filter Card */}
 
             {/* Statistics Cards */}
-            {stats && (
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={`stat-skeleton-${i}`} style={{
+                            background: 'white',
+                            borderRadius: '1.25rem',
+                            padding: '1rem',
+                            minHeight: '85px',
+                            border: '1px solid #e2e8f0',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Skeleton width="2rem" height="2rem" borderRadius="0.5rem" />
+                                <Skeleton width="60%" height="0.8rem" />
+                            </div>
+                            <Skeleton width="100%" height="2rem" borderRadius="0.75rem" />
+                        </div>
+                    ))}
+                </div>
+            ) : stats && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
                     {/* 1. Total Attempts - Prismatic Blue */}
                     <div style={{
@@ -504,122 +525,141 @@ const ReconciliationAudits: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {audits
-                                        .filter(audit => {
-                                            if (!searchQuery.trim()) return true;
-                                            const query = searchQuery.toLowerCase();
-                                            const userName = (audit.userName || '').toLowerCase();
-                                            const notes = (audit.inputData?.notes || '').toLowerCase();
-                                            return userName.includes(query) || notes.includes(query);
-                                        })
-                                        .map((audit) => {
-                                            const isExpanded = expandedRows.has(audit.id);
+                                    {loading ? (
+                                        Array.from({ length: 10 }).map((_, rIdx) => (
+                                            <tr key={`audit-skeleton-${rIdx}`} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                {Array.from({ length: 7 }).map((_, cIdx) => (
+                                                    <td key={`cell-skeleton-${cIdx}`} style={{ padding: '1.25rem 0.75rem' }}>
+                                                        <Skeleton width={cIdx === 1 ? "60%" : "80%"} height="1.2rem" />
+                                                        {cIdx < 2 && <Skeleton width="40%" height="0.8rem" style={{ marginTop: '0.25rem' }} />}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))
+                                    ) : audits.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-gray)' }}>
+                                                <History size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+                                                <p>No audit logs found</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        audits
+                                            .filter(audit => {
+                                                if (!searchQuery.trim()) return true;
+                                                const query = searchQuery.toLowerCase();
+                                                const userName = (audit.userName || '').toLowerCase();
+                                                const notes = (audit.inputData?.notes || '').toLowerCase();
+                                                return userName.includes(query) || notes.includes(query);
+                                            })
+                                            .map((audit) => {
+                                                const isExpanded = expandedRows.has(audit.id);
 
-                                            return (
-                                                <React.Fragment key={audit.id}>
-                                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                                        <td style={{ padding: '1rem 0.75rem' }}>
-                                                            <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                                                                {new Date(audit.attemptTimestamp).toLocaleDateString()}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
-                                                                {new Date(audit.attemptTimestamp).toLocaleTimeString()}
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '1rem 0.75rem' }}>
-                                                            <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                                                                {audit.userName || 'Unknown'}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
-                                                                {audit.userRole || 'N/A'}
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '1rem 0.75rem' }}>
-                                                            {getTypeBadge(audit.attemptType)}
-                                                        </td>
-                                                        <td style={{ padding: '1rem 0.75rem' }}>
-                                                            {getStatusBadge(audit.attemptStatus)}
-                                                        </td>
-                                                        <td style={{ padding: '1rem 0.75rem' }}>
-                                                            {audit.discrepancyAmount !== null && audit.discrepancyAmount !== undefined ? (
-                                                                <div>
-                                                                    <div style={{ fontWeight: 600, color: audit.discrepancyType === 'BALANCED' ? '#10B981' : '#EF4444' }}>
-                                                                        {formatPrice(audit.discrepancyAmount)}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
-                                                                        {audit.discrepancyType}
-                                                                    </div>
+                                                return (
+                                                    <React.Fragment key={audit.id}>
+                                                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                                            <td style={{ padding: '1rem 0.75rem' }}>
+                                                                <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                                                    {new Date(audit.attemptTimestamp).toLocaleDateString()}
                                                                 </div>
-                                                            ) : '—'}
-                                                        </td>
-                                                        <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-                                                            {audit.duration ? `${audit.duration}ms` : '—'}
-                                                        </td>
-                                                        <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => toggleRow(audit.id)}
-                                                                icon={isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                            >
-                                                                {isExpanded ? 'Hide' : 'Details'}
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                    {isExpanded && (
-                                                        <tr>
-                                                            <td colSpan={7} style={{ padding: '0.75rem', background: 'var(--bg-card)' }}>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-                                                                    {/* Payment Breakdown */}
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                                    {new Date(audit.attemptTimestamp).toLocaleTimeString()}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '1rem 0.75rem' }}>
+                                                                <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                                                    {audit.userName || 'Unknown'}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                                    {audit.userRole || 'N/A'}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '1rem 0.75rem' }}>
+                                                                {getTypeBadge(audit.attemptType)}
+                                                            </td>
+                                                            <td style={{ padding: '1rem 0.75rem' }}>
+                                                                {getStatusBadge(audit.attemptStatus)}
+                                                            </td>
+                                                            <td style={{ padding: '1rem 0.75rem' }}>
+                                                                {audit.discrepancyAmount !== null && audit.discrepancyAmount !== undefined ? (
                                                                     <div>
-                                                                        <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>Payment Breakdown</h4>
-                                                                        <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                                                            {audit.inputData?.paymentBreakdown && Object.entries(audit.inputData.paymentBreakdown).map(([key, value]) => (
-                                                                                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
-                                                                                    <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{key}:</span>
-                                                                                    <span style={{ fontWeight: 600 }}>{formatPrice(value as number)}</span>
+                                                                        <div style={{ fontWeight: 600, color: audit.discrepancyType === 'BALANCED' ? '#10B981' : '#EF4444' }}>
+                                                                            {formatPrice(audit.discrepancyAmount)}
+                                                                        </div>
+                                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                                            {audit.discrepancyType}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : '—'}
+                                                            </td>
+                                                            <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                                                                {audit.duration ? `${audit.duration}ms` : '—'}
+                                                            </td>
+                                                            <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => toggleRow(audit.id)}
+                                                                    icon={isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                                >
+                                                                    {isExpanded ? 'Hide' : 'Details'}
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                        {isExpanded && (
+                                                            <tr>
+                                                                <td colSpan={7} style={{ padding: '0.75rem', background: 'var(--bg-card)' }}>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                                                                        {/* Payment Breakdown */}
+                                                                        <div>
+                                                                            <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>Payment Breakdown</h4>
+                                                                            <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                                                                {audit.inputData?.paymentBreakdown && Object.entries(audit.inputData.paymentBreakdown).map(([key, value]) => (
+                                                                                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
+                                                                                        <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{key}:</span>
+                                                                                        <span style={{ fontWeight: 600 }}>{formatPrice(value as number)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Summary */}
+                                                                        <div>
+                                                                            <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>Summary</h4>
+                                                                            <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
+                                                                                    <span style={{ fontWeight: 500 }}>System Total:</span>
+                                                                                    <span style={{ fontWeight: 600 }}>{formatPrice(audit.calculatedResults?.systemTotal || 0)}</span>
                                                                                 </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Summary */}
-                                                                    <div>
-                                                                        <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>Summary</h4>
-                                                                        <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
-                                                                                <span style={{ fontWeight: 500 }}>System Total:</span>
-                                                                                <span style={{ fontWeight: 600 }}>{formatPrice(audit.calculatedResults?.systemTotal || 0)}</span>
-                                                                            </div>
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
-                                                                                <span style={{ fontWeight: 500 }}>Counted Total:</span>
-                                                                                <span style={{ fontWeight: 600 }}>{formatPrice(audit.calculatedResults?.countedTotal || 0)}</span>
-                                                                            </div>
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
-                                                                                <span style={{ fontWeight: 500 }}>Difference:</span>
-                                                                                <span style={{ fontWeight: 600, color: audit.calculatedResults?.difference === 0 ? '#10B981' : '#EF4444' }}>
-                                                                                    {formatPrice(audit.calculatedResults?.difference || 0)}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontSize: '0.8125rem' }}>
-                                                                                <span style={{ fontWeight: 500 }}>Total Expenses:</span>
-                                                                                <span style={{ fontWeight: 600 }}>{formatPrice(audit.calculatedResults?.totalExpenses || 0)}</span>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
+                                                                                    <span style={{ fontWeight: 500 }}>Counted Total:</span>
+                                                                                    <span style={{ fontWeight: 600 }}>{formatPrice(audit.calculatedResults?.countedTotal || 0)}</span>
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8125rem' }}>
+                                                                                    <span style={{ fontWeight: 500 }}>Difference:</span>
+                                                                                    <span style={{ fontWeight: 600, color: audit.calculatedResults?.difference === 0 ? '#10B981' : '#EF4444' }}>
+                                                                                        {formatPrice(audit.calculatedResults?.difference || 0)}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontSize: '0.8125rem' }}>
+                                                                                    <span style={{ fontWeight: 500 }}>Total Expenses:</span>
+                                                                                    <span style={{ fontWeight: 600 }}>{formatPrice(audit.calculatedResults?.totalExpenses || 0)}</span>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
 
-                                                                    {/* Notes */}
-                                                                    {audit.inputData?.notes && (
-                                                                        <div style={{ gridColumn: 'span 2' }}>
-                                                                            <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>Notes</h4>
-                                                                            <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-gray)' }}>
-                                                                                {audit.inputData.notes}
+                                                                        {/* Notes */}
+                                                                        {audit.inputData?.notes && (
+                                                                            <div style={{ gridColumn: 'span 2' }}>
+                                                                                <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>Notes</h4>
+                                                                                <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-gray)' }}>
+                                                                                    {audit.inputData.notes}
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    )}
+                                                                        )}
 
-                                                                    {/* Metadata */}
-                                                                    {/* <div style={{ gridColumn: 'span 2' }}>
+                                                                        {/* Metadata */}
+                                                                        {/* <div style={{ gridColumn: 'span 2' }}>
                                                                         <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>Metadata</h4>
                                                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                                                                             <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
@@ -641,25 +681,26 @@ const ReconciliationAudits: React.FC = () => {
                                                                         </div>
                                                                     </div> */}
 
-                                                                    {/* Error Message */}
-                                                                    {audit.errorMessage && (
-                                                                        <div style={{ gridColumn: 'span 2' }}>
-                                                                            <div style={{ background: '#FEE2E2', padding: '0.5rem', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
-                                                                                <div style={{ fontSize: '0.6875rem', color: '#991B1B', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Error Message</div>
-                                                                                <div style={{ fontSize: '0.8125rem', color: '#7F1D1D' }}>{audit.errorMessage}</div>
-                                                                                {audit.errorCode && (
-                                                                                    <div style={{ fontSize: '0.6875rem', color: '#991B1B', marginTop: '0.25rem' }}>Code: {audit.errorCode}</div>
-                                                                                )}
+                                                                        {/* Error Message */}
+                                                                        {audit.errorMessage && (
+                                                                            <div style={{ gridColumn: 'span 2' }}>
+                                                                                <div style={{ background: '#FEE2E2', padding: '0.5rem', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
+                                                                                    <div style={{ fontSize: '0.6875rem', color: '#991B1B', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Error Message</div>
+                                                                                    <div style={{ fontSize: '0.8125rem', color: '#7F1D1D' }}>{audit.errorMessage}</div>
+                                                                                    {audit.errorCode && (
+                                                                                        <div style={{ fontSize: '0.6875rem', color: '#991B1B', marginTop: '0.25rem' }}>Code: {audit.errorCode}</div>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </React.Fragment>
-                                            );
-                                        })}
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            })
+                                    )}
                                 </tbody>
                             </table>
                         </div>

@@ -434,7 +434,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
 
             <div style={{ marginTop: '2rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Reconciliation History</h3>
-                <Table columns={columns} data={history} />
+                <Table columns={columns} data={history} isLoading={loading} skeletonCount={5} />
             </div>
         </div>
     );

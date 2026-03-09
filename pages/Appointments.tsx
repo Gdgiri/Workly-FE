@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../redux/store';
 import { fetchAppointments, createAppointment, updateAppointment, cancelAppointment, updateAppointmentStatus } from '../redux/slices/appointmentSlice';
-import { Plus, Filter, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Printer, MessageSquare, CreditCard, Paperclip, Image as ImageIcon, RefreshCw, FileText, AlertCircle } from 'lucide-react';
+import { Plus, Filter, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Printer, MessageSquare, CreditCard, Paperclip, Image as ImageIcon, RefreshCw, FileText, AlertCircle, ChevronDown, Search } from 'lucide-react';
 import { Table, Button, Modal, Input, Select } from '../components/UI';
 import { Appointment } from '../types';
 import { useToast } from '../components/ToastContext';
@@ -90,7 +90,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     date: '',
     time: '',
     notes: '',
-    status: 'PENDING',
+    status: 'pending' as any,
     depositAmount: 0, // Default to 0 for Admin Panel bookings
     requiresDeposit: false,
     attachments: [] as Attachment[]
@@ -231,7 +231,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
         const promises = [
           fetchServices(),
           fetchSpecialists(),
-          fetchCustomers(),
+          // fetchCustomers(), // DEFERRED: Fetch only when opening modal
           fetchSettings()
         ];
 
@@ -293,7 +293,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       date: '',
       time: '',
       notes: '',
-      status: 'PENDING',
+      status: 'pending' as any,
       depositAmount: 0,
       requiresDeposit: false,
       attachments: []
@@ -303,6 +303,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setSpecialistSearch('');
     setEditingAppointment(null);
     setIsModalOpen(true);
+
+    // Fetch customers only when needed
+    fetchCustomers();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -383,10 +386,15 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       date: dateValue,
       time: timeValue,
       notes: appointment.notes || '',
-      status: appointment.status || 'PENDING',
+      status: (appointment.status?.toLowerCase() || 'pending') as any,
       attachments: (appointment.attachments || []).map(a => ({ ...a, url: a.imgUrl || a.url || '' })) as Attachment[]
     });
     setIsEditModalOpen(true);
+
+    // Fetch customers if not already loaded or stale
+    if (customers.length === 0) {
+      fetchCustomers();
+    }
   };
 
 
@@ -498,7 +506,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     // 3. Update Status to CONFIRMED if it's currently PENDING
     if (appointment.status?.toUpperCase() === 'PENDING') {
       try {
-        await dispatch(updateAppointmentStatus({ id: appointment.id, status: 'CONFIRMED' })).unwrap();
+        await dispatch(updateAppointmentStatus({ id: appointment.id, status: 'confirmed' })).unwrap();
         showToast('Appointment confirmed and WhatsApp opened!', 'success');
         // fetchAppointments(); // Handled by Redux
       } catch (error) {
@@ -551,14 +559,14 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
   const handleStartAppointment = async (row: Appointment) => {
     // Immediate feedback: Open the modal so they can see/fill the checklist
-    // We pass the expected next status (CONFIRMED) to the view
-    handleView({ ...row, status: 'CONFIRMED' });
+    // We pass the expected next status (confirmed) to the view
+    handleView({ ...row, status: 'confirmed' });
 
     // 1. Update status to CONFIRMED if PENDING
     if (row.status?.toUpperCase() === 'PENDING') {
       try {
         console.log('🚀 Starting appointment:', row.id);
-        await dispatch(updateAppointmentStatus({ id: row.id, status: 'CONFIRMED' })).unwrap();
+        await dispatch(updateAppointmentStatus({ id: row.id, status: 'confirmed' })).unwrap();
         showToast('Appointment confirmed!', 'success');
       } catch (error) {
         console.error('Failed to update status:', error);
@@ -1001,16 +1009,16 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
             return statusMatch && dateMatch && searchMatch;
           }) : [];
           const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
-          const currentData = filteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+          const paginatedAppointments = filteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
           return (
             <>
-              <div style={{ background: 'white', borderRadius: '0.75rem', border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', marginTop: '1.5rem' }}>
+              <div style={{ background: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border)', overflow: 'hidden' }}>
                 <Table
                   columns={columns}
-                  data={currentData}
+                  data={paginatedAppointments}
                   isLoading={appointmentsLoading}
-                  silentLoading={appointments.length > 0}
+                  skeletonCount={10}
                 />
               </div>
 
@@ -1105,88 +1113,146 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
           <div className="grid grid-cols-2 gap-x-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: '1.5rem', rowGap: '0.75rem' }}>
             <div className="input-group" style={{ position: 'relative', marginBottom: '0.75rem' }}>
               <label className="input-label">Customer</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Type customer name..."
-                value={customerSearch}
-                onChange={(e) => {
-                  const searchValue = e.target.value;
-                  setCustomerSearch(searchValue);
-                  setShowCustomerOptions(true); // Open on type
-
-                  // Find exact or starting match
-                  const searchTerm = (searchValue || '').toLowerCase();
-                  const matchedCustomer = customers.find(c =>
-                    (c.name || '').toLowerCase() === searchTerm ||
-                    (c.name || '').toLowerCase().startsWith(searchTerm)
-                  );
-
-                  if (matchedCustomer) {
-                    setFormData(prev => ({ ...prev, customerId: matchedCustomer.id }));
-                  } else {
-                    setFormData(prev => ({ ...prev, customerId: '' }));
-                  }
-                }}
-                onFocus={() => {
-                  setShowCustomerOptions(true); // Open on focus
-                  // Pre-fill with selected customer name if exists
-                  if (formData.customerId && !customerSearch) {
-                    const selected = customers.find(c => c.id === formData.customerId);
-                    if (selected) setCustomerSearch(selected.name);
-                  }
-                }}
-                onBlur={() => setTimeout(() => setShowCustomerOptions(false), 200)} // Close on blur
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Type customer name..."
+                  value={customerSearch}
+                  readOnly // Make this read-only to force using the dropdown/internal search for better UX
+                  onClick={() => setShowCustomerOptions(!showCustomerOptions)}
+                  onFocus={() => setShowCustomerOptions(true)}
+                  style={{
+                    paddingRight: '2.5rem',
+                    cursor: 'pointer',
+                    backgroundColor: 'white'
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCustomerOptions(!showCustomerOptions);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-light)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4px'
+                  }}
+                >
+                  <ChevronDown size={18} style={{ transform: showCustomerOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+              </div>
 
               {/* Custom Dropdown */}
-              {showCustomerOptions && customerSearch && !customers.find(c => c.name === customerSearch && c.id === formData.customerId) && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: 'white',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  zIndex: 50,
-                  maxHeight: '200px', // Show approx 5 items
-                  overflowY: 'auto',
-                  border: '1px solid var(--border)',
-                  marginTop: '0.25rem'
-                }}>
-                  {customers
-                    .filter(c =>
-                      (c.name || '').toLowerCase().includes((customerSearch || '').toLowerCase()) ||
-                      (c.email || '').toLowerCase().includes((customerSearch || '').toLowerCase())
-                    )
-                    .map(c => (
-                      <div
-                        key={c.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault(); // Prevent blur
-                          setCustomerSearch(c.name);
-                          setFormData(prev => ({ ...prev, customerId: c.id }));
-                          setShowCustomerOptions(false);
-                        }}
+              {showCustomerOptions && (
+                <div
+                  className="animate-in fade-in zoom-in duration-200"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    borderRadius: '0.75rem',
+                    boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                    zIndex: 100,
+                    maxHeight: '350px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    border: '1px solid var(--border)',
+                    marginTop: '0.5rem'
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()} // Prevent close on internal clicks
+                >
+                  {/* Internal Search Bar */}
+                  <div style={{
+                    padding: '0.75rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    background: '#f8fafc',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 1
+                  }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Search customers..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
                         style={{
-                          padding: '0.5rem 1rem',
-                          cursor: 'pointer',
-                          fontSize: '0.9rem',
-                          color: 'var(--text-dark)',
-                          borderBottom: '1px solid #f1f5f9'
+                          width: '100%',
+                          padding: '0.5rem 0.75rem 0.5rem 2.25rem',
+                          fontSize: '0.85rem',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '0.5rem',
+                          outline: 'none',
+                          background: 'white'
                         }}
-                        className="hover:bg-gray-50"
-                      >
-                        <div style={{ fontWeight: 500 }}>{c.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{c.email}</div>
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ overflowY: 'auto' }}>
+                    {customers
+                      .filter(c =>
+                        (c.name || '').toLowerCase().includes((customerSearch || '').toLowerCase()) ||
+                        (c.email || '').toLowerCase().includes((customerSearch || '').toLowerCase()) ||
+                        (c.mobile || '').includes(customerSearch)
+                      )
+                      .map(c => (
+                        <div
+                          key={c.id}
+                          onClick={() => {
+                            setCustomerSearch(c.name);
+                            setFormData(prev => ({ ...prev, customerId: c.id }));
+                            setShowCustomerOptions(false);
+                          }}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            color: 'var(--text-dark)',
+                            borderBottom: '1px solid #f1f5f9',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            transition: 'background 0.2s'
+                          }}
+                          className="hover:bg-blue-50"
+                        >
+                          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>{c.name}</span>
+                            {formData.customerId === c.id && <span style={{ color: 'var(--primary)', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase' }}>Selected</span>}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <span>{c.mobile || 'No mobile'}</span>
+                            {c.email && <span style={{ opacity: 0.5 }}>•</span>}
+                            <span>{c.email}</span>
+                          </div>
+                        </div>
+                      ))
+                    }
+                    {customers.filter(c => (c.name || '').toLowerCase().includes((customerSearch || '').toLowerCase())).length === 0 && (
+                      <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>🔍</div>
+                        <div style={{ fontSize: '0.85rem' }}>No customers match your search</div>
                       </div>
-                    ))
-                  }
-                  {customers.filter(c => (c.name || '').toLowerCase().includes((customerSearch || '').toLowerCase())).length === 0 && (
-                    <div style={{ padding: '0.5rem 1rem', color: 'var(--text-gray)', fontSize: '0.85rem' }}>No customers found</div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
             </div>

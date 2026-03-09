@@ -25,7 +25,7 @@ import {
 } from 'react-icons/md';
 import { Search } from 'lucide-react';
 import { HiOutlineDocumentReport } from 'react-icons/hi';
-import { Table, Button, Card, Modal, Input, Select, SearchableSelect } from '../components/UI';
+import { Table, Button, Card, Modal, Input, Select, SearchableSelect, Skeleton } from '../components/UI';
 import { Stylist, Service, Customer, Appointment, Category } from '../types';
 import { useToast } from '../components/ToastContext';
 import { useCurrency } from '../components/CurrencyContext';
@@ -1014,9 +1014,25 @@ const Stylists: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStylists.map(stylist => (
+                    {stylistsLoading ? (
+                      Array.from({ length: 5 }).map((_, rIdx) => (
+                        <tr key={`roster-skeleton-${rIdx}`}>
+                          <td style={{ padding: '1rem' }}>
+                            <div className="flex items-center gap-2">
+                              <Skeleton width="2.25rem" height="2.25rem" circle />
+                              <Skeleton width="100px" height="1.2rem" />
+                            </div>
+                          </td>
+                          {currentWeekDates.map(d => (
+                            <td key={d.date} style={{ padding: '0.75rem' }}>
+                              <Skeleton width="100%" height="2.5rem" borderRadius="var(--radius-lg)" />
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : filteredStylists.map(stylist => (
                       <tr key={stylist.id}>
-                        <td style={{ fontWeight: 600 }}>
+                        <td style={{ fontWeight: 600, padding: '1rem' }}>
                           <div className="flex items-center gap-2">
                             <div style={{
                               width: '2rem',
@@ -1100,307 +1116,331 @@ const Stylists: React.FC = () => {
                 return (
                   <>
                     <div className="grid md-grid-cols-2 lg-grid-cols-3 gap-6">
-                      {currentData.map((stylist, idx) => (
-                        <motion.div
-                          key={stylist.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          whileHover={{ y: -4, scale: 1.02 }}
-                        >
-                          <Card style={{
-                            minHeight: '320px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            cursor: 'pointer'
-                          }}>
-                            {/* Decorative gradient accent */}
-                            <div style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: '3px',
-                              background: stylist.isAvailable
-                                ? 'linear-gradient(90deg, #10B981, #059669)'
-                                : 'linear-gradient(90deg, #EF4444, #DC2626)',
-                              zIndex: 1
-                            }} />
-
-                            <div className="flex items-start justify-between" style={{ marginTop: '1.25rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-                                <div style={{
-                                  width: '4rem',
-                                  height: '4rem',
-                                  borderRadius: '50%',
-                                  backgroundImage: isValidAvatar(stylist.imgUrl) ? `url("${stylist.imgUrl}")` : `url("${(DEFAULT_AVATARS as any)[(stylist.gender || 'other').toLowerCase()] || DEFAULT_AVATARS.other}")`,
-                                  backgroundColor: 'var(--bg-body)',
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '2px solid var(--bg-card)',
-                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--primary-light)',
-                                  position: 'relative'
-                                }}>
-                                  {/* Status indicator ring */}
-                                  <div style={{
-                                    position: 'absolute',
-                                    bottom: '1px',
-                                    right: '1px',
-                                    width: '14px',
-                                    height: '14px',
-                                    borderRadius: '50%',
-                                    background: stylist.isAvailable ? '#10B981' : '#EF4444',
-                                    border: '2px solid var(--bg-card)',
-                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                                  }} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
-                                    <h3 style={{
-                                      fontWeight: 700,
-                                      margin: 0,
-                                      color: 'var(--text-dark)',
-                                      fontSize: '1rem',
-                                      letterSpacing: '-0.025em'
-                                    }}>
-                                      {stylist.name}
-                                    </h3>
-                                  </div>
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.375rem',
-                                    padding: '0.2rem 0.625rem',
-                                    borderRadius: 'var(--radius-full)',
-                                    background: stylist.isAvailable
-                                      ? 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)'
-                                      : 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
-                                    width: 'fit-content',
-                                    border: `1px solid ${stylist.isAvailable ? '#A7F3D0' : '#FECACA'}`
-                                  }}>
-                                    <span style={{
-                                      width: '6px',
-                                      height: '6px',
-                                      borderRadius: '50%',
-                                      background: stylist.isAvailable ? '#10B981' : '#EF4444',
-                                      boxShadow: `0 0 6px ${stylist.isAvailable ? '#10B981' : '#EF4444'}40`
-                                    }} />
-                                    <span style={{
-                                      fontSize: '0.7rem',
-                                      fontWeight: 600,
-                                      color: stylist.isAvailable ? '#047857' : '#B91C1C'
-                                    }}>
-                                      {stylist.isAvailable ? 'Active' : 'Inactive'}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                              {canEdit && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const rawSpecs = stylist.specialization
-                                      ? (typeof stylist.specialization === 'string' ? stylist.specialization.split(',') : (Array.isArray(stylist.specialization) ? stylist.specialization : [stylist.specialization]))
-                                      : [];
-                                    const uniqueSpecs = Array.from(new Set(rawSpecs.map((s: string) => s.trim()).filter(Boolean)));
-
-                                    const stylistToEdit = {
-                                      ...stylist,
-                                      workingHours: stylist.workingHours || {},
-                                      permissions: stylist.permissions || [],
-                                      specialization: uniqueSpecs.join(', ')
-                                    };
-                                    setEditingStylist(stylistToEdit);
-                                    setIsEditModalOpen(true);
-                                  }}
-                                  style={{
-                                    color: 'var(--primary)',
-                                    border: 'none',
-                                    background: 'var(--primary-light)',
-                                    cursor: 'pointer',
-                                    padding: '0.5rem',
-                                    borderRadius: 'var(--radius-md)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all var(--transition-base)',
-                                    boxShadow: 'var(--shadow-sm)'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'var(--primary)';
-                                    e.currentTarget.style.color = 'white';
-                                    e.currentTarget.style.transform = 'scale(1.1)';
-                                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'var(--primary-light)';
-                                    e.currentTarget.style.color = 'var(--primary)';
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                    e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                                  }}
-                                  title="Edit Specialist"
-                                >
-                                  <MdEdit size={18} />
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="space-y-2" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.625rem',
-                                padding: '0.5rem',
-                                background: 'var(--bg-body)',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--border-light)'
-                              }}>
-                                <div style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: 'var(--radius-md)',
-                                  background: 'var(--bg-input)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'var(--primary)',
-                                  border: '1px solid var(--border)',
-                                  flexShrink: 0
-                                }}>
-                                  <MdEmail size={14} />
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-light)', marginBottom: '0.125rem' }}>Email</div>
-                                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-dark)', fontWeight: 500, wordBreak: 'break-word' }}>
-                                    {stylist.email}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.625rem',
-                                padding: '0.5rem',
-                                background: 'var(--bg-body)',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--border-light)'
-                              }}>
-                                <div style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: 'var(--radius-md)',
-                                  background: 'var(--bg-input)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'var(--primary)',
-                                  border: '1px solid var(--border)',
-                                  flexShrink: 0
-                                }}>
-                                  <MdPhone size={14} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-light)', marginBottom: '0.125rem' }}>Phone</div>
-                                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-dark)', fontWeight: 500 }}>
-                                    {stylist.phone}
-                                  </div>
-                                </div>
-                                {stylist.gender && (
-                                  <span style={{
-                                    fontSize: '0.65rem',
-                                    padding: '0.25rem 0.625rem',
-                                    borderRadius: 'var(--radius-full)',
-                                    background: stylist.gender === 'female'
-                                      ? 'linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)'
-                                      : stylist.gender === 'male'
-                                        ? 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)'
-                                        : 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
-                                    color: stylist.gender === 'female' ? '#BE185D' : stylist.gender === 'male' ? '#1D4ED8' : '#64748B',
-                                    border: `1px solid ${stylist.gender === 'female' ? '#FBCFE8' : stylist.gender === 'male' ? '#BFDBFE' : '#E2E8F0'}`,
-                                    textTransform: 'capitalize',
-                                    fontWeight: 600,
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: 'var(--shadow-sm)'
-                                  }}>
-                                    {stylist.gender}
-                                  </span>
-                                )}
+                      {stylistsLoading ? (
+                        Array.from({ length: 6 }).map((_, idx) => (
+                          <Card key={`skeleton-${idx}`} style={{ minHeight: '320px', padding: '1.5rem' }}>
+                            <div className="flex items-center gap-3 mb-4">
+                              <Skeleton width="4rem" height="4rem" circle />
+                              <div className="flex-1">
+                                <Skeleton width="60%" height="1.25rem" style={{ marginBottom: '0.5rem' }} />
+                                <Skeleton width="40%" height="1rem" />
                               </div>
                             </div>
-
-                            <div style={{
-                              marginTop: '1rem',
-                              paddingTop: '1rem',
-                              borderTop: '1px solid var(--border-light)'
-                            }}>
-                              <div style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 600,
-                                color: 'var(--text-light)',
-                                marginBottom: '0.5rem',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em'
-                              }}>
-                                Specializations
-                              </div>
-                              <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                                {(() => {
-                                  const specs = stylist.specialization
-                                    ? (typeof stylist.specialization === 'string'
-                                      ? stylist.specialization.split(',').map(s => s.trim()).filter(Boolean)
-                                      : Array.isArray(stylist.specialization)
-                                        ? stylist.specialization
-                                        : [stylist.specialization])
-                                    : [];
-
-                                  if (specs.length === 0) {
-                                    return (
-                                      <span style={{
-                                        fontSize: '0.7rem',
-                                        background: 'var(--bg-body)',
-                                        padding: '0.375rem 0.75rem',
-                                        borderRadius: 'var(--radius-full)',
-                                        color: 'var(--text-gray)',
-                                        border: '1px solid var(--border)',
-                                        fontWeight: 500
-                                      }}>
-                                        General
-                                      </span>
-                                    );
-                                  }
-
-                                  return specs.map((spec, idx) => (
-                                    <motion.span
-                                      key={idx}
-                                      whileHover={{ scale: 1.05 }}
-                                      style={{
-                                        fontSize: '0.75rem',
-                                        background: 'var(--bg-input)',
-                                        padding: '0.5rem 1rem',
-                                        borderRadius: 'var(--radius-full)',
-                                        color: 'var(--text-dark)',
-                                        fontWeight: 600,
-                                        border: '1px solid var(--border)',
-                                        boxShadow: 'var(--shadow-sm)',
-                                        cursor: 'default',
-                                        transition: 'all var(--transition-fast)'
-                                      }}
-                                    >
-                                      {spec}
-                                    </motion.span>
-                                  ));
-                                })()}
+                            <div className="space-y-3 pt-4 border-t border-slate-100">
+                              <Skeleton height="3rem" borderRadius="var(--radius-md)" />
+                              <Skeleton height="3rem" borderRadius="var(--radius-md)" />
+                            </div>
+                            <div className="pt-4 border-t border-slate-100 mt-4">
+                              <Skeleton width="30%" height="0.75rem" style={{ marginBottom: '0.5rem' }} />
+                              <div className="flex gap-2">
+                                <Skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
+                                <Skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
                               </div>
                             </div>
                           </Card>
-                        </motion.div>
-                      ))}
+                        ))
+                      ) : (
+                        currentData.map((stylist, idx) => (
+                          <motion.div
+                            key={stylist.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            whileHover={{ y: -4, scale: 1.02 }}
+                          >
+                            <Card style={{
+                              minHeight: '320px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              cursor: 'pointer'
+                            }}>
+                              {/* Decorative gradient accent */}
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '3px',
+                                background: stylist.isAvailable
+                                  ? 'linear-gradient(90deg, #10B981, #059669)'
+                                  : 'linear-gradient(90deg, #EF4444, #DC2626)',
+                                zIndex: 1
+                              }} />
+
+                              <div className="flex items-start justify-between" style={{ marginTop: '1.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                                  <div style={{
+                                    width: '4rem',
+                                    height: '4rem',
+                                    borderRadius: '50%',
+                                    backgroundImage: isValidAvatar(stylist.imgUrl) ? `url("${stylist.imgUrl}")` : `url("${(DEFAULT_AVATARS as any)[(stylist.gender || 'other').toLowerCase()] || DEFAULT_AVATARS.other}")`,
+                                    backgroundColor: 'var(--bg-body)',
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '2px solid var(--bg-card)',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--primary-light)',
+                                    position: 'relative'
+                                  }}>
+                                    {/* Status indicator ring */}
+                                    <div style={{
+                                      position: 'absolute',
+                                      bottom: '1px',
+                                      right: '1px',
+                                      width: '14px',
+                                      height: '14px',
+                                      borderRadius: '50%',
+                                      background: stylist.isAvailable ? '#10B981' : '#EF4444',
+                                      border: '2px solid var(--bg-card)',
+                                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                                    }} />
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
+                                      <h3 style={{
+                                        fontWeight: 700,
+                                        margin: 0,
+                                        color: 'var(--text-dark)',
+                                        fontSize: '1rem',
+                                        letterSpacing: '-0.025em'
+                                      }}>
+                                        {stylist.name}
+                                      </h3>
+                                    </div>
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.375rem',
+                                      padding: '0.2rem 0.625rem',
+                                      borderRadius: 'var(--radius-full)',
+                                      background: stylist.isAvailable
+                                        ? 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)'
+                                        : 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+                                      width: 'fit-content',
+                                      border: `1px solid ${stylist.isAvailable ? '#A7F3D0' : '#FECACA'}`
+                                    }}>
+                                      <span style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        background: stylist.isAvailable ? '#10B981' : '#EF4444',
+                                        boxShadow: `0 0 6px ${stylist.isAvailable ? '#10B981' : '#EF4444'}40`
+                                      }} />
+                                      <span style={{
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        color: stylist.isAvailable ? '#047857' : '#B91C1C'
+                                      }}>
+                                        {stylist.isAvailable ? 'Active' : 'Inactive'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {canEdit && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rawSpecs = stylist.specialization
+                                        ? (typeof stylist.specialization === 'string' ? stylist.specialization.split(',') : (Array.isArray(stylist.specialization) ? stylist.specialization : [stylist.specialization]))
+                                        : [];
+                                      const uniqueSpecs = Array.from(new Set(rawSpecs.map((s: string) => s.trim()).filter(Boolean)));
+
+                                      const stylistToEdit = {
+                                        ...stylist,
+                                        workingHours: stylist.workingHours || {},
+                                        permissions: stylist.permissions || [],
+                                        specialization: uniqueSpecs.join(', ')
+                                      };
+                                      setEditingStylist(stylistToEdit);
+                                      setIsEditModalOpen(true);
+                                    }}
+                                    style={{
+                                      color: 'var(--primary)',
+                                      border: 'none',
+                                      background: 'var(--primary-light)',
+                                      cursor: 'pointer',
+                                      padding: '0.5rem',
+                                      borderRadius: 'var(--radius-md)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all var(--transition-base)',
+                                      boxShadow: 'var(--shadow-sm)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = 'var(--primary)';
+                                      e.currentTarget.style.color = 'white';
+                                      e.currentTarget.style.transform = 'scale(1.1)';
+                                      e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = 'var(--primary-light)';
+                                      e.currentTarget.style.color = 'var(--primary)';
+                                      e.currentTarget.style.transform = 'scale(1)';
+                                      e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                                    }}
+                                    title="Edit Specialist"
+                                  >
+                                    <MdEdit size={18} />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="space-y-2" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.625rem',
+                                  padding: '0.5rem',
+                                  background: 'var(--bg-body)',
+                                  borderRadius: 'var(--radius-md)',
+                                  border: '1px solid var(--border-light)'
+                                }}>
+                                  <div style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: 'var(--radius-md)',
+                                    background: 'var(--bg-input)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--primary)',
+                                    border: '1px solid var(--border)',
+                                    flexShrink: 0
+                                  }}>
+                                    <MdEmail size={14} />
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-light)', marginBottom: '0.125rem' }}>Email</div>
+                                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-dark)', fontWeight: 500, wordBreak: 'break-word' }}>
+                                      {stylist.email}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.625rem',
+                                  padding: '0.5rem',
+                                  background: 'var(--bg-body)',
+                                  borderRadius: 'var(--radius-md)',
+                                  border: '1px solid var(--border-light)'
+                                }}>
+                                  <div style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: 'var(--radius-md)',
+                                    background: 'var(--bg-input)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--primary)',
+                                    border: '1px solid var(--border)',
+                                    flexShrink: 0
+                                  }}>
+                                    <MdPhone size={14} />
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-light)', marginBottom: '0.125rem' }}>Phone</div>
+                                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-dark)', fontWeight: 500 }}>
+                                      {stylist.phone}
+                                    </div>
+                                  </div>
+                                  {stylist.gender && (
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      padding: '0.25rem 0.625rem',
+                                      borderRadius: 'var(--radius-full)',
+                                      background: stylist.gender === 'female'
+                                        ? 'linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)'
+                                        : stylist.gender === 'male'
+                                          ? 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)'
+                                          : 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+                                      color: stylist.gender === 'female' ? '#BE185D' : stylist.gender === 'male' ? '#1D4ED8' : '#64748B',
+                                      border: `1px solid ${stylist.gender === 'female' ? '#FBCFE8' : stylist.gender === 'male' ? '#BFDBFE' : '#E2E8F0'}`,
+                                      textTransform: 'capitalize',
+                                      fontWeight: 600,
+                                      whiteSpace: 'nowrap',
+                                      boxShadow: 'var(--shadow-sm)'
+                                    }}>
+                                      {stylist.gender}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div style={{
+                                marginTop: '1rem',
+                                paddingTop: '1rem',
+                                borderTop: '1px solid var(--border-light)'
+                              }}>
+                                <div style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  color: 'var(--text-light)',
+                                  marginBottom: '0.5rem',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em'
+                                }}>
+                                  Specializations
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                                  {(() => {
+                                    const specs = stylist.specialization
+                                      ? (typeof stylist.specialization === 'string'
+                                        ? stylist.specialization.split(',').map(s => s.trim()).filter(Boolean)
+                                        : Array.isArray(stylist.specialization)
+                                          ? stylist.specialization
+                                          : [stylist.specialization])
+                                      : [];
+
+                                    if (specs.length === 0) {
+                                      return (
+                                        <span style={{
+                                          fontSize: '0.7rem',
+                                          background: 'var(--bg-body)',
+                                          padding: '0.375rem 0.75rem',
+                                          borderRadius: 'var(--radius-full)',
+                                          color: 'var(--text-gray)',
+                                          border: '1px solid var(--border)',
+                                          fontWeight: 500
+                                        }}>
+                                          General
+                                        </span>
+                                      );
+                                    }
+
+                                    return specs.map((spec, idx) => (
+                                      <motion.span
+                                        key={idx}
+                                        whileHover={{ scale: 1.05 }}
+                                        style={{
+                                          fontSize: '0.75rem',
+                                          background: 'var(--bg-input)',
+                                          padding: '0.5rem 1rem',
+                                          borderRadius: 'var(--radius-full)',
+                                          color: 'var(--text-dark)',
+                                          fontWeight: 600,
+                                          border: '1px solid var(--border)',
+                                          boxShadow: 'var(--shadow-sm)',
+                                          cursor: 'default',
+                                          transition: 'all var(--transition-fast)'
+                                        }}
+                                      >
+                                        {spec}
+                                      </motion.span>
+                                    ));
+                                  })()}
+                                </div>
+                              </div>
+                            </Card>
+                          </motion.div>
+                        )))}
                     </div>
 
                     {/* Enhanced Pagination Controls */}

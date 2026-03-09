@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Ticket, Copy, Filter, Trash2, CheckCircle, RefreshCcw, Send, Users, Calendar, AlertCircle, TrendingUp, DollarSign, ArrowRight, History, User, Activity } from 'lucide-react';
-import { Button, Modal, Input, Card, Select } from '../components/UI';
+import { Button, Modal, Input, Card, Select, Skeleton } from '../components/UI';
 import { Voucher, VoucherClaim, Customer } from '../types';
 import { useToast } from '../components/ToastContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -403,18 +403,22 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
               transition={{ duration: 0.15 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
             >
-              {paginatedVouchers.length > 0 ? (
+              {isInitialLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ height: '80px', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #f1f5f9', position: 'relative', overflow: 'hidden' }}>
+                    <Skeleton height="100%" width="100%" />
+                  </div>
+                ))
+              ) : paginatedVouchers.length > 0 ? (
                 <>
                   {paginatedVouchers.map(v => <CampaignCard key={v.id} voucher={v} />)}
                   <PaginationControls />
                 </>
               ) : (
-                !isInitialLoading && (
-                  <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
-                    <Ticket size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
-                    <p>{searchTerm ? 'No vouchers match your search.' : 'No voucher campaigns found. Create your first one!'}</p>
-                  </div>
-                )
+                <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                  <Ticket size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
+                  <p>{searchTerm ? 'No vouchers match your search.' : 'No voucher campaigns found. Create your first one!'}</p>
+                </div>
               )}
             </motion.div>
           ) : (
@@ -426,18 +430,22 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
               transition={{ duration: 0.15 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
             >
-              {paginatedClaims.length > 0 ? (
+              {isInitialLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ height: '70px', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #f1f5f9', position: 'relative', overflow: 'hidden' }}>
+                    <Skeleton height="100%" width="100%" />
+                  </div>
+                ))
+              ) : paginatedClaims.length > 0 ? (
                 <>
                   {paginatedClaims.map(c => <ClaimCard key={c.id} claim={c} customers={customers} setSelectedClaim={setSelectedClaim} />)}
                   <PaginationControls />
                 </>
               ) : (
-                !isInitialLoading && (
-                  <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
-                    <Users size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
-                    <p>{searchTerm ? 'No history matching your search.' : 'No vouchers issued yet.'}</p>
-                  </div>
-                )
+                <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                  <Users size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
+                  <p>{searchTerm ? 'No history matching your search.' : 'No vouchers issued yet.'}</p>
+                </div>
               )}
             </motion.div>
           )}

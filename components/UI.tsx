@@ -7,6 +7,8 @@ import {
   MdVisibilityOff,
   MdExpandMore
 } from 'react-icons/md';
+import { Skeleton } from './Skeleton';
+export { Skeleton };
 
 // --- BUTTON ---
 interface ButtonProps extends HTMLMotionProps<"button"> {
@@ -246,9 +248,10 @@ interface KPICardProps {
   color?: string; // CSS color string or class
   comparison?: { value: string; label: string; trend: 'up' | 'down' | 'neutral' };
   variant?: 'glass' | 'colored';
+  loading?: boolean;
 }
 
-export const KPICard: React.FC<KPICardProps> = ({ title, value, icon: Icon, trend, color = 'var(--primary)', comparison, variant = 'glass' }) => {
+export const KPICard: React.FC<KPICardProps> = ({ title, value, icon: Icon, trend, color = 'var(--primary)', comparison, variant = 'glass', loading }) => {
   // Extract color for background opacity
   const activeColor = color.startsWith('text-') ? (color === 'text-pink-500' ? '#EC4899' : '#3B82F6') : color;
 
@@ -355,14 +358,22 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, icon: Icon, tren
           textTransform: 'uppercase',
           letterSpacing: '0.05em'
         }}>{title}</p>
-        <h3 style={{
-          fontSize: '1.5rem',
-          fontWeight: 800,
-          margin: 0,
-          color: isColored ? 'white' : 'var(--text-dark)',
-          letterSpacing: '-0.04em'
-        }}>{value}</h3>
-        {trend && <p style={{ fontSize: '0.75rem', fontWeight: 600, color: isColored ? 'rgba(255,255,255,0.9)' : 'var(--success)', marginTop: '0.125rem' }}>{trend}</p>}
+        {loading ? (
+          <Skeleton width="100px" height="1.8rem" style={{ margin: '4px 0' }} />
+        ) : (
+          <h3 style={{
+            fontSize: '1.5rem',
+            fontWeight: 800,
+            margin: 0,
+            color: isColored ? 'white' : 'var(--text-dark)',
+            letterSpacing: '-0.04em'
+          }}>{value}</h3>
+        )}
+        {loading ? (
+          <Skeleton width="60px" height="0.8rem" />
+        ) : (
+          trend && <p style={{ fontSize: '0.75rem', fontWeight: 600, color: isColored ? 'rgba(255,255,255,0.9)' : 'var(--success)', marginTop: '0.125rem' }}>{trend}</p>
+        )}
       </div>
 
       <div style={{
@@ -381,7 +392,11 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, icon: Icon, tren
         boxShadow: isColored ? 'none' : `0 8px 20px -4px ${activeColor}35, inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
         transition: 'all var(--transition-base)'
       }}>
-        <Icon size={20} strokeWidth={2.5} style={{ filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))' }} />
+        {loading ? (
+          <Skeleton width="20px" height="20px" variant="circular" />
+        ) : (
+          <Icon size={20} strokeWidth={2.5} style={{ filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))' }} />
+        )}
       </div>
     </motion.div>
   );
@@ -505,9 +520,10 @@ interface TableProps<T> {
   onRowClick?: (item: T) => void;
   isLoading?: boolean;
   silentLoading?: boolean;
+  skeletonCount?: number;
 }
 
-export const Table = <T extends { id: number | string }>({ columns, data, onRowClick, isLoading, silentLoading }: TableProps<T>) => {
+export const Table = <T extends { id: number | string }>({ columns, data, onRowClick, isLoading, silentLoading, skeletonCount = 5 }: TableProps<T>) => {
 
   return (
     <div className="table-container" style={{ position: 'relative' }}>
@@ -541,27 +557,33 @@ export const Table = <T extends { id: number | string }>({ columns, data, onRowC
         )}
       </AnimatePresence>
 
-      {/* Initial/Full Loading State (when no data) */}
-      {isLoading && data.length === 0 && (
-        <div style={{ width: '100%', height: '12rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-card)', borderRadius: '1rem' }}>
-          <span className="animate-spin" style={{ display: 'flex', color: 'var(--primary)' }}><MdLoop size={32} /></span>
-        </div>
-      )}
+      {/* Removed old spinner-only initial loading block */}
 
-      {(!isLoading || data.length > 0) && (
-        <table className="table">
-          <thead>
-            <tr>
-              {columns.map((col, idx) => (
-                <th key={idx} className={col.className} style={{ paddingTop: '1rem', paddingBottom: '1rem', ...col.style }}>
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <AnimatePresence>
-              {data.map((row, idx) => (
+
+      <table className="table">
+        <thead>
+          <tr>
+            {columns.map((col, idx) => (
+              <th key={idx} className={col.className} style={{ paddingTop: '1rem', paddingBottom: '1rem', ...col.style }}>
+                {col.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <AnimatePresence>
+            {isLoading && data.length === 0 ? (
+              Array.from({ length: skeletonCount }).map((_, rIdx) => (
+                <tr key={`skeleton-row-${rIdx}`}>
+                  {columns.map((_, cIdx) => (
+                    <td key={`skeleton-cell-${cIdx}`} style={{ paddingTop: '1.25rem', paddingBottom: '1.25rem' }}>
+                      <Skeleton width="80%" height="1.2rem" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              data.map((row, idx) => (
                 <motion.tr
                   key={row.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -578,18 +600,18 @@ export const Table = <T extends { id: number | string }>({ columns, data, onRowC
                     </td>
                   ))}
                 </motion.tr>
-              ))}
-            </AnimatePresence>
-            {!isLoading && data.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
-                  No data available.
-                </td>
-              </tr>
+              ))
             )}
-          </tbody>
-        </table>
-      )}
+          </AnimatePresence>
+          {!isLoading && data.length === 0 && (
+            <tr>
+              <td colSpan={columns.length} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                No data available.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };

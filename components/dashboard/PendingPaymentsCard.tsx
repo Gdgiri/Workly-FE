@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../UI';
+import { Skeleton } from '../Skeleton';
 import { DollarSign, Clock, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -15,9 +16,10 @@ interface PendingPayment {
 
 interface PendingPaymentsCardProps {
     pendingPayments: any[];
+    loading?: boolean;
 }
 
-export const PendingPaymentsCard: React.FC<PendingPaymentsCardProps> = ({ pendingPayments }) => {
+export const PendingPaymentsCard: React.FC<PendingPaymentsCardProps> = ({ pendingPayments, loading }) => {
     const navigate = useNavigate();
     const { formatPrice } = useCurrency();
     const { user } = useAuth();
@@ -60,7 +62,17 @@ export const PendingPaymentsCard: React.FC<PendingPaymentsCardProps> = ({ pendin
             }
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {displayPayments.length === 0 ? (
+                {loading ? (
+                    [1, 2, 3].map(i => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-lg)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <Skeleton width="100px" height="1rem" />
+                                <Skeleton width="60px" height="0.75rem" />
+                            </div>
+                            <Skeleton width="50px" height="1.2rem" />
+                        </div>
+                    ))
+                ) : displayPayments.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
                         <div style={{
                             width: '3rem',
