@@ -26,6 +26,8 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
     const [selectedDate, setSelectedDate] = useState(new Date()); // Controls the selected day details
     const [weekDates, setWeekDates] = useState<{ day: string; date: string; fullDate: string }[]>([]);
     const [isMobile, setIsMobile] = useState(false);
+    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     // Helper to get YYYY-MM-DD in LOCAL time
     const getLocalDateString = (date: Date) => {
@@ -47,6 +49,14 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        if (!isDropdownOpen) return;
+        const handleClick = () => setIsDropdownOpen(false);
+        window.addEventListener('click', handleClick);
+        return () => window.removeEventListener('click', handleClick);
+    }, [isDropdownOpen]);
 
     // Generate week dates based on currentDate
     useEffect(() => {
@@ -74,62 +84,72 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
         setWeekDates(dates);
     }, [currentDate]);
 
-    const nextWeek = () => {
-        if (isMobile) {
-            // Move by 1 day on mobile
+    const handleNext = () => {
+        if (viewMode === 'daily') {
             const next = new Date(selectedDate);
             next.setDate(selectedDate.getDate() + 1);
             setSelectedDate(next);
 
-            // If next day is in next week relative to current view, update week too
-            const nextDayTime = next.getTime();
-            const weekEnd = new Date(weekDates[6]?.fullDate).getTime();
-            if (weekEnd && nextDayTime > weekEnd) {
-                const newWeek = new Date(currentDate);
-                newWeek.setDate(currentDate.getDate() + 7);
-                setCurrentDate(newWeek);
-            } else if (weekDates.length === 0) {
-                // Fallback if weekDates not ready
-                setCurrentDate(next);
+            // Shift week if we move past current week view
+            if (weekDates.length > 0) {
+                const weekEnd = new Date(weekDates[6].fullDate);
+                weekEnd.setHours(23, 59, 59);
+                if (next > weekEnd) {
+                    const nextWeekDate = new Date(currentDate);
+                    nextWeekDate.setDate(currentDate.getDate() + 7);
+                    setCurrentDate(nextWeekDate);
+                }
             }
-        } else {
-            const next = new Date(currentDate);
-            next.setDate(currentDate.getDate() + 7);
-            setCurrentDate(next);
+        } else if (viewMode === 'weekly') {
+            const nextWeekDate = new Date(currentDate);
+            nextWeekDate.setDate(currentDate.getDate() + 7);
+            setCurrentDate(nextWeekDate);
 
-            // Sync selectedDate to the same relative day in the next week
             const nextSelected = new Date(selectedDate);
             nextSelected.setDate(selectedDate.getDate() + 7);
+            setSelectedDate(nextSelected);
+        } else if (viewMode === 'monthly') {
+            const nextMonthDate = new Date(currentDate);
+            nextMonthDate.setMonth(currentDate.getMonth() + 1);
+            setCurrentDate(nextMonthDate);
+
+            const nextSelected = new Date(selectedDate);
+            nextSelected.setMonth(selectedDate.getMonth() + 1);
             setSelectedDate(nextSelected);
         }
     };
 
-    const prevWeek = () => {
-        if (isMobile) {
-            // Move by 1 day back on mobile
+    const handlePrev = () => {
+        if (viewMode === 'daily') {
             const prev = new Date(selectedDate);
             prev.setDate(selectedDate.getDate() - 1);
             setSelectedDate(prev);
 
-            // If prev day is before current week, update week
-            const prevDayTime = prev.getTime();
-            const weekStart = new Date(weekDates[0]?.fullDate).getTime();
-
-            if (weekStart && prevDayTime < weekStart) {
-                const newWeek = new Date(currentDate);
-                newWeek.setDate(currentDate.getDate() - 7);
-                setCurrentDate(newWeek);
-            } else if (weekDates.length === 0) {
-                setCurrentDate(prev);
+            // Shift week if we move before current week view
+            if (weekDates.length > 0) {
+                const weekStart = new Date(weekDates[0].fullDate);
+                weekStart.setHours(0, 0, 0, 0);
+                if (prev < weekStart) {
+                    const prevWeekDate = new Date(currentDate);
+                    prevWeekDate.setDate(currentDate.getDate() - 7);
+                    setCurrentDate(prevWeekDate);
+                }
             }
-        } else {
-            const prev = new Date(currentDate);
-            prev.setDate(currentDate.getDate() - 7);
-            setCurrentDate(prev);
+        } else if (viewMode === 'weekly') {
+            const prevWeekDate = new Date(currentDate);
+            prevWeekDate.setDate(currentDate.getDate() - 7);
+            setCurrentDate(prevWeekDate);
 
-            // Sync selectedDate to the same relative day in the previous week
             const prevSelected = new Date(selectedDate);
             prevSelected.setDate(selectedDate.getDate() - 7);
+            setSelectedDate(prevSelected);
+        } else if (viewMode === 'monthly') {
+            const prevMonthDate = new Date(currentDate);
+            prevMonthDate.setMonth(currentDate.getMonth() - 1);
+            setCurrentDate(prevMonthDate);
+
+            const prevSelected = new Date(selectedDate);
+            prevSelected.setMonth(selectedDate.getMonth() - 1);
             setSelectedDate(prevSelected);
         }
     };
@@ -207,8 +227,7 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 color: 'white',
-                position: 'relative',
-                overflow: 'hidden'
+                position: 'relative'
             }}>
                 {/* Background decorative circle */}
                 <div style={{
@@ -240,12 +259,16 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                    <button onClick={prevWeek} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', padding: '0.5rem', color: 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
+                    <button onClick={handlePrev} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', padding: '0.5rem', color: 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
                         <ChevronLeft size={20} />
                     </button>
-                    {!isMobile && (
+
+                    <div style={{ position: 'relative' }}>
                         <button
-                            onClick={goToToday}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDropdownOpen(!isDropdownOpen);
+                            }}
                             style={{
                                 background: 'white',
                                 color: 'var(--primary)',
@@ -255,13 +278,84 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
                                 fontSize: '0.875rem',
                                 fontWeight: 700,
                                 cursor: 'pointer',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
                             }}
                         >
-                            Today
+                            {viewMode === 'daily' ? 'Daily' : viewMode === 'weekly' ? 'Weekly' : 'Monthly'}
+                            <MoreVertical size={14} />
                         </button>
-                    )}
-                    <button onClick={nextWeek} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', padding: '0.5rem', color: 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
+
+                        <AnimatePresence>
+                            {isDropdownOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 0.5rem)',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        background: 'white',
+                                        borderRadius: '1rem',
+                                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                        padding: '0.5rem',
+                                        minWidth: '120px',
+                                        zIndex: 100,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.25rem'
+                                    }}
+                                >
+                                    {(['daily', 'weekly', 'monthly'] as const).map((mode) => (
+                                        <button
+                                            key={mode}
+                                            onClick={() => {
+                                                setViewMode(mode);
+                                                setIsDropdownOpen(false);
+                                            }}
+                                            style={{
+                                                padding: '0.6rem 1rem',
+                                                border: 'none',
+                                                background: viewMode === mode ? '#F1F5F9' : 'transparent',
+                                                borderRadius: '0.5rem',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 600,
+                                                color: viewMode === mode ? 'var(--primary)' : '#475569',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                textTransform: 'capitalize'
+                                            }}
+                                        >
+                                            {mode}
+                                        </button>
+                                    ))}
+                                    <div style={{ height: '1px', background: '#F1F5F9', margin: '0.25rem 0' }} />
+                                    <button
+                                        onClick={goToToday}
+                                        style={{
+                                            padding: '0.6rem 1rem',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            borderRadius: '0.5rem',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 700,
+                                            color: 'var(--primary)',
+                                            textAlign: 'center',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Go to Today
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    <button onClick={handleNext} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', padding: '0.5rem', color: 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
                         <ChevronRight size={20} />
                     </button>
                 </div>

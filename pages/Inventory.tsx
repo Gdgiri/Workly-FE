@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MdClose, MdAdd, MdEdit, MdMoveToInbox, MdNoteAlt, MdErrorOutline, MdHistory, MdInventory, MdLayers, MdTableChart, MdCloudUpload, MdCloudDownload, MdAddBox, MdIndeterminateCheckBox } from 'react-icons/md';
-import { Table, Button, Modal, Input, Select, SearchableSelect } from '../components/UI';
+import { Table, Button, Modal, Input, Select, SearchableSelect, Skeleton } from '../components/UI';
 import { Product, InventoryMovement } from '../types';
 import { useToast } from '../components/ToastContext';
 import { useCurrency } from '../components/CurrencyContext';
@@ -710,26 +710,46 @@ const Inventory: React.FC = () => {
           <ServiceAvatar name={row.name} imgUrl={row.imgUrl} size={40} />
           <span style={{ fontWeight: 600 }}>{row.name}</span>
         </div>
+      ),
+      skeleton: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Skeleton width="40px" height="40px" borderRadius="12px" />
+          <Skeleton width="120px" height="1.2rem" />
+        </div>
       )
     },
-    { header: 'Category', accessor: 'category' as keyof Product },
+    {
+      header: 'Category',
+      accessor: 'category' as keyof Product,
+      skeleton: <Skeleton width="80px" height="1rem" />
+    },
     {
       header: 'Status',
       accessor: (row: Product) => (
         <span className={`badge ${row.isActive ? 'badge-success' : 'badge-danger'}`}>
           {row.isActive ? 'Active' : 'Inactive'}
         </span>
-      )
+      ),
+      skeleton: <Skeleton width="60px" height="1.4rem" borderRadius="var(--radius-sm)" />
     },
-    { header: 'SKU', accessor: 'sku' as keyof Product },
-    { header: 'Price', accessor: (row: Product) => formatPrice(row.price) },
+    {
+      header: 'SKU',
+      accessor: 'sku' as keyof Product,
+      skeleton: <Skeleton width="100px" height="1rem" />
+    },
+    {
+      header: 'Price',
+      accessor: (row: Product) => formatPrice(row.price),
+      skeleton: <Skeleton width="60px" height="1.2rem" />
+    },
     {
       header: 'Stock Level',
       accessor: (row: Product) => (
         <span className={`badge ${row.stock < 10 ? 'badge-danger' : 'badge-success'}`}>
           {row.stock} Units
         </span>
-      )
+      ),
+      skeleton: <Skeleton width="70px" height="1.4rem" borderRadius="var(--radius-sm)" />
     },
     {
       header: 'Actions',
@@ -782,6 +802,13 @@ const Inventory: React.FC = () => {
             </>
           )}
         </div>
+      ),
+      skeleton: (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Skeleton width="80px" height="2.2rem" borderRadius="0.375rem" />
+          <Skeleton width="100px" height="2.2rem" borderRadius="0.375rem" />
+          <Skeleton width="80px" height="2.2rem" borderRadius="0.375rem" />
+        </div>
       )
     }
   ];
@@ -805,9 +832,15 @@ const Inventory: React.FC = () => {
         }
 
         return date.toLocaleDateString('en-GB'); // Format: DD/MM/YYYY
-      }
+      },
+      skeleton: <Skeleton width="140px" height="1rem" />
     },
-    { header: 'Product', accessor: 'productName' as keyof InventoryMovement, className: 'font-medium' },
+    {
+      header: 'Product',
+      accessor: 'productName' as keyof InventoryMovement,
+      className: 'font-medium',
+      skeleton: <Skeleton width="160px" height="1rem" />
+    },
     {
       header: 'Type',
       accessor: (row: InventoryMovement) => {
@@ -818,12 +851,29 @@ const Inventory: React.FC = () => {
         else if (row.type === 'adjustment_remove') { color = 'badge-danger'; label = 'Adj (-)'; }
         else if (row.type === 'sold') { color = 'badge-info'; label = 'Sold'; }
         return <span className={`badge ${color}`}>{label}</span>;
-      }
+      },
+      skeleton: <Skeleton width="80px" height="1.4rem" borderRadius="var(--radius-sm)" />
     },
-    { header: 'Qty', accessor: (row: InventoryMovement) => <span style={{ fontWeight: 600 }}>{(row.type === 'adjustment_remove' || row.type === 'sold') ? '-' : '+'}{row.quantity}</span> },
-    { header: 'Balance', accessor: (row: InventoryMovement) => `${row.balanceAfter}` },
-    { header: 'Remarks', accessor: (row: InventoryMovement) => <span style={{ color: 'var(--text-gray)', fontStyle: 'italic', fontSize: '0.85rem' }}>{row.remarks || '-'}</span> },
-    { header: 'User', accessor: 'performedBy' as keyof InventoryMovement }
+    {
+      header: 'Qty',
+      accessor: (row: InventoryMovement) => <span style={{ fontWeight: 600 }}>{(row.type === 'adjustment_remove' || row.type === 'sold') ? '-' : '+'}{row.quantity}</span>,
+      skeleton: <Skeleton width="40px" height="1rem" />
+    },
+    {
+      header: 'Balance',
+      accessor: (row: InventoryMovement) => `${row.balanceAfter}`,
+      skeleton: <Skeleton width="60px" height="1rem" />
+    },
+    {
+      header: 'Remarks',
+      accessor: (row: InventoryMovement) => <span style={{ color: 'var(--text-gray)', fontStyle: 'italic', fontSize: '0.85rem' }}>{row.remarks || '-'}</span>,
+      skeleton: <Skeleton width="200px" height="1rem" />
+    },
+    {
+      header: 'User',
+      accessor: 'performedBy' as keyof InventoryMovement,
+      skeleton: <Skeleton width="100px" height="1rem" />
+    }
   ];
 
   // Filter movements based on search term and date range
@@ -1171,6 +1221,7 @@ const Inventory: React.FC = () => {
           <>
             <Table
               columns={stockColumns}
+              isLoading={inventoryLoading}
               data={filteredProducts.slice((stockPage - 1) * ITEMS_PER_PAGE, stockPage * ITEMS_PER_PAGE)}
             />
             <PaginationControls
@@ -1183,6 +1234,7 @@ const Inventory: React.FC = () => {
           <>
             <Table
               columns={historyColumns}
+              isLoading={inventoryLoading}
               data={filteredMovements.slice(
                 (historyPage - 1) * ITEMS_PER_PAGE,
                 historyPage * ITEMS_PER_PAGE

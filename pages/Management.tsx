@@ -321,6 +321,36 @@ export const ServicesView: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  // --- SKELETON COMPONENT ---
+  const ServiceCardSkeleton = () => (
+    <Card className="p-4" style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: '180px' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        <Skeleton width="60px" height="60px" borderRadius="12px" />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.625rem' }}>
+            <Skeleton width="60%" height="1.25rem" />
+            <Skeleton width="50px" height="1.2rem" borderRadius="var(--radius-sm)" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Skeleton width="40px" height="1rem" borderRadius="var(--radius-sm)" />
+            <Skeleton width="60px" height="1rem" />
+          </div>
+        </div>
+      </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: '1rem',
+        borderTop: '1px solid var(--border-light)',
+        marginTop: 'auto'
+      }}>
+        <Skeleton width="80px" height="1.8rem" />
+        <Skeleton width="24px" height="24px" borderRadius="var(--radius-sm)" />
+      </div>
+    </Card>
+  );
+
   return (
     <div className="space-y-6" style={{ position: 'relative' }}>
       {/* Loading Overlay */}
@@ -370,19 +400,7 @@ export const ServicesView: React.FC = () => {
           {loading && services.length === 0 ? (
             <div className="grid md-grid-cols-2 lg-grid-cols-3 gap-6">
               {Array.from({ length: 9 }).map((_, i) => (
-                <Card key={`service-skeleton-${i}`} className="p-4" style={{ height: '200px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <Skeleton width="60px" height="60px" borderRadius="12px" />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <Skeleton width="100%" height="1.2rem" />
-                      <Skeleton width="60%" height="0.8rem" />
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Skeleton width="80px" height="2rem" />
-                    <Skeleton width="30px" height="1.5rem" />
-                  </div>
-                </Card>
+                <ServiceCardSkeleton key={`service-skeleton-${i}`} />
               ))}
             </div>
           ) : filteredServices.length > 0 ? (

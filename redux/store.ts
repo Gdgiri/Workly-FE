@@ -14,6 +14,8 @@ import paymentReducer from './slices/paymentSlice';
 import categoryReducer from './slices/categorySlice';
 import stylistReducer from './slices/stylistSlice';
 
+import saleReducer from './slices/saleSlice';
+
 export const store = configureStore({
     reducer: {
         auth: authReducer,
@@ -28,6 +30,7 @@ export const store = configureStore({
         payments: paymentReducer,
         categories: categoryReducer,
         stylists: stylistReducer,
+        sales: saleReducer,
     },
 });
 

@@ -1019,8 +1019,8 @@ const Stylists: React.FC = () => {
                         <tr key={`roster-skeleton-${rIdx}`}>
                           <td style={{ padding: '1rem' }}>
                             <div className="flex items-center gap-2">
-                              <Skeleton width="2.25rem" height="2.25rem" circle />
-                              <Skeleton width="100px" height="1.2rem" />
+                              <Skeleton width="2rem" height="2rem" circle />
+                              <Skeleton width="100px" height="1.1rem" />
                             </div>
                           </td>
                           {currentWeekDates.map(d => (
@@ -1119,22 +1119,30 @@ const Stylists: React.FC = () => {
                       {stylistsLoading ? (
                         Array.from({ length: 6 }).map((_, idx) => (
                           <Card key={`skeleton-${idx}`} style={{ minHeight: '320px', padding: '1.5rem' }}>
-                            <div className="flex items-center gap-3 mb-4">
-                              <Skeleton width="4rem" height="4rem" circle />
-                              <div className="flex-1">
-                                <Skeleton width="60%" height="1.25rem" style={{ marginBottom: '0.5rem' }} />
-                                <Skeleton width="40%" height="1rem" />
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div style={{ position: 'relative' }}>
+                                  <Skeleton width="4rem" height="4rem" circle />
+                                  <div style={{ position: 'absolute', bottom: '2px', right: '2px' }}>
+                                    <Skeleton width="14px" height="14px" circle />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Skeleton width="120px" height="1.25rem" style={{ marginBottom: '0.5rem' }} />
+                                  <Skeleton width="80px" height="1.4rem" borderRadius="1rem" />
+                                </div>
                               </div>
+                              <Skeleton width="32px" height="32px" borderRadius="var(--radius-md)" />
                             </div>
-                            <div className="space-y-3 pt-4 border-t border-slate-100">
-                              <Skeleton height="3rem" borderRadius="var(--radius-md)" />
-                              <Skeleton height="3rem" borderRadius="var(--radius-md)" />
+                            <div className="space-y-3 pt-4 border-t border-slate-100 mt-4">
+                              <Skeleton height="3.2rem" borderRadius="var(--radius-md)" />
+                              <Skeleton height="3.2rem" borderRadius="var(--radius-md)" />
                             </div>
                             <div className="pt-4 border-t border-slate-100 mt-4">
-                              <Skeleton width="30%" height="0.75rem" style={{ marginBottom: '0.5rem' }} />
+                              <Skeleton width="80px" height="0.7rem" style={{ marginBottom: '0.75rem' }} />
                               <div className="flex gap-2">
-                                <Skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
-                                <Skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
+                                <Skeleton width="60px" height="1.8rem" borderRadius="1rem" />
+                                <Skeleton width="60px" height="1.8rem" borderRadius="1rem" />
                               </div>
                             </div>
                           </Card>

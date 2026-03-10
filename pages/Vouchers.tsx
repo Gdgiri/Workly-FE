@@ -73,11 +73,16 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
 
   // Fetch initial data IF NOT PROVIDED by App.tsx (Fallback for standalone)
   useEffect(() => {
-    // Only fetch if App.tsx hasn't loaded anything yet
-    if (vouchers.length === 0 && voucherClaims.length === 0) {
-      const fetchAll = async () => {
+    const fetchAll = async () => {
+      setIsInitialLoading(true);
+      try {
         await Promise.all([fetchVouchers(), fetchClaims()]);
-      };
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    if (vouchers.length === 0 && voucherClaims.length === 0) {
       fetchAll();
     }
   }, []);
@@ -405,9 +410,7 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
             >
               {isInitialLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ height: '80px', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #f1f5f9', position: 'relative', overflow: 'hidden' }}>
-                    <Skeleton height="100%" width="100%" />
-                  </div>
+                  <CampaignCardSkeleton key={`campaign-skeleton-${i}`} />
                 ))
               ) : paginatedVouchers.length > 0 ? (
                 <>
@@ -432,9 +435,7 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
             >
               {isInitialLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ height: '70px', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #f1f5f9', position: 'relative', overflow: 'hidden' }}>
-                    <Skeleton height="100%" width="100%" />
-                  </div>
+                  <ClaimCardSkeleton key={`claim-skeleton-${i}`} />
                 ))
               ) : paginatedClaims.length > 0 ? (
                 <>
@@ -615,6 +616,78 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
     </div >
   );
 };
+
+// --- SKELETON COMPONENTS ---
+
+const CampaignCardSkeleton = () => (
+  <div style={{
+    background: 'white',
+    borderRadius: '1rem',
+    padding: '1rem 1.5rem',
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+    border: '1px solid #f1f5f9',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2rem'
+  }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <Skeleton width="2.75rem" height="2.75rem" borderRadius="0.75rem" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <Skeleton width="120px" height="1.1rem" />
+        <Skeleton width="80px" height="0.9rem" />
+      </div>
+    </div>
+    <div style={{ flex: 1 }}>
+      <Skeleton width="80%" height="0.9rem" />
+    </div>
+    <div style={{ flex: 1 }}>
+      <Skeleton width="60px" height="1.2rem" />
+    </div>
+    <div style={{ flex: 1 }}>
+      <Skeleton width="60px" height="1.2rem" />
+    </div>
+    <div style={{ flex: 1 }}>
+      <Skeleton width="50px" height="1.4rem" borderRadius="0.375rem" />
+    </div>
+    <div style={{ flex: 1, display: 'flex', gap: '0.4rem' }}>
+      <Skeleton width="14px" height="14px" />
+      <Skeleton width="60px" height="0.9rem" />
+    </div>
+  </div>
+);
+
+const ClaimCardSkeleton = () => (
+  <div style={{
+    background: 'white',
+    borderRadius: '1rem',
+    padding: '1rem 1.5rem',
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+    border: '1px solid #f1f5f9',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2rem'
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: '0 0 250px' }}>
+      <Skeleton width="2.5rem" height="2.5rem" borderRadius="0.75rem" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <Skeleton width="140px" height="1rem" />
+        <Skeleton width="100px" height="0.8rem" />
+      </div>
+    </div>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '3rem' }}>
+      <div style={{ minWidth: '150px' }}>
+        <Skeleton width="100px" height="1.4rem" />
+      </div>
+      <div style={{ minWidth: '100px' }}>
+        <Skeleton width="60px" height="1rem" />
+      </div>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+      <Skeleton width="100px" height="1.5rem" />
+      <Skeleton width="2.25rem" height="2.25rem" borderRadius="0.6rem" />
+    </div>
+  </div>
+);
 
 export default Vouchers;
 

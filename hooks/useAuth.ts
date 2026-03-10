@@ -24,9 +24,9 @@ export const useAuth = (): UseAuthReturn => {
         loading,
         error,
         isAuthenticated,
-        isAdmin: user?.role === 'ADMIN',
-        isManager: user?.role === 'MANAGER',
-        isStaff: user?.role === 'STAFF',
-        isCustomer: user?.role === 'CUSTOMER',
+        isAdmin: user?.role?.toUpperCase() === 'ADMIN',
+        isManager: user?.role?.toUpperCase() === 'MANAGER',
+        isStaff: user?.role?.toUpperCase() === 'STAFF',
+        isCustomer: user?.role?.toUpperCase() === 'CUSTOMER',
     };
 };

@@ -378,11 +378,23 @@ const Packages: React.FC = () => {
           </div>
         </div>
       ),
+      skeleton: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Skeleton width="40px" height="40px" borderRadius="12px" />
+          <Skeleton width="100px" height="1.2rem" />
+        </div>
+      ),
       className: 'w-[8%]'
     },
-    { header: 'Description', accessor: (row: ComboPackage) => <span style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>{row.description}</span>, className: 'w-[3%]' },
     {
-      header: 'Included Items', accessor: (row: ComboPackage) => {
+      header: 'Description',
+      accessor: (row: ComboPackage) => <span style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>{row.description}</span>,
+      skeleton: <Skeleton width="120px" height="1rem" />,
+      className: 'w-[3%]'
+    },
+    {
+      header: 'Included Items',
+      accessor: (row: ComboPackage) => {
         const safeItems = Array.isArray(row.items) ? row.items : [];
         const services = safeItems.filter(item => item.type === 'service');
         const products = safeItems.filter(item => item.type === 'product');
@@ -446,15 +458,39 @@ const Packages: React.FC = () => {
           </div>
         );
       },
+      skeleton: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Skeleton width="40px" height="0.8rem" />
+            <Skeleton width="60px" height="1.4rem" borderRadius="99px" />
+            <Skeleton width="80px" height="1.4rem" borderRadius="99px" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Skeleton width="40px" height="0.8rem" />
+            <Skeleton width="70px" height="1.4rem" borderRadius="99px" />
+          </div>
+        </div>
+      ),
       className: 'w-[40%]'
     },
-    { header: 'Price', accessor: (row: ComboPackage) => <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{formatPrice(row.price)}</span>, className: 'w-[25%]' },
+    {
+      header: 'Price',
+      accessor: (row: ComboPackage) => <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{formatPrice(row.price)}</span>,
+      skeleton: <Skeleton width="60px" height="1.2rem" />,
+      className: 'w-[25%]'
+    },
     {
       header: 'Validity',
       accessor: (row: ComboPackage) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-gray)', whiteSpace: 'nowrap' }}>
           <CalendarClock size={14} />
           {row.validityDays > 0 ? `${row.validityDays} Days` : 'No Expiry'}
+        </div>
+      ),
+      skeleton: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Skeleton width="16px" height="16px" borderRadius="4px" />
+          <Skeleton width="60px" height="1rem" />
         </div>
       ),
       className: 'w-[15%]'
@@ -466,6 +502,7 @@ const Packages: React.FC = () => {
           {row.active ? 'Active' : 'Inactive'}
         </span>
       ),
+      skeleton: <Skeleton width="50px" height="1.4rem" borderRadius="var(--radius-sm)" />,
       className: 'w-[5%]'
     },
     {
@@ -498,6 +535,7 @@ const Packages: React.FC = () => {
           )}
         </div>
       ),
+      skeleton: <Skeleton width="60px" height="2.2rem" borderRadius="0.5rem" />,
       className: 'w-[5%]'
     }
   ];
@@ -551,6 +589,7 @@ const Packages: React.FC = () => {
 
       <Table
         columns={columns}
+        isLoading={packagesLoading}
         data={Array.isArray(packages) ? packages.filter(pkg => {
           const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             pkg.description.toLowerCase().includes(searchTerm.toLowerCase());

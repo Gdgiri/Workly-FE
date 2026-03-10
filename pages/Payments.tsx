@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
     Search, Filter, Download, DollarSign, CreditCard, Smartphone,
     Calendar, CheckCircle, Clock, XCircle, ArrowUpRight, ArrowDownLeft, Eye,
-    FileText, Printer, Trash2, ChevronLeft, ChevronRight, Play, TrendingUp, Wallet, MessageCircle, Paperclip, ExternalLink, RefreshCw
+    FileText, Printer, Trash2, ChevronLeft, ChevronRight, Play, TrendingUp, Wallet, MessageCircle, Paperclip, ExternalLink, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { Card, Table, Button, Input, Select, KPICard, Modal } from '../components/UI';
 import { Skeleton } from '../components/Skeleton';
@@ -21,6 +21,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../redux/store';
 import { fetchPayments, fetchSpecialists, invalidatePaymentCache } from '../redux/slices/paymentSlice';
 import { fetchSettings } from '../redux/slices/settingSlice';
+import { cancelSale } from '../redux/slices/saleSlice';
+import { fetchInventory, fetchInventoryHistory, invalidateInventoryCache } from '../redux/slices/inventorySlice';
 
 
 interface PaymentsProps {
@@ -112,7 +114,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const { settings } = useSelector((state: RootState) => state.settings); // Use global settings
 
     const navigate = useNavigate();
-    const { user, isStaff } = useAuth();
+    const { user, isStaff, isAdmin, isManager } = useAuth();
     const { showToast } = useToast();
     const { formatPrice, currency, symbol } = useCurrency();
 
@@ -131,6 +133,11 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [previewAttachment, setPreviewAttachment] = useState<{ url: string, name: string } | null>(null);
+
+    // Cancellation State
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [isCancelling, setIsCancelling] = useState(false);
 
     // Filters
     const getToday = () => {
@@ -325,7 +332,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             case 'REFUNDED': return 'bg-purple-100 text-purple-700';
             case 'PARTIAL': return 'bg-blue-100 text-blue-700';
             case 'DRAFT': return 'bg-slate-200 text-slate-700';
-            case 'CANCELLED': return 'bg-red-100 text-red-800 font-bold';
+            case 'CANCELLED': return 'bg-red-50 text-red-600 font-black border-red-200';
             default: return 'bg-slate-100 text-slate-700';
         }
     };
@@ -467,17 +474,17 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 );
             }
         },
-        // {
-        //     header: 'Sale Status',
-        //     accessor: (row: Payment) => {
-        //         const displayStatus = row.isPendingSale ? 'PENDING' : (row.sale?.saleStatus || row.paymentStatus);
-        //         return (
-        //             <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(displayStatus)}`}>
-        //                 {displayStatus}
-        //             </span>
-        //         );
-        //     }
-        // },
+        {
+            header: 'Status',
+            accessor: (row: Payment) => {
+                const displayStatus = row.isPendingSale ? 'PENDING' : (row.sale?.saleStatus || row.paymentStatus);
+                return (
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider border ${getStatusColor(displayStatus)}`}>
+                        {displayStatus}
+                    </span>
+                );
+            }
+        },
         {
             header: 'Actions',
             accessor: (row: Payment) => (
@@ -518,9 +525,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             </Button>
                         )
                     }
-                    < Button
+                    <Button
                         variant="ghost"
-                        icon={< Eye size={16} />}
+                        icon={<Eye size={16} />}
                         style={{
                             backgroundColor: '#f1f5f9',
                             color: '#475569',
@@ -537,7 +544,29 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         }}
                     >
                         View
-                    </Button >
+                    </Button>
+                    {(isAdmin || isManager) && row.sale?.saleStatus !== 'CANCELLED' && (
+                        <Button
+                            variant="ghost"
+                            icon={<XCircle size={16} />}
+                            style={{
+                                backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                padding: '0.4rem 0.75rem',
+                                borderRadius: '0.625rem',
+                                transition: 'all 0.2s'
+                            }}
+                            className="hover:bg-red-100"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPayment(row);
+                                setIsCancelModalOpen(true);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                    )}
                 </div >
             )
         }
@@ -1382,74 +1411,202 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 Close
                             </Button>
                         </div>
+
+                        {/* Cancel Bill Button Section - Restricted to Admin/Manager */}
+                        {(isAdmin || isManager) && selectedPayment.sale?.saleStatus !== 'CANCELLED' && (
+                            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
+                                <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    style={{
+                                        height: '3rem',
+                                        borderRadius: 'var(--radius-xl)',
+                                        borderColor: '#ef4444',
+                                        color: '#ef4444',
+                                        backgroundColor: 'rgba(239, 68, 68, 0.05)'
+                                    }}
+                                    icon={<XCircle size={18} />}
+                                    onClick={() => setIsCancelModalOpen(true)}
+                                >
+                                    Cancel Bill
+                                </Button>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textAlign: 'center', marginTop: '0.5rem' }}>
+                                    Cancelling will revert all stock, voucher balances, and package redemptions.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
             </Modal>
 
-            {/* Attachment Preview Modal */}
-            {/* <Modal
-                isOpen={!!previewAttachment}
-                onClose={() => setPreviewAttachment(null)}
-                title={`Preview: ${previewAttachment?.name || 'Attachment'}`}
-                maxWidth="900px"
+            {/* Sale Cancellation Modal */}
+            <Modal
+                isOpen={isCancelModalOpen}
+                onClose={() => {
+                    if (!isCancelling) {
+                        setIsCancelModalOpen(false);
+                        setCancelReason('');
+                    }
+                }}
+                title="Cancel Bill"
             >
-                <div style={{
-                    minHeight: '400px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'var(--bg-hover)',
-                    borderRadius: 'var(--radius-lg)',
-                    overflow: 'hidden',
-                    position: 'relative'
-                }}>
-                    {previewAttachment ? (
-                        previewAttachment.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ||
-                            previewAttachment.url?.toLowerCase().includes('image/upload') ? (
-                            <img
-                                src={previewAttachment.url}
-                                alt={previewAttachment.name}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0.5rem' }}>
+                    {/* Premium Blue Warning Box */}
+                    <div style={{
+                        padding: '1.25rem',
+                        background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(219, 234, 254, 0.6) 100%)',
+                        border: '1.5px solid rgba(37, 99, 235, 0.2)',
+                        borderRadius: 'var(--radius-xl)',
+                        display: 'flex',
+                        gap: '1rem',
+                        boxShadow: '0 4px 15px rgba(37, 99, 235, 0.05)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '12px',
+                            background: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#2563EB',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            flexShrink: 0
+                        }}>
+                            <AlertTriangle size={22} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <p style={{
+                                fontSize: '0.925rem',
+                                fontWeight: 800,
+                                color: '#1E40AF',
+                                marginBottom: '0.375rem',
+                                letterSpacing: '-0.01em'
+                            }}>
+                                Warning: Destructive Action
+                            </p>
+                            <p style={{
+                                fontSize: '0.8125rem',
+                                color: '#475569',
+                                lineHeight: 1.6,
+                                fontWeight: 500
+                            }}>
+                                This will permanently cancel bill <strong style={{ color: '#1E293B' }}>{selectedPayment?.sale?.saleNumber}</strong>.
+                                Stock levels, voucher balances, and package usage will be automatically reverted.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                        <label style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 700,
+                            color: 'var(--text-dark)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                        }}>
+                            Cancellation Reason <span style={{ color: '#2563EB' }}>*</span>
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                            <textarea
+                                className="w-full p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                 style={{
-                                    maxWidth: '100%',
-                                    maxHeight: '70vh',
-                                    objectFit: 'contain'
+                                    minHeight: '120px',
+                                    resize: 'none',
+                                    fontSize: '0.875rem',
+                                    lineHeight: 1.5,
+                                    color: 'var(--text-dark)'
                                 }}
+                                placeholder="Enter a reason for this cancellation..."
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
                             />
-                        ) : previewAttachment.url?.toLowerCase().endsWith('.pdf') ||
-                            previewAttachment.url?.toLowerCase().includes('raw/upload') ? (
-                            <iframe
-                                src={previewAttachment.url}
-                                title={previewAttachment.name}
+                        </div>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        marginTop: '0.75rem',
+                        borderTop: '1px solid var(--border-light)',
+                        paddingTop: '1.5rem'
+                    }}>
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            style={{
+                                height: '52px',
+                                borderRadius: 'var(--radius-xl)',
+                                fontWeight: 700,
+                                border: '2px solid var(--border)',
+                                fontSize: '0.9375rem'
+                            }}
+                            onClick={() => {
+                                setIsCancelModalOpen(false);
+                                setCancelReason('');
+                            }}
+                            disabled={isCancelling}
+                        >
+                            Back
+                        </Button>
+                        <motion.div
+                            whileHover={{ scale: (cancelReason.trim() !== '' && !isCancelling) ? 1.02 : 1 }}
+                            whileTap={{ scale: (cancelReason.trim() !== '' && !isCancelling) ? 0.98 : 1 }}
+                            className="flex-1"
+                        >
+                            <Button
+                                variant="primary"
                                 style={{
                                     width: '100%',
-                                    height: '70vh',
-                                    border: 'none'
+                                    height: '52px',
+                                    borderRadius: 'var(--radius-xl)',
+                                    fontWeight: 700,
+                                    fontSize: '0.9375rem',
+                                    background: cancelReason.trim() === '' ? 'var(--bg-button-disabled)' : 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)',
+                                    border: 'none',
+                                    boxShadow: cancelReason.trim() === '' ? 'none' : '0 10px 15px -3px rgba(37, 99, 235, 0.3)',
+                                    opacity: cancelReason.trim() === '' ? 0.6 : 1,
+                                    cursor: cancelReason.trim() === '' ? 'not-allowed' : 'pointer'
                                 }}
-                            />
-                        ) : (
-                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                <FileText size={48} style={{ color: 'var(--text-gray)', marginBottom: '1rem' }} />
-                                <p style={{ color: 'var(--text-dark)', fontWeight: 600 }}>This file type cannot be previewed</p>
-                                <Button
-                                    variant="primary"
-                                    onClick={() => window.open(previewAttachment.url, '_blank')}
-                                    style={{ marginTop: '1rem' }}
-                                >
-                                    Open in New Tab
-                                </Button>
-                            </div>
-                        )
-                    ) : (
-                        <LoadingSpinner />
-                    )}
+                                disabled={cancelReason.trim() === '' || isCancelling}
+                                onClick={async () => {
+                                    if (!selectedPayment?.sale?.id) return;
+                                    try {
+                                        setIsCancelling(true);
+                                        await dispatch(cancelSale({
+                                            id: selectedPayment.sale.id,
+                                            reason: cancelReason
+                                        })).unwrap();
+
+                                        showToast('Bill cancelled successfully', 'success');
+                                        setIsCancelModalOpen(false);
+                                        setIsModalOpen(false);
+                                        setCancelReason('');
+
+                                        // Refresh data
+                                        fetchPaymentsHandler();
+
+                                        // Also refresh inventory to ensure stock levels are updated in UI
+                                        dispatch(invalidateInventoryCache());
+                                        dispatch(fetchInventory());
+                                        dispatch(fetchInventoryHistory());
+                                    } catch (error: any) {
+                                        showToast(error || 'Failed to cancel bill', 'error');
+                                    } finally {
+                                        setIsCancelling(false);
+                                    }
+                                }}
+                                icon={isCancelling ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle size={20} />}
+                            >
+                                {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
+                            </Button>
+                        </motion.div>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                    <Button variant="outline" onClick={() => setPreviewAttachment(null)}>
-                        Close Preview
-                    </Button>
-                </div>
-            </Modal> */}
+            </Modal>
         </div>
     );
 };

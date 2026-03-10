@@ -17,7 +17,7 @@ import { generateReceiptHtml } from '../utils/receiptGenerator';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../redux/store';
 import { fetchServices } from '../redux/slices/serviceSlice';
-import { fetchInventory, invalidateInventoryCache } from '../redux/slices/inventorySlice';
+import { fetchInventory, fetchInventoryHistory, invalidateInventoryCache } from '../redux/slices/inventorySlice';
 import { fetchPackages } from '../redux/slices/packageSlice';
 import { fetchPayments, invalidatePaymentCache } from '../redux/slices/paymentSlice';
 import { fetchCustomers, createCustomer, invalidateCustomerCache } from '../redux/slices/customerSlice';
@@ -1592,6 +1592,7 @@ const Sales: React.FC<SalesProps> = ({
       // Refresh inventory stock levels and payment cache
       dispatch(invalidateInventoryCache());
       dispatch(fetchInventory());
+      dispatch(fetchInventoryHistory());
       dispatch(invalidatePaymentCache());
       // setVoucherCode(''); // Already cleared
       // setAppliedVouchers([]); // Already cleared
@@ -1738,6 +1739,7 @@ const Sales: React.FC<SalesProps> = ({
             // Refresh inventory stock levels and payment cache
             dispatch(invalidateInventoryCache());
             dispatch(fetchInventory());
+            dispatch(fetchInventoryHistory());
             dispatch(invalidatePaymentCache());
 
           } catch (error: any) {

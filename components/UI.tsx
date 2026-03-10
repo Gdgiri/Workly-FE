@@ -508,10 +508,11 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 
 // --- TABLE ---
 interface TableColumn<T> {
-  header: string;
+  header: string | React.ReactNode;
   accessor: keyof T | ((item: T) => React.ReactNode);
   className?: string;
   style?: React.CSSProperties;
+  skeleton?: React.ReactNode;
 }
 
 interface TableProps<T> {
@@ -575,9 +576,9 @@ export const Table = <T extends { id: number | string }>({ columns, data, onRowC
             {isLoading && data.length === 0 ? (
               Array.from({ length: skeletonCount }).map((_, rIdx) => (
                 <tr key={`skeleton-row-${rIdx}`}>
-                  {columns.map((_, cIdx) => (
-                    <td key={`skeleton-cell-${cIdx}`} style={{ paddingTop: '1.25rem', paddingBottom: '1.25rem' }}>
-                      <Skeleton width="80%" height="1.2rem" />
+                  {columns.map((col, cIdx) => (
+                    <td key={`skeleton-cell-${cIdx}`} className={col.className} style={{ paddingTop: '1.25rem', paddingBottom: '1.25rem', ...col.style }}>
+                      {col.skeleton ? col.skeleton : <Skeleton width="80%" height="1.2rem" />}
                     </td>
                   ))}
                 </tr>

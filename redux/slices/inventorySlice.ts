@@ -110,6 +110,7 @@ const inventorySlice = createSlice({
         },
         invalidateInventoryCache: (state) => {
             state.lastFetched = null;
+            state.lastHistoryFetched = null;
         }
     },
     extraReducers: (builder) => {
