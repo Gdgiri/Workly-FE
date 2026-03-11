@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
     AlignLeft, AlignJustify, CheckSquare, CheckCircle,
-    Hash, ChevronDown, Upload, Type, ArrowUp, ArrowDown,
+    Hash, ChevronDown, Upload, Type, ArrowDown,
     Copy, Trash2, Camera, AlertTriangle, MessageSquare, LayoutTemplate, Minus,
-    Calendar, CircleDot, ListChecks, PenTool, Eye, Save
+    Calendar, CircleDot, ListChecks, PenTool, Eye, Save, X, GripVertical
 } from 'lucide-react';
 import { Button } from '../components/UI';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
@@ -23,6 +23,21 @@ interface ChecklistItem {
     requireRemarks: boolean;
     options?: string[];
 }
+
+const QUESTION_TYPES: { value: QuestionType; label: string; icon: React.ReactNode }[] = [
+    { value: 'short_text', label: 'Short answer', icon: <AlignLeft size={16} /> },
+    { value: 'long_text', label: 'Paragraph', icon: <AlignJustify size={16} /> },
+    { value: 'multiple_choice', label: 'Multiple choice', icon: <ListChecks size={16} /> },
+    { value: 'single_choice', label: 'Single choice', icon: <CircleDot size={16} /> },
+    { value: 'dropdown', label: 'Dropdown', icon: <ChevronDown size={16} /> },
+    { value: 'yes_no', label: 'Yes / No', icon: <CheckSquare size={16} /> },
+    { value: 'pass_fail', label: 'Pass / Fail', icon: <CheckCircle size={16} /> },
+    { value: 'file_upload', label: 'File upload', icon: <Upload size={16} /> },
+    { value: 'date', label: 'Date', icon: <Calendar size={16} /> },
+    { value: 'signature', label: 'Signature', icon: <PenTool size={16} /> },
+    { value: 'section_header', label: 'Section Header', icon: <LayoutTemplate size={16} /> },
+    { value: 'divider', label: 'Divider', icon: <Minus size={16} /> },
+];
 
 export const ChecklistBuilder: React.FC = () => {
     const { appId, businessName } = useParams();
@@ -163,18 +178,6 @@ export const ChecklistBuilder: React.FC = () => {
         setSelectedId(newItem.id);
     };
 
-    const handleMoveItem = (index: number, direction: 'up' | 'down', e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (direction === 'up' && index > 0) {
-            const newItems = [...items];
-            [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
-            setItems(newItems);
-        } else if (direction === 'down' && index < items.length - 1) {
-            const newItems = [...items];
-            [newItems[index + 1], newItems[index]] = [newItems[index], newItems[index + 1]];
-            setItems(newItems);
-        }
-    };
 
     const handleUpdateItem = (id: string, updates: Partial<ChecklistItem>) => {
         setItems(items.map(i => i.id === id ? { ...i, ...updates } : i));
@@ -333,10 +336,35 @@ export const ChecklistBuilder: React.FC = () => {
                                                 marginBottom: '1.5rem',
                                                 boxShadow: isActive ? '0 2px 12px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.06)',
                                                 position: 'relative',
-                                                cursor: 'pointer',
+                                                cursor: 'default',
                                                 transition: 'all 0.2s ease-in-out'
                                             }}
                                         >
+                                            {/* Top Centered Drag Handle - Google Forms Style */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '4px',
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                cursor: 'grab',
+                                                color: '#CBD5E1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '4px 8px',
+                                                zIndex: 20,
+                                                opacity: isActive ? 1 : 0.4,
+                                                transition: 'all 0.2s'
+                                            }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = '#94A3B8'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = '#CBD5E1'}
+                                            >
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 3px)', gap: '2px' }}>
+                                                    {[...Array(6)].map((_, i) => (
+                                                        <div key={i} style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'currentColor' }} />
+                                                    ))}
+                                                </div>
+                                            </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                                 <div style={{ flex: 1, marginRight: '1rem' }}>
                                                     {item.type !== 'divider' && (
@@ -363,6 +391,42 @@ export const ChecklistBuilder: React.FC = () => {
                                                                 onBlur={(e) => e.target.style.borderBottom = isActive ? '1px solid #E2E8F0' : '1px solid transparent'}
                                                             />
                                                             {item.mandatory && item.type !== 'section_header' && <span style={{ color: '#EF4444', marginLeft: '0.25rem' }}>*</span>}
+                                                        </div>
+                                                    )}
+
+                                                    {isActive && item.type !== 'divider' && (
+                                                        <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', width: '200px' }}>
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.5rem',
+                                                                padding: '0.5rem 0.75rem',
+                                                                border: '1px solid #E2E8F0',
+                                                                borderRadius: '0.375rem',
+                                                                background: '#FFFFFF',
+                                                                cursor: 'pointer'
+                                                            }}>
+                                                                <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+                                                                    {getIconForType(item.type)}
+                                                                </div>
+                                                                <select
+                                                                    value={item.type}
+                                                                    onChange={(e) => handleUpdateItem(item.id, { type: e.target.value as QuestionType })}
+                                                                    style={{
+                                                                        border: 'none',
+                                                                        outline: 'none',
+                                                                        background: 'transparent',
+                                                                        fontSize: '0.875rem',
+                                                                        color: '#1E293B',
+                                                                        width: '100%',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    {QUESTION_TYPES.map(type => (
+                                                                        <option key={type.value} value={type.value}>{type.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
                                                         </div>
                                                     )}
 
@@ -395,22 +459,7 @@ export const ChecklistBuilder: React.FC = () => {
                                                     )}
                                                 </div>
 
-                                                {/* Question Actions (Visible if active) */}
-                                                <AnimatePresence>
-                                                    {isActive && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            exit={{ opacity: 0 }}
-                                                            style={{ display: 'flex', gap: '0.5rem', color: '#94A3B8' }}
-                                                        >
-                                                            <button onClick={(e) => handleMoveItem(index, 'up', e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: index === 0 ? '#E2E8F0' : '#94A3B8' }} disabled={index === 0}><ArrowUp size={16} /></button>
-                                                            <button onClick={(e) => handleMoveItem(index, 'down', e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: index === items.length - 1 ? '#E2E8F0' : '#94A3B8' }} disabled={index === items.length - 1}><ArrowDown size={16} /></button>
-                                                            <button onClick={(e) => handleCopyItem(item, e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: '#94A3B8' }}><Copy size={16} /></button>
-                                                            <button onClick={(e) => handleDeleteItem(item.id, e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: '#EF4444' }}><Trash2 size={16} /></button>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
+
                                             </div>
 
                                             {item.type === 'short_text' && (
@@ -434,45 +483,105 @@ export const ChecklistBuilder: React.FC = () => {
                                             )}
 
                                             {(item.type === 'dropdown' || item.type === 'multiple_choice' || item.type === 'single_choice') && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', opacity: isActive ? 1 : 0.6 }}>
-                                                    {item.options?.map((opt, idx) => (
-                                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#1E293B', fontSize: '0.875rem' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1.5rem', opacity: isActive ? 1 : 0.6 }}>
+                                                    <Reorder.Group
+                                                        axis="y"
+                                                        values={item.options || []}
+                                                        onReorder={(newOpts) => handleUpdateItem(item.id, { options: newOpts })}
+                                                        style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}
+                                                    >
+                                                        {item.options?.map((opt, idx) => (
+                                                            <Reorder.Item
+                                                                key={`${item.id}-opt-${idx}-${opt}`}
+                                                                value={opt}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1E293B', fontSize: '0.875rem' }}
+                                                            >
+                                                                {isActive && (
+                                                                    <div style={{ cursor: 'grab', color: '#CBD5E1', display: 'flex', alignItems: 'center', margin: '0 0.25rem' }}>
+                                                                        <GripVertical size={16} />
+                                                                    </div>
+                                                                )}
+                                                                {item.type === 'multiple_choice' ? (
+                                                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '2px solid #CBD5E1', flexShrink: 0 }}></div>
+                                                                ) : item.type === 'single_choice' ? (
+                                                                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #CBD5E1', flexShrink: 0 }}></div>
+                                                                ) : (
+                                                                    <span style={{ color: '#94A3B8', minWidth: '1.25rem' }}>{idx + 1}.</span>
+                                                                )}
+                                                                {isActive ? (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                                                                        <input
+                                                                            value={opt}
+                                                                            onChange={(e) => {
+                                                                                const newOpts = [...(item.options || [])];
+                                                                                newOpts[idx] = e.target.value;
+                                                                                handleUpdateItem(item.id, { options: newOpts });
+                                                                            }}
+                                                                            placeholder={`Option ${idx + 1}`}
+                                                                            style={{
+                                                                                border: 'none',
+                                                                                borderBottom: '1px solid #E2E8F0',
+                                                                                outline: 'none',
+                                                                                background: 'transparent',
+                                                                                flex: 1,
+                                                                                padding: '0.4rem 0',
+                                                                                margin: 0,
+                                                                                color: '#1E293B',
+                                                                                fontSize: '0.875rem',
+                                                                                transition: 'border-bottom 0.2s'
+                                                                            }}
+                                                                            onFocus={(e) => e.target.style.borderBottom = '2px solid #4285F4'}
+                                                                            onBlur={(e) => e.target.style.borderBottom = '1px solid #E2E8F0'}
+                                                                        />
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const newOpts = item.options?.filter((_, i) => i !== idx);
+                                                                                handleUpdateItem(item.id, { options: newOpts });
+                                                                            }}
+                                                                            style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '0.25rem' }}
+                                                                        >
+                                                                            <X size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span style={{ padding: '0.4rem 0' }}>{opt}</span>
+                                                                )}
+                                                            </Reorder.Item>
+                                                        ))}
+                                                    </Reorder.Group>
+
+                                                    {isActive && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                            <div style={{ width: '16px', margin: '0 0.25rem' }}></div>
                                                             {item.type === 'multiple_choice' ? (
-                                                                <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '2px solid #CBD5E1' }}></div>
+                                                                <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '2px solid #CBD5E1', flexShrink: 0 }}></div>
                                                             ) : item.type === 'single_choice' ? (
-                                                                <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #CBD5E1' }}></div>
+                                                                <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #CBD5E1', flexShrink: 0 }}></div>
                                                             ) : (
-                                                                <span style={{ color: '#94A3B8' }}>{idx + 1}.</span>
+                                                                <span style={{ color: '#94A3B8', minWidth: '1.25rem' }}>{(item.options?.length || 0) + 1}.</span>
                                                             )}
-                                                            {isActive ? (
-                                                                <input
-                                                                    value={opt}
-                                                                    onChange={(e) => {
-                                                                        const newOpts = [...(item.options || [])];
-                                                                        newOpts[idx] = e.target.value;
-                                                                        handleUpdateItem(item.id, { options: newOpts });
-                                                                    }}
-                                                                    placeholder={`Option ${idx + 1}`}
-                                                                    style={{
-                                                                        border: 'none',
-                                                                        borderBottom: '1px solid transparent',
-                                                                        outline: 'none',
-                                                                        background: 'transparent',
-                                                                        flex: 1,
-                                                                        padding: '0.25rem 0',
-                                                                        margin: 0,
-                                                                        color: '#1E293B',
-                                                                        fontSize: '0.875rem',
-                                                                        transition: 'border-bottom 0.2s ease-in-out'
-                                                                    }}
-                                                                    onFocus={(e) => e.target.style.borderBottom = '2px solid #4285F4'}
-                                                                    onBlur={(e) => e.target.style.borderBottom = '1px solid transparent'}
-                                                                />
-                                                            ) : (
-                                                                <span>{opt}</span>
-                                                            )}
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newOpts = [...(item.options || []), `Option ${(item.options?.length || 0) + 1}`];
+                                                                    handleUpdateItem(item.id, { options: newOpts });
+                                                                }}
+                                                                style={{
+                                                                    background: 'none',
+                                                                    border: 'none',
+                                                                    color: '#4285F4',
+                                                                    fontSize: '0.875rem',
+                                                                    fontWeight: 500,
+                                                                    cursor: 'pointer',
+                                                                    padding: '0.4rem 0',
+                                                                    textAlign: 'left'
+                                                                }}
+                                                            >
+                                                                Add option
+                                                            </button>
                                                         </div>
-                                                    ))}
+                                                    )}
                                                 </div>
                                             )}
 
@@ -528,6 +637,83 @@ export const ChecklistBuilder: React.FC = () => {
                                                             <MessageSquare size={12} /> REMARKS ON FAIL
                                                         </div>
                                                     )}
+                                                </div>
+                                            )}
+
+                                            {/* Card Footer for Active Item - Repositioned Icons */}
+                                            {isActive && (
+                                                <div style={{
+                                                    marginTop: '1.5rem',
+                                                    paddingTop: '1rem',
+                                                    borderTop: '1px solid #F1F5F9',
+                                                    display: 'flex',
+                                                    justifyContent: 'flex-end',
+                                                    alignItems: 'center',
+                                                    gap: '1rem'
+                                                }}>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', borderRight: '1px solid #E2E8F0', paddingRight: '1rem' }}>
+                                                        <button
+                                                            onClick={(e) => handleCopyItem(item, e)}
+                                                            title="Duplicate"
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                padding: '0.5rem',
+                                                                color: '#64748B',
+                                                                borderRadius: '0.375rem',
+                                                                transition: 'background 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#F8FAFC'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                                        >
+                                                            <Copy size={20} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => handleDeleteItem(item.id, e)}
+                                                            title="Delete"
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                padding: '0.5rem',
+                                                                color: '#64748B',
+                                                                borderRadius: '0.375rem',
+                                                                transition: 'background 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = '#FEF2F2'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                                        >
+                                                            <Trash2 size={20} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <span style={{ fontSize: '0.875rem', color: '#64748B' }}>Required</span>
+                                                        <div
+                                                            onClick={() => handleUpdateItem(item.id, { mandatory: !item.mandatory })}
+                                                            style={{
+                                                                width: '36px',
+                                                                height: '20px',
+                                                                borderRadius: '20px',
+                                                                background: item.mandatory ? '#4285F4' : '#CBD5E1',
+                                                                position: 'relative',
+                                                                cursor: 'pointer',
+                                                                transition: 'background 0.2s'
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                width: '14px',
+                                                                height: '14px',
+                                                                borderRadius: '50%',
+                                                                background: '#FFFFFF',
+                                                                position: 'absolute',
+                                                                top: '3px',
+                                                                left: item.mandatory ? '19px' : '3px',
+                                                                transition: 'left 0.2s'
+                                                            }} />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
                                         </Reorder.Item>
@@ -693,78 +879,7 @@ export const ChecklistBuilder: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Options Editor for Selection types */}
-                            {(selectedItem.type === 'dropdown' || selectedItem.type === 'multiple_choice' || selectedItem.type === 'single_choice') && (
-                                <div style={{ marginBottom: '2rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.725rem', fontWeight: 600, color: '#94A3B8', letterSpacing: '0.05em', marginBottom: '1rem' }}>OPTIONS</label>
-                                    <Reorder.Group
-                                        axis="y"
-                                        values={selectedItem.options || []}
-                                        onReorder={(newOrder) => handleUpdateItem(selectedItem.id, { options: newOrder })}
-                                        style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-                                    >
-                                        {(selectedItem.options || []).map((opt: string, idx: number) => (
-                                            <Reorder.Item
-                                                key={`${selectedItem.id}-opt-${idx}-${opt}`}
-                                                value={opt}
-                                                style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
-                                            >
-                                                <div style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8' }}>
-                                                    <Minus size={16} />
-                                                </div>
-                                                <input
-                                                    value={opt}
-                                                    onChange={(e) => {
-                                                        const newOpts = [...(selectedItem.options || [])];
-                                                        newOpts[idx] = e.target.value;
-                                                        handleUpdateItem(selectedItem.id, { options: newOpts });
-                                                    }}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '0.5rem 0.75rem',
-                                                        border: '1px solid #CBD5E1',
-                                                        borderRadius: '0.375rem',
-                                                        fontSize: '0.875rem',
-                                                        outline: 'none'
-                                                    }}
-                                                />
-                                                <button
-                                                    onClick={() => {
-                                                        const newOpts = selectedItem.options?.filter((_, i) => i !== idx);
-                                                        handleUpdateItem(selectedItem.id, { options: newOpts });
-                                                    }}
-                                                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '0.25rem' }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </Reorder.Item>
-                                        ))}
-                                    </Reorder.Group>
-                                    <button
-                                        onClick={() => {
-                                            const newOpts = [...(selectedItem.options || []), `Option ${(selectedItem.options?.length || 0) + 1}`];
-                                            handleUpdateItem(selectedItem.id, { options: newOpts });
-                                        }}
-                                        style={{
-                                            background: 'transparent',
-                                            border: '1px dashed #CBD5E1',
-                                            color: '#4285F4',
-                                            padding: '0.5rem',
-                                            borderRadius: '0.375rem',
-                                            fontSize: '0.875rem',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                            marginTop: '0.75rem',
-                                            width: '100%',
-                                            transition: 'all 0.2s ease-in-out'
-                                        }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#4285F4'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
-                                    >
-                                        + Add Option
-                                    </button>
-                                </div>
-                            )}
+
 
                             {/* Configuration Toggles */}
                             {selectedItem.type !== 'section_header' && selectedItem.type !== 'divider' && (

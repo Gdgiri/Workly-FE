@@ -24,6 +24,7 @@ export interface Service {
   active: boolean;
   category: string;
   imgUrl?: string; // Standardized image field
+  checklistTemplateId?: string; // Link to service checklist
 }
 
 export interface WorkingHour {
@@ -203,7 +204,7 @@ export interface Voucher {
   value: number;
   sellingPrice: number;
   type: 'fixed' | 'percentage';
-  status: 'active' | 'inactive' | 'expired';
+  status: 'active' | 'inactive' | 'expired' | boolean | number;
   expiryDate?: string;
   validityDays: number;
   createdAt: string;

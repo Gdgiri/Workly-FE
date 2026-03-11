@@ -90,7 +90,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         ageGroup: '',
         attachments: [] as Attachment[]
     });
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(true);
     const [termsError, setTermsError] = useState('');
 
     // Import State
@@ -254,7 +254,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                 ageGroup: '',
                 attachments: []
             });
-            setAcceptedTerms(false);
+            setAcceptedTerms(true);
             setTermsError('');
         } catch (err: any) {
             setError(err.response?.data?.error || err.message);

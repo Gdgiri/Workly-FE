@@ -91,6 +91,8 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
 
   // --- ACTIONS ---
 
+  const [campaignStatus, setCampaignStatus] = useState<'active' | 'inactive'>('active');
+
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalCode = autoCode ? generateCode() : customCode.toUpperCase();
@@ -107,7 +109,8 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
         value: parseFloat(campaignValue),
         sellingPrice: parseFloat(campaignSellingPrice) || 0,
         validityDays: parseInt(campaignExpiryDays) || 0,
-        type: 'fixed'
+        type: 'fixed',
+        status: campaignStatus
       });
 
       setVouchers(prev => [response.data, ...prev]);
@@ -121,6 +124,7 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
       setCampaignDesc('');
       setCustomCode('');
       setCampaignExpiryDays('30');
+      setCampaignStatus('active');
     } catch (error: any) {
       console.error('Create campaign error:', error);
       showToast(error.response?.data?.error || 'Failed to create voucher campaign', 'error');
@@ -129,14 +133,36 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
     }
   };
 
+  const handleToggleStatus = async (id: string, currentStatus: any) => {
+    const isCurrentlyActive = currentStatus === 'active' || currentStatus === true || currentStatus === 1;
+    const newStatusBool = !isCurrentlyActive;
+    const newStatusString = newStatusBool ? 'active' : 'inactive';
+
+    try {
+      await api.patch(`/vouchers/${id}/status`, { status: newStatusString });
+      setVouchers(prev => prev.map(v => v.id === id ? { ...v, status: newStatusString as any } : v));
+      showToast(`Voucher campaign is now ${newStatusString}`, 'success');
+    } catch (error: any) {
+      console.error('Toggle status error:', error);
+      showToast(error.response?.data?.error || 'Failed to update status', 'error');
+    }
+  };
+
   const handleIssueVoucher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCampaignId || !selectedCustomerId) return;
 
     const campaign = vouchers.find(v => v.id === selectedCampaignId);
+    if (!campaign) return;
+
+    if (campaign.status === 'inactive' || campaign.status === false || campaign.status === 0) {
+      showToast('Cannot issue an inactive voucher.', 'error');
+      return;
+    }
+
     const customer = customers.find(c => c.id.toString() === selectedCustomerId);
 
-    if (!campaign || !customer) return;
+    if (!customer) return;
 
     setIsSubmitting(true);
 
@@ -414,7 +440,7 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
                 ))
               ) : paginatedVouchers.length > 0 ? (
                 <>
-                  {paginatedVouchers.map(v => <CampaignCard key={v.id} voucher={v} />)}
+                  {paginatedVouchers.map(v => <CampaignCard key={v.id} voucher={v} onToggle={() => handleToggleStatus(v.id as string, v.status)} />)}
                   <PaginationControls />
                 </>
               ) : (
@@ -466,7 +492,12 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
             <Input label={`Selling Price (${symbol})`} type="number" step="0.01" required value={campaignSellingPrice} onChange={e => setCampaignSellingPrice(e.target.value)} />
             <div>
               <label className="input-label mb-2">Status</label>
-              <select className="form-control" style={{ width: '100%', height: '42px', borderRadius: '0.75rem' }}>
+              <select
+                className="form-control"
+                style={{ width: '100%', height: '42px', borderRadius: '0.75rem' }}
+                value={campaignStatus}
+                onChange={e => setCampaignStatus(e.target.value as any)}
+              >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
@@ -511,7 +542,7 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
             label="Select Campaign"
             value={selectedCampaignId}
             onChange={e => setSelectedCampaignId(e.target.value)}
-            options={[{ value: '', label: 'Choose a campaign...' }, ...vouchers.filter(v => v.status === 'active').map(v => ({ value: v.id, label: `${v.name || v.code} - ${formatPrice(v.value)}` }))]}
+            options={[{ value: '', label: 'Choose a campaign...' }, ...vouchers.filter(v => v.status === 'active' || v.status === true || v.status === 1).map(v => ({ value: v.id, label: `${v.name || v.code} - ${formatPrice(v.value)}` }))]}
             required
           />
           <Select
@@ -682,7 +713,7 @@ const ClaimCardSkeleton = () => (
         <Skeleton width="60px" height="1rem" />
       </div>
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexShrink: 0 }}>
       <Skeleton width="100px" height="1.5rem" />
       <Skeleton width="2.25rem" height="2.25rem" borderRadius="0.6rem" />
     </div>
@@ -693,7 +724,7 @@ export default Vouchers;
 
 // --- UI COMPONENTS ---
 
-const CampaignCard: React.FC<{ voucher: Voucher }> = ({ voucher }) => {
+const CampaignCard: React.FC<{ voucher: Voucher, onToggle: () => void }> = ({ voucher, onToggle }) => {
   const { showToast } = useToast();
   const { formatPrice } = useCurrency();
   // Campaigns themselves don't really "expire" in the same way now, 
@@ -759,16 +790,34 @@ const CampaignCard: React.FC<{ voucher: Voucher }> = ({ voucher }) => {
         <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#6366f1' }}>{formatPrice(voucher.sellingPrice || 0)}</p>
       </div>
       <div style={{ flex: 1 }}>
-        <span style={{
-          fontSize: '0.85rem',
-          fontWeight: 700,
-          color: isExpired ? '#ef4444' : '#22c55e',
-          background: isExpired ? '#fff1f2' : '#f0fdf4',
-          padding: '0.125rem 0.5rem',
-          borderRadius: '0.375rem'
-        }}>
-          {isExpired ? 'Expired' : 'Active'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <label style={{ position: 'relative', display: 'inline-block', width: '2.5rem', height: '1.25rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={voucher.status === 'active' || voucher.status === true || voucher.status === 1}
+              onChange={onToggle}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: 'absolute', cursor: 'pointer', inset: 0,
+              backgroundColor: (voucher.status === 'active' || voucher.status === true || voucher.status === 1) ? '#22c55e' : '#e2e8f0',
+              transition: '0.3s', borderRadius: '1rem'
+            }}></span>
+            <span style={{
+              position: 'absolute', content: '""', height: '0.9rem', width: '0.9rem',
+              left: '0.2rem', bottom: '0.17rem', backgroundColor: 'white',
+              transition: '0.3s', borderRadius: '50%',
+              transform: (voucher.status === 'active' || voucher.status === true || voucher.status === 1) ? 'translateX(1.2rem)' : 'translateX(0)'
+            }}></span>
+          </label>
+          <span style={{
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: (voucher.status === 'active' || voucher.status === true || voucher.status === 1) ? '#166534' : '#64748b',
+          }}>
+            {(voucher.status === 'active' || voucher.status === true || voucher.status === 1) ? 'Active' : (voucher.status === 'expired' ? 'Expired' : 'Inactive')}
+          </span>
+        </div>
       </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#94a3b8' }}>

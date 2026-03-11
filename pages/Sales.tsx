@@ -322,7 +322,7 @@ const Sales: React.FC<SalesProps> = ({
   const [newCustomerAgeGroup, setNewCustomerAgeGroup] = useState('');
   const [newCustomerRole, setNewCustomerRole] = useState('CUSTOMER');
   const [newCustomerAttachments, setNewCustomerAttachments] = useState<Attachment[]>([]);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [termsError, setTermsError] = useState('');
 
   // Derived state to find the actual customer object
@@ -723,6 +723,8 @@ const Sales: React.FC<SalesProps> = ({
       : activeTab === 'vouchers'
         ? (vouchers || []).filter(v => {
           if (!v) return false;
+          // Filter out inactive vouchers
+          if (v.status !== 'active' && v.status !== true && v.status !== 1) return false;
           const search = (searchTerm || '').toLowerCase();
           return (v.name && v.name.toLowerCase().includes(search)) || (v.code && v.code.toLowerCase().includes(search));
         })
@@ -827,7 +829,7 @@ const Sales: React.FC<SalesProps> = ({
       setNewCustomerAgeGroup('');
       setNewCustomerRole('CUSTOMER');
       setNewCustomerAttachments([]);
-      setAcceptedTerms(false);
+      setAcceptedTerms(true);
       setTermsError('');
 
       showToast('Customer added successfully!', 'success');
@@ -870,6 +872,12 @@ const Sales: React.FC<SalesProps> = ({
 
     if (!campaign) {
       setVoucherError('Invalid voucher code');
+      return false;
+    }
+
+    // 1b. Check if voucher is active
+    if (campaign.status !== 'active' && campaign.status !== true && campaign.status !== 1) {
+      setVoucherError('This voucher is currently inactive');
       return false;
     }
 
@@ -1036,6 +1044,12 @@ const Sales: React.FC<SalesProps> = ({
 
     if (!campaign) {
       setVoucherError('Invalid voucher code');
+      return;
+    }
+
+    // 1b. Check if voucher is active
+    if (campaign.status !== 'active' && campaign.status !== true && campaign.status !== 1) {
+      setVoucherError('This voucher is currently inactive');
       return;
     }
 

@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../redux/store';
 import { fetchAppointments, createAppointment, updateAppointment, cancelAppointment, updateAppointmentStatus } from '../redux/slices/appointmentSlice';
-import { Plus, Filter, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Printer, MessageSquare, CreditCard, Paperclip, Image as ImageIcon, RefreshCw, FileText, AlertCircle, ChevronDown, Search } from 'lucide-react';
+import { Plus, Filter, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Printer, MessageSquare, CreditCard, Paperclip, Image as ImageIcon, RefreshCw, FileText, AlertCircle, ChevronDown, Search, CheckCircle } from 'lucide-react';
 import { Table, Button, Modal, Input, Select } from '../components/UI';
 import { Appointment } from '../types';
 import { useToast } from '../components/ToastContext';
@@ -81,6 +81,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [activeChecklistId, setActiveChecklistId] = useState<string | null>(null);
   const [showChecklistInline, setShowChecklistInline] = useState(false);
+  const [isChecklistFilled, setIsChecklistFilled] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -554,7 +555,25 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setViewAppointment(row);
     setViewAttachments(row.attachments || []);
     setIsViewModalOpen(true);
-    setShowChecklistInline(false); // Reset when opening new view
+    setShowChecklistInline(false); // Reset while checking
+    setIsChecklistFilled(false);
+
+    // Check for existing checklist submission
+    try {
+      const linkedService = services.find(s => s.id?.toString() === row.serviceId?.toString());
+      const templateId = row.service?.checklistTemplateId || linkedService?.checklistTemplateId;
+
+      if (templateId) {
+        const submissionRes = await api.get(`/checklists/submission/appointment/${row.id}`);
+        if (submissionRes.data && submissionRes.data.data) {
+          setIsChecklistFilled(true);
+          setShowChecklistInline(true);
+          setActiveChecklistId(templateId);
+        }
+      }
+    } catch (error) {
+      console.log('No checklist submission found or error fetching:', error);
+    }
   };
 
   const handleStartAppointment = async (row: Appointment) => {
@@ -2358,6 +2377,32 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                           <AlertCircle size={14} />
                           No checklist linked to this service
                         </div>
+                      );
+                    }
+
+                    if (isChecklistFilled) {
+                      return (
+                        <button
+                          onClick={() => setShowChecklistInline(!showChecklistInline)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: showChecklistInline ? '#64748B' : '#10b981',
+                            border: 'none',
+                            color: 'white',
+                            borderRadius: '0.5rem',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.625rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.23s',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                            borderBottom: '2px solid rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          <CheckCircle size={18} />
+                          {showChecklistInline ? 'Close Checklist' : 'View Checklist'}
+                        </button>
                       );
                     }
 
