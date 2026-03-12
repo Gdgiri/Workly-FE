@@ -39,7 +39,7 @@ export const ServicesView: React.FC = () => {
 
   // Add Service State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newService, setNewService] = useState({ name: '', description: '', category: '', duration: 60, price: 50, active: true, imgUrl: '' });
+  const [newService, setNewService] = useState({ name: '', description: '', category: '', duration: 60, price: 50, active: true, imgUrl: '', checklistTemplateId: '' });
 
   // Edit Service State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -57,6 +57,7 @@ export const ServicesView: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [removeBgAddEnabled, setRemoveBgAddEnabled] = useState(false);
   const [removeBgEditEnabled, setRemoveBgEditEnabled] = useState(false);
+  const [checklistTemplates, setChecklistTemplates] = useState<any[]>([]);
 
   // --- HANDLERS ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,6 +239,18 @@ export const ServicesView: React.FC = () => {
 
   React.useEffect(() => {
     dispatch(fetchServices());
+
+    const fetchTemplates = async () => {
+      try {
+        const response = await api.get('/checklists/templates');
+        // Handle response.data.data according to ChecklistBuilder.tsx logic
+        const data = response.data.data || response.data;
+        setChecklistTemplates(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch checklist templates', err);
+      }
+    };
+    fetchTemplates();
   }, [dispatch]);
 
   const handleAddService = async (e: React.FormEvent) => {
@@ -257,7 +270,7 @@ export const ServicesView: React.FC = () => {
 
       showToast('Service added successfully', 'success');
       setIsAddModalOpen(false);
-      setNewService({ name: '', description: '', category: '', duration: 60, price: 50, active: true, imgUrl: '' });
+      setNewService({ name: '', description: '', category: '', duration: 60, price: 50, active: true, imgUrl: '', checklistTemplateId: '' });
       setRemoveBgAddEnabled(false);
       // No need to fetch again, redux updates state
 
@@ -705,6 +718,19 @@ export const ServicesView: React.FC = () => {
                   ]}
                 />
 
+                <Select
+                  label="Service Checklist"
+                  value={newService.checklistTemplateId}
+                  onChange={e => setNewService({ ...newService, checklistTemplateId: e.target.value })}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...checklistTemplates.map(template => ({
+                      value: template.id,
+                      label: template.name
+                    }))
+                  ]}
+                />
+
                 <div className="input-group" style={{ position: 'relative' }}>
                   <label className="input-label">Category</label>
                   <input
@@ -909,6 +935,19 @@ export const ServicesView: React.FC = () => {
                     options={[
                       { value: 'active', label: 'Active' },
                       { value: 'inactive', label: 'Inactive' }
+                    ]}
+                  />
+
+                  <Select
+                    label="Service Checklist"
+                    value={editingService.checklistTemplateId || ''}
+                    onChange={e => setEditingService({ ...editingService, checklistTemplateId: e.target.value })}
+                    options={[
+                      { value: '', label: 'None' },
+                      ...checklistTemplates.map(template => ({
+                        value: template.id,
+                        label: template.name
+                      }))
                     ]}
                   />
 

@@ -21,8 +21,9 @@ import SignaturePad from './SignaturePad';
 
 interface ChecklistFormProps {
     templateId: string;
-    appointmentId: string;
+    appointmentId?: string;
     onSuccess?: () => void;
+    onDataChange?: (data: any, remarks: any) => void;
     readOnly?: boolean;
 }
 
@@ -30,6 +31,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
     templateId,
     appointmentId,
     onSuccess,
+    onDataChange,
     readOnly = false
 }) => {
     const { showToast } = useToast();
@@ -50,29 +52,27 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
         try {
             // 1. Fetch template
             const templateRes = await api.get(`/checklists/templates/${templateId}`);
-            // Important: Backend uses 'fields' not 'items', and 'name' not 'title'
             const templateData = templateRes.data.data;
             setTemplate(templateData);
 
-            // 2. Check for existing submission (nested try to handle 404 gracefully)
-            try {
-                console.log('🔍 Checking for submission - Appointment:', appointmentId);
-                const submissionRes = await api.get(`/checklists/submission/appointment/${appointmentId}`);
-                if (submissionRes.data && submissionRes.data.data) {
-                    const submission = submissionRes.data.data;
-                    console.log('✅ Submission found:', submission.id);
-                    setExistingSubmission(submission);
-                    setResponses(submission.data || {});
-                    setRemarks(submission.remarks || {});
-                } else {
-                    console.log('ℹ️ No submission data in response');
-                }
-            } catch (subError: any) {
-                // 404 is expected if they haven't filled it yet
-                if (subError.response?.status === 404) {
-                    console.log('ℹ️ No existing submission found (404)');
-                } else {
-                    console.warn('⚠️ Optional submission fetch failed:', subError);
+            // 2. Check for existing submission if appointmentId is provided
+            if (appointmentId) {
+                try {
+                    console.log('🔍 Checking for submission - Appointment:', appointmentId);
+                    const submissionRes = await api.get(`/checklists/submission/appointment/${appointmentId}`);
+                    if (submissionRes.data && submissionRes.data.data) {
+                        const submission = submissionRes.data.data;
+                        console.log('✅ Submission found:', submission.id);
+                        setExistingSubmission(submission);
+                        setResponses(submission.data || {});
+                        setRemarks(submission.remarks || {});
+                    }
+                } catch (subError: any) {
+                    if (subError.response?.status === 404) {
+                        console.log('ℹ️ No existing submission found (404)');
+                    } else {
+                        console.warn('⚠️ Optional submission fetch failed:', subError);
+                    }
                 }
             }
         } catch (error) {
@@ -83,24 +83,25 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
         }
     };
 
+    useEffect(() => {
+        if (onDataChange && !loading) {
+            onDataChange(responses, remarks);
+        }
+    }, [responses, remarks, onDataChange, loading]);
+
     const handleInputChange = (itemId: string, value: any) => {
         if (readOnly) return;
-        setResponses((prev: any) => ({
-            ...prev,
-            [itemId]: value
-        }));
+        setResponses((prev: any) => ({ ...prev, [itemId]: value }));
     };
 
     const handleRemarkChange = (itemId: string, value: string) => {
         if (readOnly) return;
-        setRemarks((prev: any) => ({
-            ...prev,
-            [itemId]: value
-        }));
+        setRemarks((prev: any) => ({ ...prev, [itemId]: value }));
     };
 
     const handleSubmit = async () => {
         if (readOnly) return;
+        if (!appointmentId) return; // Cannot submit directly without appointmentId
 
         // Basic validation
         const items = template.fields || template.items || [];
@@ -120,7 +121,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
                 templateId,
                 data: responses,
                 remarks: remarks,
-                severityScore: 0 // Logic for severity can be added later
+                severityScore: 0
             });
             showToast('Checklist submitted successfully', 'success');
             if (onSuccess) onSuccess();
@@ -759,8 +760,8 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
                 ))}
             </div>
 
-            {/* Sticky Save Bar (only when filling) */}
-            {!readOnly && (
+            {/* Sticky Save Bar (only when filling and we have an ID to save to) */}
+            {!readOnly && appointmentId && (
                 <div style={{
                     marginTop: '2.5rem',
                     padding: '1.5rem',

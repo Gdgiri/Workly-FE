@@ -2,10 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, ArrowLeft, Lock, FileText, Globe } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 const TermsAndConditions: React.FC = () => {
     const navigate = useNavigate();
     const { appId, businessName } = useParams<{ appId: string; businessName: string }>();
+    const { user } = useSelector((state: any) => state.auth);
 
     const handleBack = () => {
         if (window.history.length > 1) {
@@ -78,23 +80,25 @@ const TermsAndConditions: React.FC = () => {
                 </div>
 
                 <section style={{ marginBottom: '2.5rem' }}>
-                    <div style={{
-                        background: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
-                        padding: '2rem',
-                        borderRadius: '1.5rem',
-                        border: '1px solid #BFDBFE',
-                        marginBottom: '2rem'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#1E40AF' }}>
-                            <Lock size={24} />
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Data Safety & Trust Commitment</h2>
+                    {((user as any)?.adminId === '25945aeb-b1d1-4020-913e-ebcd4b51f7f6' || user?.id === '25945aeb-b1d1-4020-913e-ebcd4b51f7f6') && (
+                        <div style={{
+                            background: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
+                            padding: '2rem',
+                            borderRadius: '1.5rem',
+                            border: '1px solid #BFDBFE',
+                            marginBottom: '2rem'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#1E40AF' }}>
+                                <Lock size={24} />
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Data Safety & Trust Commitment</h2>
+                            </div>
+                            <p style={{ color: '#1E40AF', lineHeight: 1.6, fontSize: '1.05rem', fontWeight: 500 }}>
+                                We understand that the details you provide are personal and sensitive.
+                                <strong> We strictly guarantee that all information collected through our forms is handled with the highest level of security.</strong>
+                                We do not leak, sell, or share your data with unauthorized third parties. Your details are used exclusively for managing your relationship with the salon and improving your service experience.
+                            </p>
                         </div>
-                        <p style={{ color: '#1E40AF', lineHeight: 1.6, fontSize: '1.05rem', fontWeight: 500 }}>
-                            We understand that the details you provide are personal and sensitive.
-                            <strong> We strictly guarantee that all information collected through our forms is handled with the highest level of security.</strong>
-                            We do not leak, sell, or share your data with unauthorized third parties. Your details are used exclusively for managing your relationship with the salon and improving your service experience.
-                        </p>
-                    </div>
+                    )}
 
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1E293B', marginBottom: '1rem' }}>1. Acceptance of Terms</h2>
                     <p style={{ lineHeight: 1.6, color: '#475569', marginBottom: '1rem' }}>
@@ -115,6 +119,29 @@ const TermsAndConditions: React.FC = () => {
                     <p style={{ lineHeight: 1.6, color: '#475569', marginBottom: '1rem' }}>
                         We employ industry-standard encryption and security protocols to protect your data stored in our system. Only authorized personnel have access to this information.
                     </p>
+
+                    {((user as any)?.adminId === '25945aeb-b1d1-4020-913e-ebcd4b51f7f6' || user?.id === '25945aeb-b1d1-4020-913e-ebcd4b51f7f6') && (
+                        <>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1E293B', marginBottom: '1rem' }}>5. Mobile Marketing and SMS Policy</h2>
+                            <p style={{ lineHeight: 1.6, color: '#475569', marginBottom: '1.5rem' }}>
+                                I agree to receive transaction and recurring promotional and personalized advertising messages (SMS and MMS) from <strong>Indian Beauty Art - Bugis</strong>, and I consent to these text messages being sent via autodialer to the mobile number I provided above. I understand consent is not a condition of purchase, message and data rates may apply, message frequency varies, and I can reply "STOP" to any Indian Beauty Art - Bugis text to stop receiving texts or "HELP" for help. I also agree to the <strong>Indian Beauty Art - Bugis</strong> Terms & Conditions and Privacy Policy.
+                            </p>
+                            <div style={{
+                                padding: '1.5rem',
+                                background: '#F8FAFC',
+                                borderRadius: '1rem',
+                                border: '1px solid #E2E8F0',
+                                textAlign: 'center',
+                                marginTop: '2rem'
+                            }}>
+                                <div style={{ fontSize: '0.875rem', color: '#64748B', marginBottom: '1rem' }}>
+                                    By submitting this feedback, I understand and agree to the <strong>Review and Mobile Marketing Policy</strong>.
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1E293B' }}>Indian Beauty Art - Bugis</div>
+                                <div style={{ fontSize: '0.875rem', color: '#64748B' }}>3 New Bugis Street 2nd Floor CSL A08/09</div>
+                            </div>
+                        </>
+                    )}
                 </section>
 
                 <footer style={{

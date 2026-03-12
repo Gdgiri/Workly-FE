@@ -183,6 +183,10 @@
   width: 1.25rem;
 }
 
+.w-full {
+  width: 100%;
+}
+
 /* Table row spacing */
 /* Enhanced Table Styles */
 .table-container {

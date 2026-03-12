@@ -105,6 +105,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [specialistSearch, setSpecialistSearch] = useState(''); // Added for Specialist Dropdown
   const [showSpecialistOptions, setShowSpecialistOptions] = useState(false);
 
+  // New Checklist Toggle States
+  const [showChecklistToggle, setShowChecklistToggle] = useState(false);
+  const [checklistData, setChecklistData] = useState<{ responses: any, remarks: any } | null>(null);
+  const [showChecklistInCreate, setShowChecklistInCreate] = useState(false);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -122,6 +127,18 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   // Booking Configuration State
   const [openingTime, setOpeningTime] = useState('09:00');
   const [closingTime, setClosingTime] = useState('20:00');
+
+  const handleChecklistDataChange = React.useCallback((responses: any, remarks: any) => {
+    setChecklistData(prev => {
+      // Prevent infinite loops by checking for equality
+      if (prev &&
+        JSON.stringify(prev.responses) === JSON.stringify(responses) &&
+        JSON.stringify(prev.remarks) === JSON.stringify(remarks)) {
+        return prev;
+      }
+      return { responses, remarks };
+    });
+  }, []);
 
   const fetchServices = async () => {
     try {
@@ -438,7 +455,24 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       if (editingAppointment) {
         await dispatch(updateAppointment({ id: editingAppointment.id, data: appointmentData })).unwrap();
       } else {
-        await dispatch(createAppointment(appointmentData)).unwrap();
+        const newAppointment = await dispatch(createAppointment(appointmentData)).unwrap();
+
+        // Submit checklist if data exists
+        const selectedService = services.find(s => s.id?.toString() === formData.serviceId?.toString());
+        if (showChecklistInCreate && checklistData && newAppointment?.id && selectedService?.checklistTemplateId) {
+          try {
+            await api.post(`/checklists/submit`, {
+              appointmentId: newAppointment.id,
+              templateId: selectedService.checklistTemplateId,
+              data: checklistData.responses,
+              remarks: checklistData.remarks,
+              severityScore: 0
+            });
+          } catch (checklistErr) {
+            console.error('Failed to submit checklist:', checklistErr);
+            showToast('Appointment created but checklist failed to save', 'warning');
+          }
+        }
       }
 
       // Show appropriate success message
@@ -457,6 +491,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       setIsModalOpen(false);
       setIsEditModalOpen(false);
       setEditingAppointment(null);
+      setShowChecklistInCreate(false);
+      setChecklistData(null);
       // fetchAppointments(); // Handled by Redux update
       setFormData({
         customerId: '',
@@ -1651,6 +1687,68 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 );
               })()}
             </div>
+            {/* Checklist Toggle and Inline Form */}
+            {(() => {
+              const selectedService = services.find(s => s.id?.toString() === formData.serviceId?.toString());
+              if (selectedService?.checklistTemplateId) {
+                return (
+                  <div style={{ gridColumn: 'span 2', marginTop: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)', padding: '0.5rem', borderRadius: '0.5rem' }}>
+                          <FileText size={20} />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e293b' }}>Service Checklist</p>
+                          <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Fill the required service checklist now</p>
+                        </div>
+                      </div>
+                      <div
+                        onClick={() => setShowChecklistInCreate(!showChecklistInCreate)}
+                        style={{
+                          width: '48px',
+                          height: '24px',
+                          background: showChecklistInCreate ? 'var(--primary)' : '#cbd5e1',
+                          borderRadius: '12px',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s'
+                        }}
+                      >
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          background: 'white',
+                          borderRadius: '50%',
+                          position: 'absolute',
+                          top: '3px',
+                          left: showChecklistInCreate ? '27px' : '3px',
+                          transition: 'all 0.3s'
+                        }} />
+                      </div>
+                    </div>
+
+                    <AnimatePresence>
+                      {showChecklistInCreate && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          style={{ overflow: 'hidden', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}
+                        >
+                          <ChecklistForm
+                            templateId={selectedService.checklistTemplateId}
+                            onDataChange={handleChecklistDataChange}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
               <label className="input-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>Comments</label>
               <textarea

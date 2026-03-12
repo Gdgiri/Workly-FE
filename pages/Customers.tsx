@@ -1081,8 +1081,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                     <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #E2E8F0' }}>
                                         <Checkbox
                                             label={
-                                                <span style={{ fontSize: '0.85rem', lineHeight: '1.4', color: '#475569', display: 'block' }}>
-                                                    By checking this box, I agree to receive transaction and recurring promotional and personalized advertising messages (SMS and MMS) from <strong>Indian Beauty Art - Bugis</strong>, and I consent to these text messages being sent via autodialer to the mobile number I provided above. I understand consent is not a condition of purchase, message and data rates may apply, message frequency varies, and I can reply "STOP" to any Indian Beauty Art - Bugis text to stop receiving texts or "HELP" for help. I also agree to the Indian Beauty Art -Bugis <Link to={`/${appId}/${businessName}/terms-and-conditions`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Terms & Conditions</Link> and <Link to={`/${appId}/${businessName}/privacy-policy`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Privacy Policy</Link>.
+                                                <span style={{ fontSize: '0.85rem', lineHeight: '1.5', color: '#475569', display: 'block' }}>
+                                                    By checking this box, I agree to receive transaction and recurring promotional and personalized advertising messages (SMS and MMS) from <strong>Indian Beauty Art - Bugis</strong>, and I consent to these text messages being sent via autodialer to the mobile number I provided above. I understand consent is not a condition of purchase, message and data rates may apply, message frequency varies, and I can reply "STOP" to any Indian Beauty Art - Bugis text to stop receiving texts or "HELP" for help. I also agree to the <strong>Indian Beauty Art - Bugis</strong> <Link to={`/${appId}/${businessName}/terms-and-conditions`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Terms & Conditions</Link> and <Link to={`/${appId}/${businessName}/privacy-policy`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>Privacy Policy</Link>.
                                                 </span>
                                             }
                                             checked={acceptedTerms}
@@ -1093,12 +1093,14 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             error={termsError}
                                         />
                                     </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '1.5rem' }}>
+                                    <div style={{ textAlign: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '1rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '1.25rem' }}>
                                             By submitting this feedback, I understand and agree to the <Link to={`/${appId}/${businessName}/terms-and-conditions`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Review and Mobile Marketing Policy</Link>.
                                         </div>
-                                        <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B', marginBottom: '0.125rem' }}>Indian Beauty Art - Bugis</div>
-                                        <div style={{ fontSize: '0.8125rem', color: '#64748B' }}>3 New Bugis Street 2nd Floor CSL A08/09,</div>
+                                        <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B', marginBottom: '0.25rem' }}>Indian Beauty Art - Bugis</div>
+                                        <div style={{ fontSize: '0.8125rem', color: '#64748B', lineHeight: '1.4' }}>
+                                            3 New Bugis Street 2nd Floor CSL A08/09
+                                        </div>
                                     </div>
                                 </div>
                             ) : (

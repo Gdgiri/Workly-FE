@@ -16,10 +16,11 @@ interface ButtonProps extends HTMLMotionProps<"button"> {
   isLoading?: boolean;
   icon?: React.ReactNode;
   children?: React.ReactNode;
+  fullWidth?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
-  children, variant = 'primary', className = '', isLoading, icon, type = "button", ...props
+  children, variant = 'primary', className = '', isLoading, icon, type = "button", fullWidth, ...props
 }) => {
   const variantClass = `btn-${variant}`;
 
@@ -27,7 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
     <motion.button
       whileHover={{ scale: 1.02, y: -1 }}
       whileTap={{ scale: 0.98 }}
-      className={`btn ${variantClass} ${className}`}
+      className={`btn ${variantClass} ${fullWidth ? 'w-full' : ''} ${className}`}
       type={type}
       style={{
         ...props.style,
@@ -46,9 +47,10 @@ export const Button: React.FC<ButtonProps> = ({
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  fullWidth?: boolean;
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, className = '', type, ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, error, className = '', type, fullWidth, ...props }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
 
