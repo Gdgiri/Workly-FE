@@ -291,7 +291,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
           // Convert backend format { name, status: 1/0, url, secretKey } to frontend format
           if (Array.isArray(savedMethods) && savedMethods.length > 0) {
             const convertedMethods = savedMethods.map((method: any) => ({
-              id: method.name.toLowerCase().replace(/\s+/g, '-'),
+              id: method.name.toUpperCase().trim().replace(/\s+/g, '_'),
               name: method.name,
               active: method.status === 1,
               url: method.url || '',
@@ -511,11 +511,21 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
 
       // Update global state if available (Convert to App Format)
       if (setPaymentMethods) {
-        const appMethods = localPaymentMethods.map((m: any) => ({
-          id: m.name.toLowerCase() === 'razorpay' || m.name.toLowerCase() === 'razor' ? 'RAZORPAY' : (m.name.toLowerCase() === 'cash' ? 'CASH' : m.name.toUpperCase().replace(/\s+/g, '_')),
-          name: m.name,
-          active: m.active
-        })).filter((m: any) => m.active);
+        const appMethods = localPaymentMethods.map((m: any) => {
+          const name = m.name.toUpperCase().trim();
+
+          // 1:1 Dynamic ID generation: name -> UPPERCASE_WITH_UNDERSCORES
+          let id = name.replace(/[^A-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+          if (name === 'CASH') id = 'CASH';
+
+          // Ensure we have a valid ID fallback
+          if (!id) id = `METHOD_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+          return {
+            id,
+            name: m.name,
+            active: m.active
+          };
+        }).filter((m: any) => m.active);
         setPaymentMethods(appMethods);
       }
 
@@ -602,8 +612,16 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
 
   const addMethod = () => {
     if (newMethodName.trim()) {
-      const newId = newMethodName.toLowerCase().replace(/\s+/g, '-');
-      setLocalPaymentMethods(prev => [...prev, { id: newId, name: newMethodName, active: true }]);
+      const newName = newMethodName.trim();
+      const newId = newName.toUpperCase().replace(/\s+/g, '_');
+
+      // Prevent duplicates
+      if (localPaymentMethods.some(m => m.id === newId)) {
+        showToast('Payment method already exists', 'error');
+        return;
+      }
+
+      setLocalPaymentMethods(prev => [...prev, { id: newId, name: newName, active: true }]);
       setNewMethodName('');
     }
   };
@@ -1501,46 +1519,52 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             </div>
           </Card>
 
-          {/* <Card title="Currency Configuration">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CreditCard size={18} style={{ color: 'var(--primary)' }} />
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-              Select the currency for your payment transactions
-            </p>
-          </div>
+          <Card title="Currency Configuration">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard size={18} style={{ color: 'var(--primary)' }} />
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                  Select the currency for your business transactions
+                </p>
+              </div>
 
-          <div>
-            <label className="input-label">Payment Currency</label>
-            <select
-              name="currency"
-              value={razorpayConfig.currency}
-              onChange={(e) => setRazorpayConfig(prev => ({ ...prev, currency: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '0.5rem',
-                border: '1px solid var(--border)',
-                fontSize: '0.875rem',
-                outline: 'none',
-                background: 'white'
-              }}
-            >
-              <option value="INR">🇮🇳 INR - Indian Rupee (₹)</option>
-              <option value="SGD">🇸🇬 SGD - Singapore Dollar ($)</option>
-            </select>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
-              This currency will be used for all Razorpay payment transactions
-            </p>
-          </div>
+              <div>
+                <label className="input-label">Business Currency</label>
+                <select
+                  name="currency"
+                  value={razorpayConfig.currency}
+                  onChange={(e) => setRazorpayConfig(prev => ({ ...prev, currency: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid var(--border)',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    background: 'white'
+                  }}
+                >
+                  <option value="INR">🇮🇳 INR - Indian Rupee (₹)</option>
+                  <option value="AED">🇦🇪 AED - UAE Dirham (د.إ)</option>
+                  <option value="SGD">🇸🇬 SGD - Singapore Dollar (S$)</option>
+                  <option value="SAR">🇸🇦 SAR - Saudi Riyal (SR)</option>
+                  <option value="USD">🇺🇸 USD - US Dollar ($)</option>
+                  <option value="EUR">🇪🇺 EUR - Euro (€)</option>
+                  <option value="GBP">🇬🇧 GBP - British Pound (£)</option>
+                  <option value="MYR">🇲🇾 MYR - Malaysian Ringgit (RM)</option>
+                </select>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                  This currency will be used throughout the admin and user apps.
+                </p>
+              </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-            <Button onClick={saveRazorpaySettings} disabled={savingRazorpay || loading} isLoading={savingRazorpay} icon={<Save size={18} />}>
-              {savingRazorpay ? 'Saving...' : 'Save Currency Settings'}
-            </Button>
-          </div>
-        </div>
-      </Card> */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                <Button onClick={saveRazorpaySettings} disabled={savingRazorpay || loading} isLoading={savingRazorpay} icon={<Save size={18} />}>
+                  {savingRazorpay ? 'Saving...' : 'Save Currency Settings'}
+                </Button>
+              </div>
+            </div>
+          </Card>
 
 
 

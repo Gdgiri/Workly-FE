@@ -41,7 +41,16 @@ export const createAppointment = createAsyncThunk(
     async (appointmentData: any, { rejectWithValue }) => {
         try {
             const response = await api.post('/appointments', appointmentData);
-            return response.data;
+            const data = response.data;
+
+            // Standardize response extraction for multi-service support
+            if (data && data.appointments && Array.isArray(data.appointments)) {
+                return data.appointments;
+            }
+            if (data && data.appointment) {
+                return data.appointment;
+            }
+            return data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.error || error.response?.data?.message || 'Failed to create appointment');
         }
@@ -113,8 +122,12 @@ const appointmentSlice = createSlice({
                 state.error = action.payload as string;
             })
             // Create
-            .addCase(createAppointment.fulfilled, (state, action: PayloadAction<Appointment>) => {
-                state.appointments.unshift(action.payload);
+            .addCase(createAppointment.fulfilled, (state, action: PayloadAction<Appointment | Appointment[]>) => {
+                if (Array.isArray(action.payload)) {
+                    state.appointments = [...action.payload, ...state.appointments];
+                } else {
+                    state.appointments.unshift(action.payload);
+                }
             })
             // Update & Status Update
             .addCase(updateAppointment.fulfilled, (state, action: PayloadAction<Appointment>) => {

@@ -12,7 +12,6 @@ import api from '../utils/api';
 
 import { useAuth } from '../hooks/useAuth';
 import { ServiceAvatar } from '../components/ServiceAvatar';
-import ChecklistForm from '../components/ChecklistForm';
 import { FaWalking } from "react-icons/fa";
 import { generateReceiptHtml } from '../utils/receiptGenerator';
 import { useDispatch, useSelector } from 'react-redux';
@@ -369,21 +368,6 @@ const Sales: React.FC<SalesProps> = ({
   const [successMessage, setSuccessMessage] = useState('');
   const [pendingAutoCheckout, setPendingAutoCheckout] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [showChecklistToggle, setShowChecklistToggle] = useState(false);
-  const [checklistData, setChecklistData] = useState<{ responses: any; remarks: any } | null>(null);
-  const [showChecklistInSummary, setShowChecklistInSummary] = useState(false);
-
-  const handleChecklistDataChange = React.useCallback((responses: any, remarks: any) => {
-    setChecklistData(prev => {
-      // Prevent infinite loops by checking for equality
-      if (prev &&
-        JSON.stringify(prev.responses) === JSON.stringify(responses) &&
-        JSON.stringify(prev.remarks) === JSON.stringify(remarks)) {
-        return prev;
-      }
-      return { responses, remarks };
-    });
-  }, []);
 
   const fetchCustomerPackages = async (customerId: string) => {
     try {
@@ -1527,42 +1511,6 @@ const Sales: React.FC<SalesProps> = ({
       const response = await api.post('/sales', saleData);
       const sale = response.data.sale;
 
-      // Submit checklist if data exists
-      if (showChecklistInSummary && checklistData) {
-        const serviceWithChecklist = cart.find(item => {
-          const serviceId = item.itemId?.toString();
-          const s = services.find(s => s.id?.toString() === serviceId || s.name === item.name);
-          return s?.checklistTemplateId;
-        });
-
-        if (serviceWithChecklist) {
-          const service = services.find(s => s.id?.toString() === serviceWithChecklist.itemId?.toString() || s.name === serviceWithChecklist.name);
-          if (service?.checklistTemplateId) {
-            try {
-              const payload = {
-                // Backend crashes if appointmentId is explicitly null
-                appointmentId: appointmentId || sale?.appointmentId || undefined,
-                saleId: sale?.id || undefined,
-                templateId: service.checklistTemplateId,
-                data: checklistData.responses,
-                remarks: checklistData.remarks,
-                severityScore: 0
-              };
-              console.log('📤 [Direct] Submitting Checklist Payload:', payload);
-              await api.post(`/checklists/submit`, payload);
-            } catch (checklistErr: any) {
-              console.error('Failed to submit checklist:', checklistErr);
-              const errorMsg = checklistErr.response?.data?.message || checklistErr.message || 'Checklist submission failed';
-              showToast(`Sale completed but checklist failed: ${errorMsg}`, 'warning');
-            }
-          }
-        }
-      }
-
-      // Reset checklist states
-      setShowChecklistInSummary(false);
-      setChecklistData(null);
-
       // 3. Update vouchers if applied
       if (appliedVouchers.length > 0) {
         let remainingDeduction = voucherDeduction;
@@ -1764,41 +1712,6 @@ const Sales: React.FC<SalesProps> = ({
               // The sale should already have the deposit recorded from creation step.
             });
             // handlePaymentSuccess(verifyResponse.data); // Removed to fix ReferenceError
-
-            // Submit checklist if data exists
-            if (showChecklistInSummary && checklistData) {
-              const serviceWithChecklist = cart.find(item => {
-                const serviceId = item.itemId?.toString();
-                const s = services.find(s => s.id?.toString() === serviceId || s.name === item.name);
-                return s?.checklistTemplateId;
-              });
-
-              if (serviceWithChecklist) {
-                const service = services.find(s => s.id?.toString() === serviceWithChecklist.itemId?.toString() || s.name === serviceWithChecklist.name);
-                if (service?.checklistTemplateId) {
-                  try {
-                    const payload = {
-                      appointmentId: appointmentId || sale?.appointmentId || undefined,
-                      saleId: sale?.id || undefined,
-                      templateId: service.checklistTemplateId,
-                      data: checklistData.responses,
-                      remarks: checklistData.remarks,
-                      severityScore: 0
-                    };
-                    console.log('📤 [Razorpay] Submitting Checklist Payload:', payload);
-                    await api.post(`/checklists/submit`, payload);
-                  } catch (checklistErr: any) {
-                    console.error('Failed to submit checklist:', checklistErr);
-                    const errorMsg = checklistErr.response?.data?.message || checklistErr.message || 'Checklist submission failed';
-                    showToast(`Payment verified but checklist failed: ${errorMsg}`, 'warning');
-                  }
-                }
-              }
-            }
-
-            // Reset checklist states
-            setShowChecklistInSummary(false);
-            setChecklistData(null);
 
             // 5. Update vouchers if applied
             if (appliedVouchers.length > 0) {
@@ -3703,89 +3616,6 @@ const Sales: React.FC<SalesProps> = ({
             </div>
           </div>
 
-          {/* Service Checklist Toggle */}
-          {(() => {
-            const serviceWithChecklist = cart.find(item => {
-              const service = services.find(s => s.id?.toString() === item.itemId?.toString() || s.name === item.name);
-              return service?.checklistTemplateId;
-            });
-
-            if (!serviceWithChecklist) return null;
-            const service = services.find(s => s.id?.toString() === serviceWithChecklist.itemId?.toString() || s.name === serviceWithChecklist.name);
-
-            return (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{
-                  padding: '1rem',
-                  background: 'var(--bg-active)',
-                  borderRadius: '0.875rem',
-                  border: '1px solid var(--primary-light)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{
-                      padding: '0.5rem',
-                      background: 'white',
-                      borderRadius: '0.6rem',
-                      color: 'var(--primary)'
-                    }}>
-                      <CheckCircle size={20} />
-                    </div>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>Service Checklist</p>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>Fill checklist for {service?.name}</p>
-                    </div>
-                  </div>
-                  <div
-                    onClick={() => setShowChecklistInSummary(!showChecklistInSummary)}
-                    style={{
-                      width: '48px',
-                      height: '24px',
-                      background: showChecklistInSummary ? 'var(--primary)' : '#cbd5e1',
-                      borderRadius: '12px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'background 0.3s'
-                    }}
-                  >
-                    <motion.div
-                      animate={{ x: showChecklistInSummary ? 26 : 2 }}
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        background: 'white',
-                        borderRadius: '50%',
-                        position: 'absolute',
-                        top: '2px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {showChecklistInSummary && service?.checklistTemplateId && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      style={{ overflow: 'hidden' }}
-                    >
-                      <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
-                        <ChecklistForm
-                          templateId={service.checklistTemplateId}
-                          onDataChange={handleChecklistDataChange}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })()}
 
           <div style={{ display: 'flex', gap: '1rem' }}>
             <Button

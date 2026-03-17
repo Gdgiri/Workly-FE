@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../redux/store';
 import { fetchAppointments, createAppointment, updateAppointment, cancelAppointment, updateAppointmentStatus } from '../redux/slices/appointmentSlice';
-import { Plus, Filter, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Printer, MessageSquare, CreditCard, Paperclip, Image as ImageIcon, RefreshCw, FileText, AlertCircle, ChevronDown, Search, CheckCircle } from 'lucide-react';
+import { Plus, Filter, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Printer, MessageSquare, CreditCard, Paperclip, Image as ImageIcon, RefreshCw, FileText, AlertCircle, ChevronDown, Search, CheckCircle, X } from 'lucide-react';
 import { Table, Button, Modal, Input, Select } from '../components/UI';
 import { Appointment } from '../types';
 import { useToast } from '../components/ToastContext';
@@ -19,6 +19,14 @@ import api from '../utils/api';
 interface AppointmentsProps {
   fraudProtection?: boolean;
 }
+
+// Global fade-in animation for dropdowns
+const dropdownStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
 
 
 
@@ -87,6 +95,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [formData, setFormData] = useState({
     customerId: '',
     serviceId: '',
+    serviceIds: [] as string[], // NEW: For multiple services
     stylistId: '',
     date: '',
     time: '',
@@ -107,7 +116,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
   // New Checklist Toggle States
   const [showChecklistToggle, setShowChecklistToggle] = useState(false);
-  const [checklistData, setChecklistData] = useState<{ responses: any, remarks: any } | null>(null);
+  const [checklistResponses, setChecklistResponses] = useState<Record<string, { responses: any, remarks: any }>>({});
   const [showChecklistInCreate, setShowChecklistInCreate] = useState(false);
 
   // Pagination State
@@ -128,15 +137,19 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [openingTime, setOpeningTime] = useState('09:00');
   const [closingTime, setClosingTime] = useState('20:00');
 
-  const handleChecklistDataChange = React.useCallback((responses: any, remarks: any) => {
-    setChecklistData(prev => {
+  const handleChecklistDataChange = React.useCallback((serviceId: string, responses: any, remarks: any) => {
+    setChecklistResponses(prev => {
+      const current = prev[serviceId];
       // Prevent infinite loops by checking for equality
-      if (prev &&
-        JSON.stringify(prev.responses) === JSON.stringify(responses) &&
-        JSON.stringify(prev.remarks) === JSON.stringify(remarks)) {
+      if (current &&
+        JSON.stringify(current.responses) === JSON.stringify(responses) &&
+        JSON.stringify(current.remarks) === JSON.stringify(remarks)) {
         return prev;
       }
-      return { responses, remarks };
+      return {
+        ...prev,
+        [serviceId]: { responses, remarks }
+      };
     });
   }, []);
 
@@ -307,6 +320,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setFormData({
       customerId: '',
       serviceId: '',
+      serviceIds: [], // Reset multi-service list
       stylistId: '',
       date: '',
       time: '',
@@ -320,6 +334,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setServiceSearch('');
     setSpecialistSearch('');
     setEditingAppointment(null);
+    setChecklistResponses({});
+    setShowChecklistInCreate(false);
     setIsModalOpen(true);
 
     // Fetch customers only when needed
@@ -400,6 +416,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setFormData({
       customerId: appointment.customerId?.toString() || appointment.userId || '',
       serviceId: appointment.serviceId?.toString() || '',
+      serviceIds: appointment.services && appointment.services.length > 0
+        ? appointment.services.map(s => s.id.toString())
+        : [appointment.serviceId?.toString()].filter(Boolean) as string[],
       stylistId: originalSpecialist,
       date: dateValue,
       time: timeValue,
@@ -442,6 +461,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
       const appointmentData = {
         ...formData,
+        // Send both serviceId (first) for compatibility and serviceIds (full list)
+        serviceId: formData.serviceIds[0] || formData.serviceId,
+        serviceIds: formData.serviceIds,
         // Convert empty stylistId to null for backend validation
         stylistId: formData.stylistId || null,
         attachments: formData.attachments.map(a => ({
@@ -455,24 +477,32 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       if (editingAppointment) {
         await dispatch(updateAppointment({ id: editingAppointment.id, data: appointmentData })).unwrap();
       } else {
-        const newAppointment = await dispatch(createAppointment(appointmentData)).unwrap();
+        const result = await dispatch(createAppointment(appointmentData)).unwrap();
+        // Handle the single appointment returned by the backend
+        const createdAppointment = Array.isArray(result) ? result[0] : result;
 
-        // Submit checklist if data exists
-        const selectedService = services.find(s => s.id?.toString() === formData.serviceId?.toString());
-        if (showChecklistInCreate && checklistData && newAppointment?.id && selectedService?.checklistTemplateId) {
-          try {
-            await api.post(`/checklists/submit`, {
-              appointmentId: newAppointment.id,
-              templateId: selectedService.checklistTemplateId,
-              data: checklistData.responses,
-              remarks: checklistData.remarks,
-              severityScore: 0
-            });
-          } catch (checklistErr) {
-            console.error('Failed to submit checklist:', checklistErr);
-            showToast('Appointment created but checklist failed to save', 'warning');
+        console.log(`✅ Appointment created. Submitting checklists for ${formData.serviceIds.length} services...`);
+
+        // Submit checklists for each selected service linked to this SINGLE appointment
+        await Promise.all(formData.serviceIds.map(async (serviceId) => {
+          const selectedService = services.find(s => s.id?.toString() === serviceId?.toString());
+          const responses = checklistResponses[serviceId];
+
+          if (responses && createdAppointment?.id && selectedService?.checklistTemplateId) {
+            try {
+              await api.post(`/checklists/submit`, {
+                appointmentId: createdAppointment.id,
+                templateId: selectedService.checklistTemplateId,
+                data: responses.responses,
+                remarks: responses.remarks,
+                severityScore: 0
+              });
+            } catch (checklistErr) {
+              console.error(`Failed to submit checklist for service ${serviceId}:`, checklistErr);
+              showToast(`Appointment created but checklist for ${selectedService?.name} failed to save`, 'warning');
+            }
           }
-        }
+        }));
       }
 
       // Show appropriate success message
@@ -492,11 +522,12 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       setIsEditModalOpen(false);
       setEditingAppointment(null);
       setShowChecklistInCreate(false);
-      setChecklistData(null);
+      setChecklistResponses({});
       // fetchAppointments(); // Handled by Redux update
       setFormData({
         customerId: '',
         serviceId: '',
+        serviceIds: [],
         stylistId: '',
         date: '',
         time: '',
@@ -543,7 +574,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     // 3. Update Status to CONFIRMED if it's currently PENDING
     if (appointment.status?.toUpperCase() === 'PENDING') {
       try {
-        await dispatch(updateAppointmentStatus({ id: appointment.id, status: 'confirmed' })).unwrap();
+        await dispatch(updateAppointmentStatus({ id: appointment.id, status: 'CONFIRMED' })).unwrap();
         showToast('Appointment confirmed and WhatsApp opened!', 'success');
         // fetchAppointments(); // Handled by Redux
       } catch (error) {
@@ -614,14 +645,14 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
   const handleStartAppointment = async (row: Appointment) => {
     // Immediate feedback: Open the modal so they can see/fill the checklist
-    // We pass the expected next status (confirmed) to the view
-    handleView({ ...row, status: 'confirmed' });
+    // We pass the expected next status (CONFIRMED) to the view
+    handleView({ ...row, status: 'CONFIRMED' });
 
     // 1. Update status to CONFIRMED if PENDING
     if (row.status?.toUpperCase() === 'PENDING') {
       try {
         console.log('🚀 Starting appointment:', row.id);
-        await dispatch(updateAppointmentStatus({ id: row.id, status: 'confirmed' })).unwrap();
+        await dispatch(updateAppointmentStatus({ id: row.id, status: 'CONFIRMED' })).unwrap();
         showToast('Appointment confirmed!', 'success');
       } catch (error) {
         console.error('Failed to update status:', error);
@@ -641,11 +672,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
           customerId: (row.userId || row.customerId || row.customer?.id),
           customerName: row.customerName || row.customer?.name,
           serviceId: row.serviceId,
-          items: [{
-            ...row.service,
-            quantity: 1,
-            type: 'service'
-          }],
+          items: row.services && row.services.length > 0
+            ? row.services.map(s => ({ ...s, quantity: 1, type: 'service' }))
+            : row.service
+              ? [{ ...row.service, quantity: 1, type: 'service' }]
+              : [],
           depositAmount: row.paidAmount || row.depositAmount,
           depositPaymentMethod: depMeth,
           stylistId: row.stylistId,
@@ -673,7 +704,12 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     },
     {
       header: 'Service',
-      accessor: (row: Appointment) => row.service?.name || row.serviceName || 'N/A'
+      accessor: (row: Appointment) => {
+        if (row.services && row.services.length > 0) {
+          return row.services.map(s => s.name).join(', ');
+        }
+        return row.service?.name || row.serviceName || 'N/A';
+      }
     },
     {
       header: 'Specialist',
@@ -731,7 +767,12 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     {
       header: 'Payment Status',
       accessor: (row: Appointment) => {
-        const paymentStatus = row.paymentStatus?.toUpperCase() || 'PENDING';
+        let paymentStatus = row.paymentStatus?.toUpperCase() || 'PENDING';
+
+        // Ensure confirmed appointments that aren't paid show PENDING
+        if (row.status?.toUpperCase() === 'CONFIRMED' && paymentStatus !== 'COMPLETED' && paymentStatus !== 'PAID' && paymentStatus !== 'PARTIAL') {
+          paymentStatus = 'PENDING';
+        }
 
         let backgroundColor = '#f3f4f6'; // Gray
         let textColor = '#374151';
@@ -930,6 +971,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
   return (
     <div className="space-y-6" style={{ position: 'relative' }}>
+      <style>{dropdownStyles}</style>
       <div className="flex flex-col md:flex-row justify-between items-center" style={{ gap: '1rem' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-card)', padding: '0.25rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
@@ -1312,78 +1354,221 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
               )}
             </div>
 
-            <div className="input-group" style={{ position: 'relative', marginBottom: '0.75rem' }}>
-              <label className="input-label">Service</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Type service name..."
-                value={serviceSearch}
-                onChange={(e) => {
-                  const searchVal = e.target.value;
-                  setServiceSearch(searchVal);
-                  setShowServiceOptions(true);
-                  // Optional: Clear selection if user clears input
-                  if (!searchVal) setFormData(prev => ({ ...prev, serviceId: '' }));
+
+            {/* 1. Multi-Select Service Dropdown */}
+            <div style={{ gridColumn: 'span 2', position: 'relative' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Services</label>
+              <div
+                onClick={() => setShowServiceOptions(!showServiceOptions)}
+                style={{
+                  padding: '0.625rem 1rem',
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  minHeight: '42px',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                 }}
-                onFocus={() => {
-                  setShowServiceOptions(true);
-                  if (formData.serviceId && !serviceSearch) {
-                    const s = services.find(srv => srv.id?.toString() === formData.serviceId?.toString());
-                    if (s) setServiceSearch(s.name);
-                  }
-                }}
-                onBlur={() => setTimeout(() => setShowServiceOptions(false), 200)}
-                required
-              />
-              {/* Service Dropdown */}
-              {showServiceOptions && (serviceSearch || document.activeElement === document.querySelector('input[placeholder="Type service name..."]')) &&
-                !services.find(s => s.name === serviceSearch && s.id === formData.serviceId) && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: 'white',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    zIndex: 50,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    border: '1px solid var(--border)',
-                    marginTop: '0.25rem'
-                  }}>
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = showServiceOptions ? 'var(--primary)' : '#e2e8f0'}
+              >
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {formData.serviceIds.length > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                        {formData.serviceIds.length}
+                      </div>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>
+                        Service{formData.serviceIds.length > 1 ? 's' : ''} Selected
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Select services...</span>
+                  )}
+                </div>
+                <ChevronDown size={18} style={{ color: '#64748b', transform: showServiceOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              </div>
+
+              {showServiceOptions && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'white',
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                  zIndex: 100,
+                  border: '1px solid #e2e8f0',
+                  marginTop: '0.5rem',
+                  overflow: 'hidden',
+                  animation: 'fadeIn 0.2s ease'
+                }}>
+                  {/* Search inside dropdown */}
+                  <div style={{ padding: '0.75rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Search services..."
+                        value={serviceSearch}
+                        onChange={(e) => setServiceSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ paddingLeft: '2.25rem', fontSize: '0.875rem', background: 'white', marginBottom: 0 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* List with checkboxes */}
+                  <div style={{ maxHeight: '250px', overflowY: 'auto', padding: '0.25rem' }}>
                     {services
                       .filter(s => (s.name || '').toLowerCase().includes((serviceSearch || '').toLowerCase()))
-                      .map(s => (
-                        <div
-                          key={s.id}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setServiceSearch(s.name);
-                            setFormData(prev => ({ ...prev, serviceId: s.id }));
-                            setShowServiceOptions(false);
-                          }}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            color: 'var(--text-dark)',
-                            borderBottom: '1px solid #f1f5f9',
-                            display: 'flex', justifyContent: 'space-between'
-                          }}
-                          className="hover:bg-gray-50"
-                        >
-                          <span style={{ fontWeight: 500 }}>{s.name}</span>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-gray)' }}>{symbol}{s.price}</span>
-                        </div>
-                      ))
-                    }
+                      .map(s => {
+                        const isSelected = formData.serviceIds.includes(s.id);
+                        return (
+                          <label
+                            key={s.id}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.625rem 0.75rem',
+                              cursor: 'pointer',
+                              borderRadius: '0.375rem',
+                              transition: 'all 0.15s',
+                              background: isSelected ? 'rgba(var(--primary-rgb), 0.05)' : 'transparent',
+                              marginBottom: '1px'
+                            }}
+                            className="hover:bg-gray-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData(prev => ({ ...prev, serviceIds: [...prev.serviceIds, String(s.id)] }));
+                                  if (s.checklistTemplateId) setShowChecklistInCreate(true);
+                                } else {
+                                  setFormData(prev => ({ ...prev, serviceIds: prev.serviceIds.filter(id => String(id) !== String(s.id)) }));
+                                }
+                              }}
+                              style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', border: '2px solid #cbd5e1' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.875rem', fontWeight: isSelected ? 600 : 500, color: isSelected ? 'var(--primary)' : '#1e293b' }}>{s.name}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{s.duration} mins</span>
+                              </div>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1e293b' }}>{symbol}{s.price}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
                     {services.filter(s => (s.name || '').toLowerCase().includes((serviceSearch || '').toLowerCase())).length === 0 && (
-                      <div style={{ padding: '0.5rem 1rem', color: 'var(--text-gray)', fontSize: '0.85rem' }}>No services found</div>
+                      <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
+                        <p style={{ fontSize: '0.875rem' }}>No services found</p>
+                      </div>
                     )}
                   </div>
+                </div>
+              )}
+            </div>
+
+            <div className="input-group" style={{ gridColumn: 'span 2', marginTop: '0.75rem' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Selected Services Summary</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                {formData.serviceIds.map((id, index) => {
+                  const s = services.find(srv => srv.id?.toString() === id.toString());
+                  if (!s) return null;
+                  return (
+                    <div key={`${id}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{s.duration} mins • {symbol}{s.price}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, serviceIds: prev.serviceIds.filter((_, i) => i !== index) }))}
+                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {formData.serviceIds.length === 0 && (
+                  <div style={{ padding: '0.75rem', textAlign: 'center', border: '1px dashed #cbd5e1', borderRadius: '0.5rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                    No services selected
+                  </div>
                 )}
+              </div>
+
+              {/* Totals Summary */}
+              {formData.serviceIds.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem', padding: '0.5rem 0.75rem', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '0.5rem', marginBottom: '0.75rem', fontSize: '0.8125rem', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Clock size={14} />
+                    <span>Total Duration: {formData.serviceIds.reduce((acc, id) => acc + (services.find(s => s.id?.toString() === id.toString())?.duration || 0), 0)} mins</span>
+                  </div>
+                  <span>Total Price: {symbol}{formData.serviceIds.reduce((acc, id) => acc + (services.find(s => s.id?.toString() === id.toString())?.price || 0), 0)}</span>
+                </div>
+              )}
+
+              {/* Multi-Service Checklist Forms */}
+              {(() => {
+                const servicesWithChecklists = formData.serviceIds
+                  .map(id => services.find(s => s.id?.toString() === id.toString()))
+                  .filter(s => s?.checklistTemplateId || (s as any)?.checklistId);
+
+                if (formData.serviceIds.length > 0) {
+                  return (
+                    <div style={{ marginTop: '0.5rem', marginBottom: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)', padding: '0.4rem', borderRadius: '0.4rem' }}>
+                          <FileText size={18} />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1e293b' }}>
+                            Required Service Checklists {servicesWithChecklists.length > 0 && `(${servicesWithChecklists.length})`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {servicesWithChecklists.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '0.5rem' }}>
+                          {servicesWithChecklists.map((s: any) => (
+                            <div key={s.id} style={{ background: 'white', borderRadius: '0.75rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                              <div style={{ padding: '0.625rem 0.75rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase' }}>{s.name}</span>
+                                <span style={{ fontSize: '0.65rem', color: '#1e40af', background: '#dbeafe', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>Action Required</span>
+                              </div>
+                              <div style={{ padding: '0.75rem' }}>
+                                <ChecklistForm
+                                  templateId={s.checklistTemplateId || s.checklistId}
+                                  onDataChange={(res, rem) => handleChecklistDataChange(s.id.toString(), res, rem)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '1rem', background: 'white', borderRadius: '0.5rem', border: '1px dashed #e2e8f0' }}>
+                          <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            No additional checklists needed for selected services.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             <div className="input-group" style={{ position: 'relative', marginBottom: '0.75rem' }}>
@@ -1687,67 +1872,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 );
               })()}
             </div>
-            {/* Checklist Toggle and Inline Form */}
-            {(() => {
-              const selectedService = services.find(s => s.id?.toString() === formData.serviceId?.toString());
-              if (selectedService?.checklistTemplateId) {
-                return (
-                  <div style={{ gridColumn: 'span 2', marginTop: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)', padding: '0.5rem', borderRadius: '0.5rem' }}>
-                          <FileText size={20} />
-                        </div>
-                        <div>
-                          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e293b' }}>Service Checklist</p>
-                          <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Fill the required service checklist now</p>
-                        </div>
-                      </div>
-                      <div
-                        onClick={() => setShowChecklistInCreate(!showChecklistInCreate)}
-                        style={{
-                          width: '48px',
-                          height: '24px',
-                          background: showChecklistInCreate ? 'var(--primary)' : '#cbd5e1',
-                          borderRadius: '12px',
-                          position: 'relative',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s'
-                        }}
-                      >
-                        <div style={{
-                          width: '18px',
-                          height: '18px',
-                          background: 'white',
-                          borderRadius: '50%',
-                          position: 'absolute',
-                          top: '3px',
-                          left: showChecklistInCreate ? '27px' : '3px',
-                          transition: 'all 0.3s'
-                        }} />
-                      </div>
-                    </div>
-
-                    <AnimatePresence>
-                      {showChecklistInCreate && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          style={{ overflow: 'hidden', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}
-                        >
-                          <ChecklistForm
-                            templateId={selectedService.checklistTemplateId}
-                            onDataChange={handleChecklistDataChange}
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              }
-              return null;
-            })()}
 
             <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
               <label className="input-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>Comments</label>
@@ -2265,11 +2389,26 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.375rem', display: 'block', letterSpacing: '0.025em' }}>Service</label>
-                    <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '1rem' }}>{viewAppointment.service?.name}</div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#059669', marginTop: '0.125rem' }}>
-                      {formatPrice(viewAppointment.service?.price || 0)}
-                    </div>
+                    <label style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.375rem', display: 'block', letterSpacing: '0.025em' }}>Service{viewAppointment.services && viewAppointment.services.length > 1 ? 's' : ''}</label>
+                    {viewAppointment.services && viewAppointment.services.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {viewAppointment.services.map((s, idx) => (
+                          <div key={idx}>
+                            <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '1rem' }}>{s.name}</div>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#059669', marginTop: '0.125rem' }}>
+                              {formatPrice(s.price || 0)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '1rem' }}>{viewAppointment.service?.name}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#059669', marginTop: '0.125rem' }}>
+                          {formatPrice(viewAppointment.service?.price || 0)}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.375rem', display: 'block', letterSpacing: '0.025em' }}>Specialist</label>
@@ -2399,9 +2538,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                           </tr>
                         ))
                       ) : (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B', fontSize: '0.875rem', background: '#f8fafc', borderRadius: '0.75rem' }}>
-                          No payments recorded yet.
-                        </div>
+                        <tr>
+                          <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: '#64748B', fontSize: '0.875rem', background: '#f8fafc', fontStyle: 'italic' }}>
+                            No transaction history available.
+                          </td>
+                        </tr>
                       )}
                     </tbody>
                     <tfoot style={{ background: '#f8fafc', fontWeight: 600, borderTop: '1px solid #e2e8f0' }}>
@@ -2465,72 +2606,61 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                   )}
 
                   {/* Checklist Button */}
+                  {/* Checklist Buttons */}
                   {(() => {
-                    const linkedService = services.find(s => s.id?.toString() === viewAppointment.serviceId?.toString());
-                    const templateId = viewAppointment.service?.checklistTemplateId || linkedService?.checklistTemplateId;
+                    const servicesList = viewAppointment.services && viewAppointment.services.length > 0
+                      ? viewAppointment.services
+                      : services.filter(s => s.id?.toString() === viewAppointment.serviceId?.toString());
 
-                    if (!templateId) {
+                    const servicesWithChecklists = servicesList.filter(s => s.checklistTemplateId);
+
+                    if (servicesWithChecklists.length === 0) {
                       return (
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px dashed #e2e8f0' }}>
                           <AlertCircle size={14} />
-                          No checklist linked to this service
+                          No checklists linked to these services
                         </div>
                       );
                     }
 
-                    if (isChecklistFilled) {
-                      return (
-                        <button
-                          onClick={() => setShowChecklistInline(!showChecklistInline)}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: showChecklistInline ? '#64748B' : '#10b981',
-                            border: 'none',
-                            color: 'white',
-                            borderRadius: '0.5rem',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.625rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.23s',
-                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
-                            borderBottom: '2px solid rgba(0,0,0,0.1)'
-                          }}
-                        >
-                          <CheckCircle size={18} />
-                          {showChecklistInline ? 'Close Checklist' : 'View Checklist'}
-                        </button>
-                      );
-                    }
-
                     return (
-                      <button
-                        onClick={() => {
-                          setActiveChecklistId(templateId);
-                          setShowChecklistInline(!showChecklistInline);
-                        }}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          background: showChecklistInline ? '#64748B' : 'var(--primary)',
-                          border: 'none',
-                          color: 'white',
-                          borderRadius: '0.5rem',
-                          fontWeight: 600,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.625rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.23s',
-                          boxShadow: '0 4px 12px rgba(var(--primary-rgb), 0.2)',
-                          borderBottom: '2px solid rgba(0,0,0,0.1)'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                      >
-                        <FileText size={18} />
-                        {showChecklistInline ? 'Close Checklist' : (viewAppointment.status === 'COMPLETED' ? 'View Checklist' : 'Fill Service Checklist')}
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {servicesWithChecklists.map((s, idx) => {
+                          const isActive = activeChecklistId === s.checklistTemplateId && showChecklistInline;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                if (isActive) {
+                                  setShowChecklistInline(false);
+                                  setActiveChecklistId(null);
+                                } else {
+                                  setActiveChecklistId(s.checklistTemplateId);
+                                  setShowChecklistInline(true);
+                                }
+                              }}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                background: isActive ? '#64748B' : 'var(--primary)',
+                                border: 'none',
+                                color: 'white',
+                                borderRadius: '0.5rem',
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.625rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.23s',
+                                boxShadow: '0 4px 12px rgba(var(--primary-rgb), 0.2)',
+                                borderBottom: '2px solid rgba(0,0,0,0.1)'
+                              }}
+                            >
+                              <FileText size={18} />
+                              {isActive ? `Close ${s.name} Checklist` : `${viewAppointment.status === 'COMPLETED' ? 'View' : 'Fill'} ${s.name} Checklist`}
+                            </button>
+                          );
+                        })}
+                      </div>
                     );
                   })()}
                 </div>
@@ -2560,6 +2690,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                   </button>
                 </div>
               </div>
+
             </div>
           </Modal>
         )

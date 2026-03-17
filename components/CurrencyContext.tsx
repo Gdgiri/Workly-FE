@@ -29,7 +29,19 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             case 'USD': return '$';
             case 'EUR': return '€';
             case 'GBP': return '£';
-            case 'SGD': return '$';
+            case 'SGD': return 'S$';
+            case 'AED': return 'د.إ';
+            case 'SAR': return 'SR';
+            case 'MYR': return 'RM';
+            case 'IDR': return 'Rp';
+            case 'THB': return '฿';
+            case 'JPY':
+            case 'CNY': return '¥';
+            case 'AUD': return 'A$';
+            case 'CAD': return 'C$';
+            case 'HKD': return 'HK$';
+            case 'NZD': return 'NZD$';
+            case 'TWD': return 'TWD';
             default: return curr;
         }
     };

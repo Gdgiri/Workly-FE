@@ -92,7 +92,7 @@ export interface Appointment {
   time?: string;
   startTime: string; // ISO DateTime string
   endTime: string; // ISO DateTime string
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  status: 'CONFIRMED' | 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'confirmed' | 'pending' | 'completed' | 'cancelled';
   price: number;
   duration: number;
   depositAmount?: number;
@@ -101,6 +101,7 @@ export interface Appointment {
   // Relations populated by backend
   customer?: Customer;
   service?: Service;
+  services?: Service[]; // New field for multiple services under one appointment
   stylist?: Stylist;
   payments?: any[];
 

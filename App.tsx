@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from './redux/store';
 import { logoutUser } from './redux/slices/authSlice';
+import { fetchSettings } from './redux/slices/settingSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, TopBar } from './components/Layout';
@@ -202,69 +203,73 @@ const AppContent: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   // Fetch Data on Load
+  const { settings: reduxSettings } = useSelector((state: any) => state.settings);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch Vouchers, Claims, Customers, and Settings using standardized api instance
-        const [vouchersRes, claimsRes, customersRes, settingsRes] = await Promise.all([
+        const [vouchersRes, claimsRes, customersRes] = await Promise.all([
           api.get('/vouchers'),
           api.get('/vouchers/claims'),
-          api.get('/customers'),
-          api.get('/settings')
+          api.get('/customers')
         ]);
 
         setVouchers(vouchersRes.data);
         setVoucherClaims(claimsRes.data);
         setCustomers(customersRes.data);
 
-        // Cache for faster next load
         localStorage.setItem('cached_vouchers', JSON.stringify(vouchersRes.data));
         localStorage.setItem('cached_voucherClaims', JSON.stringify(claimsRes.data));
         localStorage.setItem('cached_customers', JSON.stringify(customersRes.data));
-
-        const settingsData = settingsRes.data;
-        // Parse activePaymentMethods from settings
-        let methods: PaymentMethod[] = [];
-        if (settingsData.activePaymentMethods) {
-          const parsed = typeof settingsData.activePaymentMethods === 'string'
-            ? JSON.parse(settingsData.activePaymentMethods)
-            : settingsData.activePaymentMethods;
-
-          if (Array.isArray(parsed)) {
-            methods = parsed.map((m: any) => {
-              const name = m.name.toUpperCase();
-              let id = name.replace(/\s+/g, '_');
-
-              // Standardize common methods to match Backend Enums for filtering
-              if (name.includes('GPAY') || name.includes('GOOGLE')) id = 'GPAY';
-              if (name.includes('PHONEPE') || name.includes('PHONEPA')) id = 'PHONEPE';
-              if (name.includes('PAYTM')) id = 'PAYTM';
-              if (name === 'RAZORPAY' || name === 'RAZOR') id = 'RAZORPAY';
-              if (name === 'CASH') id = 'CASH';
-
-              return {
-                id,
-                name: m.name,
-                active: m.status === 1
-              };
-            }).filter((m: any) => m.active);
-          }
-        }
-        if (settingsData.fraudProtection !== undefined) {
-          setFraudProtection(settingsData.fraudProtection);
-        }
-        if (methods.length === 0) methods = [{ id: 'CASH', name: 'Cash', active: true }];
-        setPaymentMethods(methods);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
 
-    // Only fetch if authenticated
     if (isAuthenticated) {
       fetchData();
+      dispatch(fetchSettings());
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, dispatch]);
+
+  useEffect(() => {
+    if (reduxSettings) {
+      const settingsData = reduxSettings;
+      let methods: PaymentMethod[] = [];
+      if (settingsData.activePaymentMethods) {
+        const parsed = typeof settingsData.activePaymentMethods === 'string'
+          ? JSON.parse(settingsData.activePaymentMethods)
+          : settingsData.activePaymentMethods;
+
+        if (Array.isArray(parsed)) {
+          methods = parsed.map((m: any) => {
+            const name = m.name.toUpperCase().trim();
+
+            // 1:1 Dynamic ID generation: name -> UPPERCASE_WITH_UNDERSCORES
+            // We only keep 'CASH' as a protected system ID.
+            let id = name.replace(/[^A-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+            if (name === 'CASH') id = 'CASH';
+
+            // Ensure we have a valid ID fallback
+            if (!id) id = `METHOD_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+            return {
+              id,
+              name: m.name,
+              active: m.status === 1,
+              url: m.url || '',
+              secretKey: m.secretKey || ''
+            };
+          });
+        }
+      }
+      if (settingsData.fraudProtection !== undefined) {
+        setFraudProtection(settingsData.fraudProtection);
+      }
+      if (methods.length === 0) methods = [{ id: 'CASH', name: 'Cash', active: true }];
+      setPaymentMethods(methods);
+    }
+  }, [reduxSettings]);
 
   // --- RENDER CURRENT PAGE ---
   // Moved to Routes definition below

@@ -20,6 +20,7 @@ import { uploadToCloudinary } from '../utils/cloudinary';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../redux/store';
 import { fetchPayments, fetchSpecialists, invalidatePaymentCache } from '../redux/slices/paymentSlice';
+import { fetchAppointments } from '../redux/slices/appointmentSlice';
 import { fetchSettings } from '../redux/slices/settingSlice';
 import { cancelSale } from '../redux/slices/saleSlice';
 import { fetchInventory, fetchInventoryHistory, invalidateInventoryCache } from '../redux/slices/inventorySlice';
@@ -111,6 +112,7 @@ const StatCard = ({ title, value, icon: Icon, trend, color, secondaryColor, onCl
 const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtection = false }) => {
     const dispatch = useDispatch<AppDispatch>();
     const { payments, stats, pagination, loading: paymentsLoading, specialists } = useSelector((state: RootState) => state.payments);
+    const { appointments } = useSelector((state: RootState) => state.appointments);
     const { settings } = useSelector((state: RootState) => state.settings); // Use global settings
 
     const navigate = useNavigate();
@@ -125,7 +127,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     };
 
     // Removed local payments, stats, cashiers, settings state
-    // const [payments, setPayments] = useState<Payment[]>([]);
+    // const [payments, setPayments] = useState<Payment[]>();
     // const [stats, setStats] = useState({...});
     // const [loading, setLoading] = useState(true);
     // const [settings, setSettings] = useState<any>(null);
@@ -139,6 +141,42 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const [cancelReason, setCancelReason] = useState('');
     const [isCancelling, setIsCancelling] = useState(false);
 
+    // Intelligence Matcher (Same logic as Reconciliation for consistency)
+    const isMatching = (backendKey: string, settingsName: string): boolean => {
+        if (!backendKey || !settingsName) return false;
+        const normalizedBackend = backendKey.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+        const normalizedSettings = settingsName.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+
+        // Direct check
+        if (normalizedBackend === normalizedSettings) return true;
+
+        // Prefix check (e.g., GPAY matches GOOGLEPAY)
+        if (normalizedSettings.startsWith(normalizedBackend) || normalizedBackend.startsWith(normalizedSettings)) return true;
+
+        // Alias Library
+        const aliases: Record<string, string[]> = {
+            'ONLINEPAY': ['AMAZON', 'ONLINE', 'RAZORPAY', 'TEST'],
+            'GPAY': ['GOOGLEPAY', 'GOOGLE', 'GPAY'],
+            'PHONEPE': ['PHONEPA', 'PHONE', 'PE'],
+            'CASH': ['PHYSICAL', 'CASH'],
+            'CARD': ['VISA', 'MASTERCARD', 'CREDIT', 'DEBIT']
+        };
+
+        for (const [key, variants] of Object.entries(aliases)) {
+            const isBackendMatchingKey = normalizedBackend === key || variants.includes(normalizedBackend);
+            const isSettingsMatchingKey = normalizedSettings === key || variants.includes(normalizedSettings);
+            if (isBackendMatchingKey && isSettingsMatchingKey) return true;
+        }
+
+        return false;
+    };
+
+    // Breakdown State
+    const [breakdownData, setBreakdownData] = useState<any>(null);
+    const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+    const [breakdownLoading, setBreakdownLoading] = useState(false);
+    const [breakdownTitle, setBreakdownTitle] = useState('');
+
     // Filters
     const getToday = () => {
         const d = new Date();
@@ -150,7 +188,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const [paymentMethod, setPaymentMethod] = useState('ALL');
     const [status, setStatus] = useState('ALL');
     const [selectedSpecialist, setSelectedSpecialist] = useState('ALL');
-    // const [cashiers, setCashiers] = useState<string[]>([]);
+    // const [cashiers, setCashiers] = useState<string[]>();
 
     // Use Redux pagination or local override? 
     // Let's stick to local page control triggering Redux fetch
@@ -311,6 +349,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         if (minAmount) params.minAmount = Number(minAmount);
 
         dispatch(fetchPayments(params));
+        dispatch(fetchAppointments());
     };
 
     useEffect(() => {
@@ -322,6 +361,72 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         dispatch(invalidatePaymentCache());
         dispatch(fetchSpecialists());
         loadPayments();
+    };
+
+    const handleShowBreakdown = async (type: 'total' | 'cash' | 'digital') => {
+        setBreakdownTitle(type === 'total' ? 'Revenue Breakdown' : type === 'cash' ? 'Cash Breakdown' : 'Digital Breakdown');
+        setIsBreakdownModalOpen(true);
+        setBreakdownLoading(true);
+
+        try {
+            const params: any = {
+                page: 1,
+                limit: 1000 // Fetch a large sample for accurate breakdown
+            };
+            if (dateRange.start) params.startDate = dateRange.start;
+            if (dateRange.end) params.endDate = dateRange.end;
+            if (status !== 'ALL') params.status = status;
+            if (paymentMethod !== 'ALL') params.paymentMethod = paymentMethod;
+            if (selectedSpecialist !== 'ALL') params.specialist = selectedSpecialist;
+            if (debouncedSearch) {
+                params.customerSearch = debouncedSearch;
+            }
+
+            const response = await api.get('/payments', { params });
+            const allItems = response.data.payments || [];
+
+            const breakdown: Record<string, number> = {};
+
+            // Get current active methods from settings to map breakdown rows
+            const activeMethods = settings?.paymentMethods || [];
+
+            allItems.forEach((p: any) => {
+                // Only count COMPLETED payments to match the summary cards
+                if (p.paymentStatus !== 'COMPLETED') return;
+
+                const method = (p.paymentMethod || 'UNKNOWN').toUpperCase();
+                const isCash = method === 'CASH';
+
+                if (type === 'total' || (type === 'cash' && isCash) || (type === 'digital' && !isCash)) {
+                    // Try to get custom method from notes
+                    let rawMethod = method;
+                    if (p.notes && typeof p.notes === 'string' && p.notes.includes('Method:')) {
+                        const match = p.notes.match(/Method:\s*([^|]+)/);
+                        if (match && match[1]) rawMethod = match[1].trim().toUpperCase();
+                    }
+
+                    // Map raw backend key to a friendly name from Settings using isMatching
+                    let displayLabel = rawMethod;
+                    const matchedSetting = activeMethods.find((m: any) => isMatching(rawMethod, m.name));
+                    if (matchedSetting) {
+                        displayLabel = matchedSetting.name;
+                    } else {
+                        // Special labels for legacy/system keys
+                        if (rawMethod === 'ONLINEPAY' || rawMethod === 'RAZORPAY') displayLabel = 'Online Pay (System)';
+                        if (rawMethod === 'CASH') displayLabel = 'Cash';
+                    }
+
+                    breakdown[displayLabel] = (breakdown[displayLabel] || 0) + p.amount;
+                }
+            });
+
+            setBreakdownData(breakdown);
+        } catch (error) {
+            console.error('Failed to fetch breakdown:', error);
+            showToast('Failed to load breakdown data', 'error');
+        } finally {
+            setBreakdownLoading(false);
+        }
     };
 
     const getStatusColor = (status: string) => {
@@ -336,6 +441,50 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             default: return 'bg-slate-100 text-slate-700';
         }
     };
+
+    // Memoize the combined list of real payments + synthesized pending appointments
+    const combinedPayments = React.useMemo(() => {
+        // 1. Base payments from API
+        let list = [...payments];
+
+        // 2. Synthesize pending payments from CONFIRMED appointments
+        if (appointments && appointments.length > 0) {
+            const confirmedAppts = appointments.filter(a => {
+                const apptStatus = a.status?.toUpperCase();
+                const payStatus = a.paymentStatus?.toUpperCase() || 'PENDING';
+                return apptStatus === 'CONFIRMED' && payStatus !== 'COMPLETED' && payStatus !== 'PAID' && payStatus !== 'PARTIAL';
+            });
+
+            const synthesized: Payment[] = confirmedAppts.map(appt => ({
+                id: `pending-${appt.id}`,
+                transactionId: `PENDING-CHECKOUT-${appt.id.toString().slice(-6).toUpperCase()}`,
+                appointmentId: appt.id.toString(),
+                amount: appt.totalAmount || appt.price || (appt.service?.price || 0),
+                paymentMethod: 'PENDING',
+                paymentStatus: 'PENDING',
+                paymentType: 'SALE',
+                createdAt: (appt as any).createdAt || new Date().toISOString(),
+                updatedAt: (appt as any).updatedAt || new Date().toISOString(),
+                // Attach the appointment object so the table renderer knows who the customer etc. is
+                appointment: appt as any,
+                // Flag to help UI know this isn't a real saved transaction yet
+                isPendingSale: true,
+                sale: {
+                    saleStatus: 'PENDING',
+                    saleNumber: 'Awaiting Checkout...',
+                    invoiceNumber: '--'
+                } as any
+            }));
+
+            // Only add synthesized ones if they aren't somehow already in the actual payments list
+            const existingApptIds = new Set(payments.map(p => p.appointmentId).filter(Boolean));
+            const uniqueSynthesized = synthesized.filter(s => !existingApptIds.has(s.appointmentId));
+
+            list = [...uniqueSynthesized, ...list];
+        }
+
+        return list;
+    }, [payments, appointments]);
 
     const columns = [
         {
@@ -545,7 +694,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     >
                         View
                     </Button>
-                    {(isAdmin || isManager) && row.sale?.saleStatus !== 'CANCELLED' && (
+                    {(isAdmin || isManager) && row.sale?.saleStatus !== 'CANCELLED' && row.sale?.saleStatus !== 'COMPLETED' && row.paymentStatus !== 'COMPLETED' && (
                         <Button
                             variant="ghost"
                             icon={<XCircle size={16} />}
@@ -610,6 +759,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     color="#4F46E5" // Indigo 600
                     secondaryColor="#9333EA" // Purple 600
                     loading={paymentsLoading}
+                    onClick={() => handleShowBreakdown('total')}
                 />
                 <StatCard
                     title="Cash Collected"
@@ -619,6 +769,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     color="#059669" // Emerald 600
                     secondaryColor="#10B981" // Emerald 500
                     loading={paymentsLoading}
+                    onClick={() => handleShowBreakdown('cash')}
                 />
                 <StatCard
                     title="Digital Payments"
@@ -628,6 +779,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     color="#2563EB" // Blue 600
                     secondaryColor="#3B82F6" // Blue 500
                     loading={paymentsLoading}
+                    onClick={() => handleShowBreakdown('digital')}
                 />
                 <StatCard
                     title="Balance Amount"
@@ -644,8 +796,6 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     onClick={() => {
                         setStatus('PARTIAL');
                         setCurrentPage(1);
-                        // Force fetch if status didn't change (rare but possible)
-                        // loadPayments(); // useEffect with status as dependency will handle this
                     }}
                     loading={paymentsLoading}
                 />
@@ -785,7 +935,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     height: '44px',
                                     padding: '0 20px'
                                 }}
-                                icon={<Trash2 size={16} />}
+                                icon={<RefreshCw size={16} />}
                             >
                                 Reset
                             </Button>
@@ -806,7 +956,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 <Table
                     columns={columns}
                     data={(() => {
-                        let filtered = [...payments];
+                        let filtered = [...combinedPayments];
 
                         // Client-side fallback filter to ensure "correct" filtering for current page
                         if (customerSearch.trim()) {
@@ -837,7 +987,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 {/* Pagination Footer */}
                 <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                     <div className="text-sm text-slate-500 font-medium">
-                        Showing <span className="text-slate-900 dark:text-white font-bold">{payments.length}</span> of <span className="text-slate-900 dark:text-white font-bold">{pagination.totalCount}</span> transactions
+                        Showing <span className="text-slate-900 dark:text-white font-bold">{combinedPayments.length}</span> of <span className="text-slate-900 dark:text-white font-bold">{pagination.totalCount + (combinedPayments.length - payments.length)}</span> transactions
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-xs text-slate-400 font-bold uppercase tracking-widest hidden md:block">
@@ -1413,7 +1563,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         </div>
 
                         {/* Cancel Bill Button Section - Restricted to Admin/Manager */}
-                        {(isAdmin || isManager) && selectedPayment.sale?.saleStatus !== 'CANCELLED' && (
+                        {(isAdmin || isManager) && selectedPayment.sale?.saleStatus !== 'CANCELLED' && selectedPayment.sale?.saleStatus !== 'COMPLETED' && selectedPayment.paymentStatus !== 'COMPLETED' && (
                             <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
                                 <Button
                                     variant="outline"
@@ -1605,6 +1755,120 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             </Button>
                         </motion.div>
                     </div>
+                </div>
+            </Modal>
+
+            {/* Breakdown Modal */}
+            <Modal
+                isOpen={isBreakdownModalOpen}
+                onClose={() => setIsBreakdownModalOpen(false)}
+                title={breakdownTitle}
+                width="450px"
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0.5rem' }}>
+                    {breakdownLoading ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-4">
+                            <RefreshCw className="animate-spin text-blue-500" size={40} />
+                            <p className="text-sm font-medium text-slate-500">Calculating breakdown...</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{
+                                padding: '1.25rem',
+                                background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%)',
+                                borderRadius: '1.25rem',
+                                border: '1px solid rgba(79, 70, 229, 0.1)',
+                                textAlign: 'center'
+                            }}>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                    {breakdownTitle.split(' ')[0]} for {new Date(dateRange.start).toLocaleDateString()}
+                                    {dateRange.start !== dateRange.end && ` - ${new Date(dateRange.end).toLocaleDateString()}`}
+                                </p>
+                                <h3 className="text-3xl font-black text-slate-800 tracking-tighter">
+                                    {formatPrice(Object.values(breakdownData || {}).reduce((a: any, b: any) => a + Number(b), 0))}
+                                </h3>
+                                {(status !== 'ALL' || paymentMethod !== 'ALL' || selectedSpecialist !== 'ALL') && (
+                                    <div className="mt-2 flex items-center justify-center gap-1.5 px-3 py-1 bg-amber-50 rounded-full border border-amber-200 w-fit mx-auto">
+                                        <AlertTriangle size={12} className="text-amber-600" />
+                                        <span className="text-[10px] font-bold text-amber-700 uppercase">
+                                            Filters Active: {status !== 'ALL' ? status : ''} {paymentMethod !== 'ALL' ? paymentMethod : ''}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-4">
+                                {Object.entries(breakdownData || {}).length > 0 ? (
+                                    Object.entries(breakdownData || {}).sort((a: any, b: any) => b[1] - a[1]).map(([method, amount]: any) => {
+                                        const total = Object.values(breakdownData || {}).reduce((a: any, b: any) => a + Number(b), 0) as number;
+                                        const percentage = Math.round((Number(amount) / total) * 100);
+
+                                        return (
+                                            <div key={method} className="space-y-1.5">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                                                        <span className="text-sm font-bold text-slate-700">{method}</span>
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-900">{formatPrice(amount)}</span>
+                                                </div>
+                                                <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${percentage}%` }}
+                                                        transition={{ duration: 1, ease: 'easeOut' }}
+                                                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.2)]"
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end pr-1">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{percentage}% OF {breakdownTitle.split(' ')[0]}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-8 text-slate-400 font-medium">No payments found for this selection</div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    style={{
+                                        height: '52px',
+                                        borderRadius: 'var(--radius-xl)',
+                                        fontWeight: 700,
+                                        marginTop: '1rem',
+                                        border: '2px solid var(--border)'
+                                    }}
+                                    onClick={() => setIsBreakdownModalOpen(false)}
+                                >
+                                    Close
+                                </Button>
+                                {(status !== 'ALL' || paymentMethod !== 'ALL') && (
+                                    <Button
+                                        variant="primary"
+                                        className="flex-1"
+                                        style={{
+                                            height: '52px',
+                                            borderRadius: 'var(--radius-xl)',
+                                            fontWeight: 700,
+                                            marginTop: '1rem'
+                                        }}
+                                        onClick={() => {
+                                            setStatus('ALL');
+                                            setPaymentMethod('ALL');
+                                            setIsBreakdownModalOpen(false);
+                                            // Page will refresh due to status change
+                                        }}
+                                    >
+                                        Show All Data
+                                    </Button>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </Modal>
         </div>

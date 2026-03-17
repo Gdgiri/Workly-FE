@@ -42,9 +42,54 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
     // State for reconciliation history
     const [history, setHistory] = useState<Reconciliation[]>([]);
 
+    // Unified intelligence matcher for payment methods
+    const isMatching = (target: string, candidate: string) => {
+        if (!target || !candidate) return false;
+
+        const norm = (s: string) => s.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+        const t = norm(target);
+        const c = norm(candidate);
+
+        // 1. Direct or Normalized Match
+        if (t === c) return true;
+
+        // 2. Common prefix match (e.g., GPAY vs GOOGLEPAY)
+        if ((t.startsWith('GPAY') && c.includes('GOOGLE')) || (c.startsWith('GPAY') && t.includes('GOOGLE'))) return true;
+        if ((t.startsWith('PHONEP') && c.startsWith('PHONEP')) || (t.startsWith('PHONP') && c.startsWith('PHONP'))) return true;
+
+        // 3. Known Aliases
+        const variations: Record<string, string[]> = {
+            'CASH': ['CASH', 'MONEY', 'CASH_PAYMENT'],
+            'RAZORPAY': ['RAZORPAY', 'RAZOR', 'ONLINEPAYMENT', 'ONLINE_PAYMENT'],
+            'AMAZON_PAY': ['AMAZON', 'AMAZONPAY', 'ONLINEPAY', 'AMAZON_PAYMENT'],
+            'GPAY': ['GPAY', 'GOOGLEPAY', 'GOOGLE_PAY', 'GPAY_PHONE'],
+            'PHONEPE': ['PHONEPE', 'PHONEPA', 'PHONPE', 'MOBILE_PAY']
+        };
+
+        // Check aliases for the target key
+        const targetVariations = variations[t] || [];
+        if (targetVariations.some(v => norm(v) === c)) return true;
+
+        // Check if candidate is an alias for target
+        for (const [key, aliases] of Object.entries(variations)) {
+            const normKey = norm(key);
+            if (t === normKey || targetVariations.includes(normKey)) {
+                if (aliases.some(a => norm(a) === c)) return true;
+            }
+        }
+
+        return false;
+    };
+
     const getExpectedAmount = (methodIdOrName: string) => {
-        const id = methodIdOrName.toLowerCase();
-        return expectedTotals[methodIdOrName] || expectedTotals[id] || 0;
+        if (!expectedTotals) return 0;
+        const keys = Object.keys(expectedTotals);
+
+        // Find the best match in the keys
+        const match = keys.find(k => isMatching(methodIdOrName, k));
+        if (match) return expectedTotals[match];
+
+        return 0;
     };
 
     const handleRefresh = async () => {
@@ -70,6 +115,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
             setLoading(true);
             const response = await api.get('/reconciliations/expected-totals');
             const data = response.data;
+            console.log('DEBUG: Expected Totals Response:', data); // Added for debugging
             setExpectedTotals(data.breakdown || {});
             setTotalExpected(data.total || 0);
             setTotalExpenses(data.totalExpenses || 0);
@@ -251,11 +297,6 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                                         placeholder="0.00"
                                         disabled={isSubmittedToday}
                                     />
-                                    {/* {!fraudProtection && (
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem', textAlign: 'right' }}>
-                                                    System Expected: {formatPrice(getExpectedAmount(method.id) || getExpectedAmount(method.name))}
-                                                </div>
-                                            )} */}
                                 </div>
                             ))}
                         </div>
@@ -320,12 +361,35 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
 
                                             {!fraudProtection ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                                    {paymentMethods.filter(m => m.active).map(m => (
-                                                        <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem' }}>
-                                                            <span style={{ color: 'var(--text-gray)', fontWeight: 500 }}>System {m.name}</span>
-                                                            <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(getExpectedAmount(m.id) || getExpectedAmount(m.name))}</span>
+                                                    {/* 1. Show all methods configured in Settings */}
+                                                    {paymentMethods.filter(m => m.active).map(m => {
+                                                        const expected = getExpectedAmount(m.id) || getExpectedAmount(m.name);
+                                                        return (
+                                                            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem' }}>
+                                                                <span style={{ color: 'var(--text-gray)', fontWeight: 500 }}>System {m.name}</span>
+                                                                <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(expected)}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {/* 2. Show any extra methods found in backend that weren't matched above */}
+                                                    {Object.keys(expectedTotals || {}).filter(key => {
+                                                        const amount = expectedTotals[key];
+                                                        if (amount <= 0) return false;
+
+                                                        // Filter out keys already matched by active payment methods
+                                                        const isMapped = paymentMethods.some(m =>
+                                                            isMatching(m.id, key) || isMatching(m.name, key)
+                                                        );
+
+                                                        return !isMapped;
+                                                    }).map(key => (
+                                                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem', borderLeft: '3px solid var(--warning)', paddingLeft: '0.5rem' }}>
+                                                            <span style={{ color: 'var(--warning)', fontWeight: 600 }}>Other: {key}</span>
+                                                            <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(expectedTotals[key])}</span>
                                                         </div>
                                                     ))}
+
                                                     <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <span style={{ fontSize: '0.825rem', fontWeight: 800, color: 'var(--primary)' }}>TOTAL EXPECTED</span>
                                                         <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)' }}>{formatPrice(totalExpected)}</span>
@@ -350,6 +414,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                                                             <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(parseFloat(counts[m.id]) || 0)}</span>
                                                         </div>
                                                     ))}
+
                                                     <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <span style={{ fontSize: '0.825rem', fontWeight: 800, color: 'var(--text-dark)' }}>TOTAL COUNTED</span>
                                                         <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-dark)' }}>{formatPrice(totalCounted)}</span>
