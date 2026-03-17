@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, Link, useParams, useSearchParams } from 'react-router-dom';
 import { Search, Plus, Minus, User, UserPlus, CreditCard, ShoppingBag, UserCog, Package, Ticket, X, AlertTriangle, CheckCircle, Smartphone, DollarSign, Wallet, Paperclip, Printer, ChevronDown } from 'lucide-react';
@@ -730,7 +730,9 @@ const Sales: React.FC<SalesProps> = ({
         })
         : (combos || []).filter(c => {
           if (!c || !c.name) return false;
-          return c.name.toLowerCase().includes((searchTerm || '').toLowerCase());
+          const matchesSearch = c.name.toLowerCase().includes((searchTerm || '').toLowerCase());
+          const matchesActive = showInactive ? true : c.active;
+          return matchesSearch && matchesActive;
         });
 
   // Customer Filter
@@ -2152,18 +2154,18 @@ const Sales: React.FC<SalesProps> = ({
                 </button>
               </div>
 
-              {/* Show Inactive Toggle */}
-              {/* {activeTab === 'services' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginLeft: 'auto', paddingRight: '0.5rem' }}>
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-gray)', fontWeight: 600, userSelect: 'none' }}>Show Inactive</span>
-            </label>
-          )} */}
+              {/* Show Inactive Toggle commented out as requested */}
+              {/* {(activeTab === 'services' || activeTab === 'combos') && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginLeft: 'auto', paddingRight: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={showInactive}
+                    onChange={(e) => setShowInactive(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-gray)', fontWeight: 600, userSelect: 'none' }}>Show Inactive</span>
+                </label>
+              )} */}
 
             </div>
 
