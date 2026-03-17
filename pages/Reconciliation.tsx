@@ -94,6 +94,8 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
 
     const handleRefresh = async () => {
         try {
+            setCounts({});
+            setIsCalculated(false);
             await Promise.all([
                 fetchExpectedTotals(),
                 fetchReconciliationHistory()
@@ -108,6 +110,28 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
         fetchExpectedTotals();
         fetchReconciliationHistory();
     }, []);
+
+    // Auto-fill counts if fraud protection is disabled
+    React.useEffect(() => {
+        if (!fraudProtection && expectedTotals && Object.keys(expectedTotals).length > 0) {
+            setCounts(prevCounts => {
+                const newCounts = { ...prevCounts };
+                let madeChanges = false;
+                paymentMethods.filter(m => m.active).forEach(method => {
+                    if (prevCounts[method.id] === undefined) {
+                        const keys = Object.keys(expectedTotals);
+                        const matchId = keys.find(k => isMatching(method.id, k));
+                        const matchName = keys.find(k => isMatching(method.name, k));
+                        const match = matchId || matchName;
+                        const val = match ? expectedTotals[match] : 0;
+                        newCounts[method.id] = val.toString();
+                        madeChanges = true;
+                    }
+                });
+                return madeChanges ? newCounts : prevCounts;
+            });
+        }
+    }, [fraudProtection, expectedTotals, paymentMethods]);
 
 
     const fetchExpectedTotals = async () => {
@@ -282,7 +306,9 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                 <Card title="Today's Reconciliation">
                     <div className="space-y-6">
                         <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                            Enter the closing amounts for all active payment terminals and cash drawers.
+                            {fraudProtection 
+                                ? "Enter the closing amounts for all active payment terminals and cash drawers."
+                                : "Review the auto-filled system totals and adjust if there are discrepancies."}
                         </p>
 
 
@@ -292,7 +318,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                                     <Input
                                         label={`${method.name} (${symbol})`}
                                         type="number"
-                                        value={counts[method.id] || ''}
+                                        value={counts[method.id] ?? ''}
                                         onChange={(e) => handleInputChange(method.id, e.target.value)}
                                         placeholder="0.00"
                                         disabled={isSubmittedToday}
