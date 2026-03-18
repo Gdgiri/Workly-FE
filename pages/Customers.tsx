@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../redux/store';
 import { fetchCustomers, invalidateCustomerCache } from '../redux/slices/customerSlice';
+import { fetchPackages } from '../redux/slices/packageSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, ChevronLeft, ChevronRight, Download, Users, Mail, Phone, MapPin, Calendar, DollarSign, TrendingUp, RefreshCw, Ticket } from 'lucide-react';
 import { Table, Button, Modal, Input, Checkbox } from '../components/UI';
@@ -55,6 +56,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     };
     const dispatch = useDispatch<AppDispatch>();
     const { customers, loading: customersLoading } = useSelector((state: RootState) => state.customers);
+    const { packages: globalPackages } = useSelector((state: RootState) => state.packages);
 
     // const [customers, setCustomers] = useState<Customer[]>([]); // Removed local state
     // const [loading, setLoading] = useState(false); // Removed local state
@@ -69,7 +71,11 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         setSearchParams(searchParams);
     };
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+    // Derive the live customer from Redux so stats always reflect the freshest data
+    const selectedCustomer = selectedCustomerId
+        ? (customers.find(c => c.id.toString() === selectedCustomerId) ?? null)
+        : null;
     const [customerAppointments, setCustomerAppointments] = useState<Appointment[]>([]);
     const [loadingAppointments, setLoadingAppointments] = useState(false);
     const [customerSales, setCustomerSales] = useState<Sale[]>([]);
@@ -102,8 +108,19 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
     useEffect(() => {
         dispatch(fetchCustomers());
+        dispatch(fetchPackages());
     }, [dispatch]);
 
+    // When Redux refreshes the customer list (e.g. after a sale), re-fetch the
+    // active packages and voucher claims for the currently open profile so new
+    // purchases appear immediately without closing and reopening the modal.
+    useEffect(() => {
+        if (isProfileModalOpen && selectedCustomerId) {
+            fetchCustomerActivePackages(selectedCustomerId);
+            fetchCustomerVoucherClaims(selectedCustomerId);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [customers, isProfileModalOpen, selectedCustomerId]);
 
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -147,14 +164,91 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const fetchCustomerActivePackages = async (customerId: string) => {
         setLoadingPackages(true);
         try {
-            const response = await api.get(`/customers/${customerId}/packages/active`);
-            setActivePackages(response.data);
+            // 1. Fetch regular (package-type) active packages from the dedicated endpoint
+            const packageRes = await api.get(`/customers/${customerId}/packages/active`);
+            const regularPackages: any[] = Array.isArray(packageRes.data) ? packageRes.data : [];
+
+            // 2. Fetch ALL sales to calculate combo balances (since backend doesn't track them)
+            const salesRes = await api.get(`/sales?customerId=${customerId}`);
+            const sales: any[] = salesRes.data?.sales || salesRes.data || [];
+            
+            // Sort sales by date ASC for FIFO
+            const sortedSales = [...sales].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+            // Step A: Extract all combo purchases ("Supply")
+            let comboPool: any[] = [];
+            sortedSales
+                .filter(s => s.saleStatus !== 'CANCELLED')
+                .forEach(s => {
+                    (s.items || []).filter((item: any) => item.type === 'combo').forEach((item: any) => {
+                        // De-duplicate: If already in regularPackages, skip
+                        const isDup = regularPackages.some(rp => 
+                            (rp.package?.name === item.name || rp.packageName === item.name) &&
+                            rp.purchaseDate?.split('T')[0] === s.createdAt?.split('T')[0]
+                        );
+                        if (isDup) return;
+
+                        const comboDef = globalPackages.find(gp => gp.name === item.name);
+                        comboPool.push({
+                            id: `combo-${s.id}-${item.itemId || item.name}`,
+                            name: item.name,
+                            purchaseDate: s.createdAt,
+                            items: comboDef?.items?.map(ci => ({
+                                name: ci.name,
+                                total: ci.quantity * item.quantity,
+                                remaining: ci.quantity * item.quantity
+                            })) || []
+                        });
+                    });
+                });
+
+            // Step B: Extract all redemptions ("Demand")
+            const redemptions = sortedSales
+                .filter(s => s.saleStatus !== 'CANCELLED')
+                .flatMap(s => (s.items || []).map((item: any) => ({ ...item, saleDate: s.createdAt })))
+                .filter(item => (item.price === 0 || item.redeemedQuantity > 0) && item.type !== 'combo');
+
+            // Step C: Apply FIFO (Subtract demand from supply)
+            redemptions.forEach(red => {
+                // Try to find the oldest combo that has this item and has remaining balance
+                const targetCombo = comboPool.find(c => 
+                    new Date(c.purchaseDate) <= new Date(red.saleDate) &&
+                    c.items.some((i: any) => i.name === red.name && i.remaining > 0)
+                );
+
+                if (targetCombo) {
+                    const comboItem = targetCombo.items.find((i: any) => i.name === red.name);
+                    if (comboItem) {
+                        const qtyToDeduct = red.quantity || 1;
+                        comboItem.remaining = Math.max(0, comboItem.remaining - qtyToDeduct);
+                    }
+                }
+            });
+
+            // Step D: Map the remaining pool to the activePackages format
+            const activeCombos = comboPool
+                .filter(c => c.items.some((i: any) => i.remaining > 0)) // Only show if something left
+                .map(c => ({
+                    id: c.id,
+                    isCombo: true,
+                    package: { name: c.name },
+                    purchaseDate: c.purchaseDate,
+                    expiryDate: null,
+                    usageDetails: c.items.map((i: any) => ({
+                        name: i.name,
+                        totalQuantity: i.total,
+                        remainingQuantity: i.remaining
+                    }))
+                }));
+
+            setActivePackages([...regularPackages, ...activeCombos]);
         } catch (err) {
             console.error('Failed to fetch active packages', err);
         } finally {
             setLoadingPackages(false);
         }
     };
+
 
     const fetchCustomerVoucherClaims = async (customerId: string) => {
         setLoadingVoucherClaims(true);
@@ -177,7 +271,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     };
 
     const handleViewProfile = (customer: Customer) => {
-        setSelectedCustomer(customer as any);
+        setSelectedCustomerId(customer.id.toString());
         setIsProfileModalOpen(true);
         fetchCustomerAppointments(customer.id.toString());
         fetchCustomerSales(customer.id.toString());
@@ -1131,7 +1225,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
             {/* Customer Profile Modal */}
             <Modal
                 isOpen={isProfileModalOpen}
-                onClose={() => { setIsProfileModalOpen(false); setSelectedCustomer(null); }}
+                onClose={() => { setIsProfileModalOpen(false); setSelectedCustomerId(null); }}
                 title="Customer Profile"
             >
                 {selectedCustomer && (
@@ -1501,7 +1595,16 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
                         {/* Active Packages / Memberships */}
                         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Active Memberships & Packages</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Active Memberships & Packages</h3>
+                                <button
+                                    onClick={() => selectedCustomerId && fetchCustomerActivePackages(selectedCustomerId)}
+                                    title="Refresh packages"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                                >
+                                    <RefreshCw size={15} className={loadingPackages ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
                             {loadingPackages ? (
                                 <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '1rem' }}>Loading packages...</p>
                             ) : activePackages.length === 0 ? (
@@ -1516,7 +1619,9 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             backgroundColor: '#f8fafc'
                                         }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{pkg.package?.name}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{pkg.package?.name}</span>
+                                                </div>
                                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                                                     <span style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>
                                                         Purchased: {pkg.purchaseDate ? new Date(pkg.purchaseDate).toLocaleDateString() : 'N/A'}
@@ -1532,11 +1637,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem' }}>
                                                     {pkg.usageDetails.map((item: any, idx: number) => (
                                                         <div key={idx} style={{
-                                                            backgroundColor: 'white',
-                                                            padding: '0.5rem',
-                                                            borderRadius: '0.375rem',
-                                                            border: '1px solid #e2e8f0',
-                                                            fontSize: '0.8rem'
+                                                            backgroundColor: 'white', padding: '0.5rem', borderRadius: '0.375rem',
+                                                            border: '1px solid #e2e8f0', fontSize: '0.8rem'
                                                         }}>
                                                             <div style={{ fontWeight: 500, marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
@@ -1546,14 +1648,21 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                         </div>
                                                     ))}
                                                 </div>
+                                            ) : pkg.isCombo ? (
+                                                /* Combo purchase fallback if definition not found */
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                                    <Ticket size={14} style={{ color: 'var(--text-gray)' }} />
+                                                    <span style={{ color: 'var(--text-gray)', fontStyle: 'italic' }}>
+                                                        Combo items available for redemption
+                                                    </span>
+                                                </div>
                                             ) : (
                                                 /* Legacy View */
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
                                                     <div style={{ flex: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                                                         <div style={{
                                                             width: `${(pkg.remainingQuantity / pkg.totalQuantity) * 100}%`,
-                                                            height: '100%',
-                                                            backgroundColor: 'var(--success)'
+                                                            height: '100%', backgroundColor: 'var(--success)'
                                                         }} />
                                                     </div>
                                                     <span style={{ fontWeight: 600 }}>{pkg.remainingQuantity}/{pkg.totalQuantity} left</span>
@@ -2175,7 +2284,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         </div>
 
                         <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button type="button" onClick={() => { setIsProfileModalOpen(false); setSelectedCustomer(null); }}>Close</Button>
+                            <Button type="button" onClick={() => { setIsProfileModalOpen(false); setSelectedCustomerId(null); }}>Close</Button>
                         </div>
                     </div>
                 )}

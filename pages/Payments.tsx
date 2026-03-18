@@ -23,6 +23,7 @@ import { fetchPayments, fetchSpecialists, invalidatePaymentCache } from '../redu
 import { fetchAppointments } from '../redux/slices/appointmentSlice';
 import { fetchSettings } from '../redux/slices/settingSlice';
 import { cancelSale } from '../redux/slices/saleSlice';
+import { cancelAppointment } from '../redux/slices/appointmentSlice';
 import { fetchInventory, fetchInventoryHistory, invalidateInventoryCache } from '../redux/slices/inventorySlice';
 
 
@@ -452,7 +453,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             const confirmedAppts = appointments.filter(a => {
                 const apptStatus = a.status?.toUpperCase();
                 const payStatus = a.paymentStatus?.toUpperCase() || 'PENDING';
-                return apptStatus === 'CONFIRMED' && payStatus !== 'COMPLETED' && payStatus !== 'PAID' && payStatus !== 'PARTIAL';
+                return (apptStatus === 'CONFIRMED' || apptStatus === 'CANCELLED') && payStatus !== 'COMPLETED' && payStatus !== 'PAID' && payStatus !== 'PARTIAL';
             });
 
             const synthesized: Payment[] = confirmedAppts.map(appt => ({
@@ -626,7 +627,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         {
             header: 'Status',
             accessor: (row: Payment) => {
-                const displayStatus = row.isPendingSale ? 'PENDING' : (row.sale?.saleStatus || row.paymentStatus);
+                const displayStatus = row.isPendingSale 
+                    ? (row.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') 
+                    : (row.sale?.saleStatus || row.paymentStatus);
                 return (
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider border ${getStatusColor(displayStatus)}`}>
                         {displayStatus}
@@ -694,7 +697,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     >
                         View
                     </Button>
-                    {(isAdmin || isManager) && row.sale?.saleStatus !== 'CANCELLED' && row.sale?.saleStatus !== 'COMPLETED' && row.paymentStatus !== 'COMPLETED' && (
+                    {(isAdmin || isManager) && row.sale?.saleStatus !== 'CANCELLED' && row.appointment?.status?.toUpperCase() !== 'CANCELLED' && (
                         <Button
                             variant="ghost"
                             icon={<XCircle size={16} />}
@@ -1563,7 +1566,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         </div>
 
                         {/* Cancel Bill Button Section - Restricted to Admin/Manager */}
-                        {(isAdmin || isManager) && selectedPayment.sale?.saleStatus !== 'CANCELLED' && selectedPayment.sale?.saleStatus !== 'COMPLETED' && selectedPayment.paymentStatus !== 'COMPLETED' && (
+                        {(isAdmin || isManager) && ((selectedPayment.isPendingSale && selectedPayment.appointment?.status?.toUpperCase() !== 'CANCELLED') || (selectedPayment.sale?.saleStatus !== 'CANCELLED')) && (
                             <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
                                 <Button
                                     variant="outline"
@@ -1723,13 +1726,31 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 }}
                                 disabled={cancelReason.trim() === '' || isCancelling}
                                 onClick={async () => {
-                                    if (!selectedPayment?.sale?.id) return;
+                                    if (!selectedPayment) return;
+                                    const isPending = selectedPayment.isPendingSale;
+                                    const id = isPending ? selectedPayment.appointmentId : selectedPayment.sale?.id;
+                                    
+                                    if (!id) {
+                                        showToast('No valid ID found for cancellation', 'error');
+                                        return;
+                                    }
+
                                     try {
                                         setIsCancelling(true);
-                                        await dispatch(cancelSale({
-                                            id: selectedPayment.sale.id,
-                                            reason: cancelReason
-                                        })).unwrap();
+                                        
+                                        if (isPending) {
+                                            // Handle cancellation for synthesized pending checkouts (Appointments)
+                                            await dispatch(cancelAppointment({
+                                                id: id,
+                                                reason: cancelReason
+                                            })).unwrap();
+                                        } else {
+                                            // Handle cancellation for real sales
+                                            await dispatch(cancelSale({
+                                                id: id as string,
+                                                reason: cancelReason
+                                            })).unwrap();
+                                        }
 
                                         showToast('Bill cancelled successfully', 'success');
                                         setIsCancelModalOpen(false);
@@ -1744,7 +1765,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                         dispatch(fetchInventory());
                                         dispatch(fetchInventoryHistory());
                                     } catch (error: any) {
-                                        showToast(error || 'Failed to cancel bill', 'error');
+                                        showToast(error?.message || error || 'Failed to cancel bill', 'error');
                                     } finally {
                                         setIsCancelling(false);
                                     }

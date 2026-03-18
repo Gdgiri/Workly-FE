@@ -372,7 +372,76 @@ const Sales: React.FC<SalesProps> = ({
   const fetchCustomerPackages = async (customerId: string) => {
     try {
       const response = await api.get(`/customers/${customerId}/packages/active`);
-      setCustomerPackages(response.data);
+      const regularPackages = response.data || [];
+      
+      // Also fetch sales to include combo purchases for redemption
+      const salesRes = await api.get(`/sales?customerId=${customerId}`);
+      const sales: any[] = salesRes.data?.sales || salesRes.data || [];
+      
+      // Sort sales by date ASC for FIFO
+      const sortedSales = [...sales].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      // Step A: Extract all combo purchases ("Supply")
+      let comboPool: any[] = [];
+      sortedSales
+        .filter((s: any) => s.saleStatus !== 'CANCELLED')
+        .forEach((s: any) => {
+          (s.items || []).filter((item: any) => item.type === 'combo').forEach((item: any) => {
+            // De-duplicate: If already in regularPackages, skip
+            const isDup = regularPackages.some((rp: any) => 
+              (rp.package?.name === item.name || rp.packageName === item.name) &&
+              rp.purchaseDate?.split('T')[0] === s.createdAt?.split('T')[0]
+            );
+            if (isDup) return;
+
+            const comboDef = rawCombos.find(c => c.name === item.name);
+            comboPool.push({
+              id: `combo-${s.id}-${item.itemId || item.name}`,
+              isCombo: true,
+              package: { 
+                name: item.name,
+                description: comboDef?.description
+              },
+              purchaseDate: s.createdAt,
+              expiryDate: null,
+              usageDetails: comboDef?.items?.map(ci => ({
+                name: ci.name,
+                itemId: ci.name, // Use name as ID for matching
+                totalQuantity: ci.quantity * item.quantity,
+                remainingQuantity: ci.quantity * item.quantity // Initial
+              })) || [],
+              totalQuantity: item.quantity,
+              remainingQuantity: item.quantity
+            });
+          });
+        });
+
+      // Step B: Extract all redemptions ("Demand")
+      const redemptions = sortedSales
+        .filter((s: any) => s.saleStatus !== 'CANCELLED')
+        .flatMap((s: any) => (s.items || []).map((item: any) => ({ ...item, saleDate: s.createdAt })))
+        .filter((item: any) => (item.price === 0 || item.redeemedQuantity > 0) && item.type !== 'combo');
+
+      // Step C: Apply FIFO (Subtract demand from supply)
+      redemptions.forEach(red => {
+        const targetCombo = comboPool.find(c => 
+          new Date(c.purchaseDate) <= new Date(red.saleDate) &&
+          c.usageDetails.some((i: any) => i.name === red.name && i.remainingQuantity > 0)
+        );
+
+        if (targetCombo) {
+          const comboItem = targetCombo.usageDetails.find((i: any) => i.name === red.name);
+          if (comboItem) {
+            const qtyToDeduct = red.quantity || 1;
+            comboItem.remainingQuantity = Math.max(0, comboItem.remainingQuantity - qtyToDeduct);
+          }
+        }
+      });
+
+      // Step D: Filter out exhausted combos (for POS)
+      const activeCombos = comboPool.filter(c => c.usageDetails.some((i: any) => i.remainingQuantity > 0));
+
+      setCustomerPackages([...regularPackages, ...activeCombos]);
     } catch (err) {
       console.error("❌ Error fetching customer packages", err);
     }
@@ -1610,6 +1679,8 @@ const Sales: React.FC<SalesProps> = ({
       dispatch(fetchInventory());
       dispatch(fetchInventoryHistory());
       dispatch(invalidatePaymentCache());
+      dispatch(invalidateCustomerCache());
+      dispatch(fetchCustomers());
       // setVoucherCode(''); // Already cleared
       // setAppliedVouchers([]); // Already cleared
 
@@ -1757,6 +1828,8 @@ const Sales: React.FC<SalesProps> = ({
             dispatch(fetchInventory());
             dispatch(fetchInventoryHistory());
             dispatch(invalidatePaymentCache());
+            dispatch(invalidateCustomerCache());
+            dispatch(fetchCustomers());
 
           } catch (error: any) {
             console.error('Verification failed:', error);

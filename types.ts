@@ -267,6 +267,7 @@ export interface Payment {
   appointmentId?: string;
   appointment?: {
     id?: string;
+    status?: string;
     startTime?: string;
     customer: {
       id: string;
