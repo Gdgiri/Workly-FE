@@ -464,7 +464,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 paymentMethod: 'PENDING',
                 paymentStatus: 'PENDING',
                 paymentType: 'SALE',
-                createdAt: (appt as any).createdAt || new Date().toISOString(),
+                createdAt: appt.startTime || (appt as any).date || (appt as any).createdAt || new Date().toISOString(),
                 updatedAt: (appt as any).updatedAt || new Date().toISOString(),
                 // Attach the appointment object so the table renderer knows who the customer etc. is
                 appointment: appt as any,
@@ -960,6 +960,57 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     columns={columns}
                     data={(() => {
                         let filtered = [...combinedPayments];
+
+                        // Client-side Date Filter (crucial for synthesized appointments from Redux)
+                        if (dateRange.start) {
+                            const startObj = new Date(dateRange.start);
+                            startObj.setHours(0, 0, 0, 0);
+                            filtered = filtered.filter(p => {
+                                const d = new Date(p.createdAt);
+                                d.setHours(0, 0, 0, 0);
+                                return d.getTime() >= startObj.getTime();
+                            });
+                        }
+                        if (dateRange.end) {
+                            const endObj = new Date(dateRange.end);
+                            endObj.setHours(0, 0, 0, 0);
+                            filtered = filtered.filter(p => {
+                                const d = new Date(p.createdAt);
+                                d.setHours(0, 0, 0, 0);
+                                return d.getTime() <= endObj.getTime();
+                            });
+                        }
+                        
+                        // Client-side Method Filter
+                        if (paymentMethod !== 'ALL') {
+                            filtered = filtered.filter(p => {
+                                let displayMethod = p.paymentMethod?.toUpperCase() || 'UNKNOWN';
+                                if (p.notes && typeof p.notes === 'string' && p.notes.includes('Method:')) {
+                                    const match = p.notes.match(/Method:\s*([^|]+)/);
+                                    if (match && match[1]) displayMethod = match[1].trim().toUpperCase();
+                                }
+                                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN') && p.amount === 0 && (p.sale?.saleStatus === 'COMPLETED' || p.paymentStatus === 'COMPLETED')) {
+                                    displayMethod = 'VOUCHER';
+                                }
+                                return displayMethod === paymentMethod;
+                            });
+                        }
+
+                        // Client-side Status Filter
+                        if (status !== 'ALL') {
+                            filtered = filtered.filter(p => {
+                                const pStatus = p.isPendingSale ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') : (p.sale?.saleStatus || p.paymentStatus);
+                                return pStatus === status;
+                            });
+                        }
+
+                        // Client-side Specialist Filter
+                        if (selectedSpecialist !== 'ALL') {
+                            filtered = filtered.filter(p => {
+                                const spec = p.appointment?.stylist?.name || p.sale?.specialist?.name || '-';
+                                return spec === selectedSpecialist;
+                            });
+                        }
 
                         // Client-side fallback filter to ensure "correct" filtering for current page
                         if (customerSearch.trim()) {

@@ -91,6 +91,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [showChecklistInline, setShowChecklistInline] = useState(false);
   const [isChecklistFilled, setIsChecklistFilled] = useState(false);
 
+  // Start button loading state
+  const [startingAppointmentId, setStartingAppointmentId] = useState<string | null>(null);
+
   // Form State
   const [formData, setFormData] = useState({
     customerId: '',
@@ -644,20 +647,16 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   };
 
   const handleStartAppointment = async (row: Appointment) => {
-    // Immediate feedback: Open the modal so they can see/fill the checklist
-    // We pass the expected next status (CONFIRMED) to the view
-    handleView({ ...row, status: 'CONFIRMED' });
-
-    // 1. Update status to CONFIRMED if PENDING
-    if (row.status?.toUpperCase() === 'PENDING') {
-      try {
-        console.log('🚀 Starting appointment:', row.id);
-        await dispatch(updateAppointmentStatus({ id: row.id, status: 'CONFIRMED' })).unwrap();
-        showToast('Appointment confirmed!', 'success');
-      } catch (error) {
-        console.error('Failed to update status:', error);
-        showToast('Failed to sync status to server, but you can still view details', 'error');
-      }
+    setStartingAppointmentId(row.id.toString());
+    try {
+      console.log('🚀 Starting appointment:', row.id);
+      await dispatch(updateAppointmentStatus({ id: row.id, status: 'CONFIRMED' })).unwrap();
+      showToast('Appointment confirmed!', 'success');
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      showToast('Failed to confirm appointment', 'error');
+    } finally {
+      setStartingAppointmentId(null);
     }
   };
 
@@ -870,27 +869,59 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
             </button>
 
             {/* Start - Only for Pending */}
-            {(status === 'PENDING') && (
-              <button
-                onClick={() => handleStartAppointment(row)}
-                style={{
-                  color: 'white',
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  padding: '0.375rem 0.75rem',
-                  borderRadius: '0.375rem',
-                  fontWeight: 500,
-                  marginRight: '0.5rem',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                Start
-              </button>
-            )}
+            {(status === 'PENDING') && (() => {
+              const isStarting = startingAppointmentId === row.id.toString();
+              return (
+                <button
+                  onClick={() => !isStarting && handleStartAppointment(row)}
+                  disabled={isStarting}
+                  style={{
+                    color: 'white',
+                    background: isStarting
+                      ? 'linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)'
+                      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    cursor: isStarting ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    fontWeight: 500,
+                    marginRight: '0.5rem',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: isStarting ? 0.85 : 1
+                  }}
+                  onMouseEnter={(e) => { if (!isStarting) e.currentTarget.style.opacity = '0.9'; }}
+                  onMouseLeave={(e) => { if (!isStarting) e.currentTarget.style.opacity = '1'; }}
+                >
+                  {isStarting ? (
+                    <>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          animation: 'spin 0.8s linear infinite',
+                          flexShrink: 0
+                        }}
+                      >
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                      </svg>
+                      Starting...
+                    </>
+                  ) : (
+                    'Start'
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Continue/Checkout - For Confirmed or Unpaid Completed */}
             {(status === 'CONFIRMED' || (status === 'COMPLETED' && (paymentStatus === 'PARTIAL' || paymentStatus === 'PENDING'))) && (
