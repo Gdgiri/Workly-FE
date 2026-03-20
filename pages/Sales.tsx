@@ -3337,43 +3337,60 @@ const Sales: React.FC<SalesProps> = ({
                           <div style={{
                             display: 'flex', gap: '0.4rem', flexWrap: 'wrap',
                           }}>
-                            {availableClaims.map(v => (
-                              <button
-                                key={v.id}
-                                onClick={() => handleVoucherClick(v.voucherCode)}
-                                style={{
-                                  fontSize: '0.72rem', fontWeight: 700,
-                                  padding: '0.25rem 0.55rem',
-                                  background: cartVoucherCode.includes(v.voucherCode)
-                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                    : 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)',
-                                  color: cartVoucherCode.includes(v.voucherCode) ? '#fff' : '#059669',
-                                  border: '1px solid rgba(16,185,129,0.28)',
-                                  borderRadius: '2rem',
-                                  cursor: 'pointer',
-                                  display: 'flex', alignItems: 'center', gap: '0.3rem',
-                                  transition: 'all 0.15s',
-                                  whiteSpace: 'nowrap',
-                                  boxShadow: cartVoucherCode.includes(v.voucherCode) ? '0 2px 6px rgba(16,185,129,0.3)' : 'none',
-                                }}
-                              >
-                                <Ticket size={11} />
-                                {v.voucherCode}
-                                <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
-                                {cartVoucherCode.includes(v.voucherCode) && (
-                                  <div
-                                    style={{
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      background: 'rgba(255,255,255,0.2)',
-                                      borderRadius: '50%',
-                                      padding: '2px'
-                                    }}
-                                  >
-                                    <X size={10} strokeWidth={3} />
-                                  </div>
-                                )}
-                              </button>
-                            ))}
+                            {availableClaims.map(v => {
+                              const isExpired = (v.expiryDate && new Date(v.expiryDate) < new Date()) || 
+                                               (v.voucher?.expiryDate && new Date(v.voucher.expiryDate) < new Date()) ||
+                                               (v.voucher?.status === 'expired');
+                              
+                              const isSelected = cartVoucherCode.split(',').map(c => c.trim()).includes(v.voucherCode);
+
+                              return (
+                                <button
+                                  key={v.id}
+                                  onClick={() => !isExpired && handleVoucherClick(v.voucherCode)}
+                                  title={isExpired ? "Voucher expired" : "Click to select"}
+                                  style={{
+                                    fontSize: '0.72rem', fontWeight: 700,
+                                    padding: '0.25rem 0.65rem',
+                                    background: isExpired 
+                                      ? 'rgba(239, 68, 68, 0.08)' 
+                                      : isSelected
+                                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                        : 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)',
+                                    color: isExpired ? '#ef4444' : (isSelected ? '#fff' : '#059669'),
+                                    border: isExpired 
+                                      ? '1px solid rgba(239, 68, 68, 0.3)' 
+                                      : '1px solid rgba(16,185,129,0.28)',
+                                    borderRadius: '0.6rem',
+                                    cursor: isExpired ? 'not-allowed' : 'pointer',
+                                    opacity: 0.9,
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: isSelected ? '0 2px 6px rgba(16,185,129,0.3)' : 'none',
+                                  }}
+                                >
+                                  <Ticket size={11} />
+                                  {v.voucherCode}
+                                  <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
+                                  {isExpired && <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.9 }}>(Expired)</span>}
+                                  {isSelected && (
+                                    <div
+                                      style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        borderRadius: '50%',
+                                        padding: '2px'
+                                      }}
+                                    >
+                                      <X size={10} strokeWidth={3} />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       );
