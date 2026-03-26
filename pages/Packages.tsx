@@ -201,6 +201,7 @@ const Packages: React.FC = () => {
   const [removeBgAddEnabled, setRemoveBgAddEnabled] = useState(false);
   const [removeBgEditEnabled, setRemoveBgEditEnabled] = useState(false);
   const [activeItemTab, setActiveItemTab] = useState<'services' | 'products'>('services');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const availableServices = services.map(s => s.name);
   const availableProducts = products.map(p => p.name);
@@ -321,6 +322,19 @@ const Packages: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = 'Package name is required';
+    if (!price || parseFloat(price) <= 0) newErrors.price = 'Price must be greater than 0';
+    if (selectedItems.length === 0) newErrors.items = 'At least one service or product must be included';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    setFormErrors({});
     setIsSubmitting(true);
 
     const newPackage: any = {
@@ -619,14 +633,16 @@ const Packages: React.FC = () => {
           {/* Form Content */}
           <form className="space-y-3" onSubmit={handleSubmit}>
             <div className="space-y-4">
-              <Input
-                label="Package Name"
-                placeholder=""
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
+              <div className="flex flex-col">
+                <Input
+                  label="Package Name"
+                  placeholder=""
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '1rem', display: 'block' }}>{formErrors.name}</span>}
+              </div>
 
               <div className="input-group">
                 <label className="input-label">Description</label>
@@ -642,16 +658,18 @@ const Packages: React.FC = () => {
               </div>
 
               <div className="grid md-grid-cols-3 gap-4">
-                <Input
-                  label={`Total Price(${symbol})`}
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
+                 <div className="flex flex-col">
+                  <Input
+                    label={`Total Price(${symbol})`}
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                  {formErrors.price && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '1rem', display: 'block' }}>{formErrors.price}</span>}
+                </div>
                 <Select
                   label="Status"
                   options={[
@@ -774,6 +792,7 @@ const Packages: React.FC = () => {
               <div className="space-y-2">
                 <label className="input-label">Included Items & Quantities</label>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '-0.25rem', marginBottom: '0.5rem' }}>Select items and specify quantity (e.g. 10 for a package)</p>
+                {formErrors.items && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.items}</span>}
 
 
                 {/* Tabs Header */}

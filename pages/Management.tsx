@@ -58,6 +58,7 @@ export const ServicesView: React.FC = () => {
   const [removeBgAddEnabled, setRemoveBgAddEnabled] = useState(false);
   const [removeBgEditEnabled, setRemoveBgEditEnabled] = useState(false);
   const [checklistTemplates, setChecklistTemplates] = useState<any[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // --- HANDLERS ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,6 +258,20 @@ export const ServicesView: React.FC = () => {
     e.preventDefault();
     if (submittingRef.current) return;
 
+    // VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!newService.name.trim()) newErrors.name = 'Service name is required';
+    if (!newService.category.trim()) newErrors.category = 'Category is required';
+    if (newService.price <= 0) newErrors.price = 'Price must be greater than 0';
+    if (newService.duration <= 0) newErrors.duration = 'Duration must be greater than 0';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields correctly', 'error');
+      return;
+    }
+
+    setFormErrors({});
     submittingRef.current = true;
     setIsSubmitting(true);
     try {
@@ -287,6 +302,20 @@ export const ServicesView: React.FC = () => {
     e.preventDefault();
     if (submittingRef.current || !editingService) return;
 
+    // VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!editingService.name.trim()) newErrors.name = 'Service name is required';
+    if (!editingService.category.trim()) newErrors.category = 'Category is required';
+    if (editingService.price <= 0) newErrors.price = 'Price must be greater than 0';
+    if (editingService.duration <= 0) newErrors.duration = 'Duration must be greater than 0';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields correctly', 'error');
+      return;
+    }
+
+    setFormErrors({});
     submittingRef.current = true;
     setIsSubmitting(true);
 
@@ -588,13 +617,15 @@ export const ServicesView: React.FC = () => {
             title="Add New Service"
           >
             <form className="space-y-3" onSubmit={handleAddService}>
-              <Input
-                label="Service Name"
-                placeholder="e.g. Luxury Facial"
-                value={newService.name}
-                onChange={e => setNewService({ ...newService, name: e.target.value })}
-                required
-              />
+              <div className="flex flex-col">
+                <Input
+                  label="Service Name"
+                  placeholder="e.g. Luxury Facial"
+                  value={newService.name}
+                  onChange={e => setNewService({ ...newService, name: e.target.value })}
+                />
+                {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '1rem', display: 'block' }}>{formErrors.name}</span>}
+              </div>
 
               <div>
                 <label className="input-label" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.875rem' }}>Description</label>
@@ -694,20 +725,24 @@ export const ServicesView: React.FC = () => {
               </div>
 
               <div className="grid md-grid-cols-4 gap-4" style={{ display: 'grid', gridTemplateColumns: '0.7fr 0.7fr 1fr 1.6fr' }}>
-                <Input
-                  label="Duration (min)"
-                  type="number"
-                  value={newService.duration}
-                  onChange={e => setNewService({ ...newService, duration: parseInt(e.target.value) })}
-                  required
-                />
-                <Input
-                  label={`Price (${symbol})`}
-                  type="number"
-                  value={newService.price}
-                  onChange={e => setNewService({ ...newService, price: parseFloat(e.target.value) })}
-                  required
-                />
+                <div className="flex flex-col">
+                  <Input
+                    label="Duration (min)"
+                    type="number"
+                    value={newService.duration}
+                    onChange={e => setNewService({ ...newService, duration: parseInt(e.target.value) })}
+                  />
+                  {formErrors.duration && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.duration}</span>}
+                </div>
+                <div className="flex flex-col">
+                  <Input
+                    label={`Price (${symbol})`}
+                    type="number"
+                    value={newService.price}
+                    onChange={e => setNewService({ ...newService, price: parseFloat(e.target.value) })}
+                  />
+                  {formErrors.price && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.price}</span>}
+                </div>
                 <Select
                   label="Status"
                   value={newService.active ? 'active' : 'inactive'}
@@ -789,6 +824,7 @@ export const ServicesView: React.FC = () => {
                       )}
                     </div>
                   )}
+                  {formErrors.category && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{formErrors.category}</span>}
                 </div>
               </div>
 

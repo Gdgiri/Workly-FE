@@ -52,6 +52,7 @@ const Category: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [removeBgAddEnabled, setRemoveBgAddEnabled] = useState(false);
     const [removeBgEditEnabled, setRemoveBgEditEnabled] = useState(false);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     // Image upload handler
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,6 +249,7 @@ const Category: React.FC = () => {
         setCategoryActive(true);
         setCategoryImgUrl('');
         setRemoveBgAddEnabled(false);
+        setFormErrors({});
         setIsModalOpen(true);
     };
 
@@ -258,16 +260,24 @@ const Category: React.FC = () => {
         setCategoryActive(category.active);
         setCategoryImgUrl(category.imgUrl || '');
         setRemoveBgEditEnabled(false);
+        setFormErrors({});
         setIsModalOpen(true);
     };
 
     const handleSaveCategory = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!categoryName.trim()) {
-            showToast('Category name is required', 'error');
+        // VALIDATION
+        const newErrors: Record<string, string> = {};
+        if (!categoryName.trim()) newErrors.name = 'Category name is required';
+
+        if (Object.keys(newErrors).length > 0) {
+            setFormErrors(newErrors);
+            showToast('Please fill all required fields', 'error');
             return;
         }
+
+        setFormErrors({});
 
         setIsSubmitting(true);
         try {
@@ -488,13 +498,15 @@ const Category: React.FC = () => {
                             </div>
                         </div>
 
-                        <Input
-                            label="Category Name"
-                            placeholder="Enter category name"
-                            value={categoryName}
-                            onChange={(e) => setCategoryName(e.target.value)}
-                            required
-                        />
+                        <div className="flex flex-col">
+                            <Input
+                                label="Category Name"
+                                placeholder="Enter category name"
+                                value={categoryName}
+                                onChange={(e) => setCategoryName(e.target.value)}
+                            />
+                            {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.name}</span>}
+                        </div>
 
                         <div>
                             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '0.5rem' }}>

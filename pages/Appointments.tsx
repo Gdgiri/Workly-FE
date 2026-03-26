@@ -90,6 +90,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [activeChecklistId, setActiveChecklistId] = useState<string | null>(null);
   const [showChecklistInline, setShowChecklistInline] = useState(false);
   const [isChecklistFilled, setIsChecklistFilled] = useState(false);
+  const [activeServiceId, setActiveServiceId] = useState<string | null>(null);
+  const [checklistStatuses, setChecklistStatuses] = useState<Record<string, string>>({});
 
   // Start button loading state
   const [startingAppointmentId, setStartingAppointmentId] = useState<string | null>(null);
@@ -103,7 +105,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     date: '',
     time: '',
     notes: '',
-    status: 'pending' as any,
+    status: 'PENDING' as any,
     depositAmount: 0, // Default to 0 for Admin Panel bookings
     requiresDeposit: false,
     attachments: [] as Attachment[]
@@ -121,6 +123,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const [showChecklistToggle, setShowChecklistToggle] = useState(false);
   const [checklistResponses, setChecklistResponses] = useState<Record<string, { responses: any, remarks: any }>>({});
   const [showChecklistInCreate, setShowChecklistInCreate] = useState(false);
+  const [enabledChecklists, setEnabledChecklists] = useState<Record<string, boolean>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -328,7 +332,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       date: '',
       time: '',
       notes: '',
-      status: 'pending' as any,
+      status: 'PENDING' as any,
       depositAmount: 0,
       requiresDeposit: false,
       attachments: []
@@ -338,6 +342,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setSpecialistSearch('');
     setEditingAppointment(null);
     setChecklistResponses({});
+    setEnabledChecklists({});
+    setFormErrors({});
     setShowChecklistInCreate(false);
     setIsModalOpen(true);
 
@@ -384,12 +390,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     }
 
     // Initialize Service Search
-    const service = services.find(s => s.id?.toString() === appointment.serviceId?.toString());
-    if (service) {
-      setServiceSearch(service.name);
-    } else {
-      setServiceSearch(appointment.serviceName || appointment.service?.name || '');
-    }
+    setServiceSearch(''); // Reset search for new edit context
+
 
     // Initialize Specialist Search
     const specialist = specialists.find(s => s.id?.toString() === appointment.stylistId?.toString());
@@ -426,7 +428,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       date: dateValue,
       time: timeValue,
       notes: appointment.notes || '',
-      status: (appointment.status?.toLowerCase() || 'pending') as any,
+      status: (appointment.status?.toUpperCase() || 'PENDING') as any,
       attachments: (appointment.attachments || []).map(a => ({ ...a, url: a.imgUrl || a.url || '' })) as Attachment[]
     });
     setIsEditModalOpen(true);
@@ -441,6 +443,21 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({}); // Reset errors
+
+    // GLOBAL VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!formData.customerId && !editingAppointment) newErrors.customerId = 'Please select a customer';
+    if (formData.serviceIds.length === 0) newErrors.serviceIds = 'Please select at least one service';
+    if (!formData.date) newErrors.date = 'Please select a date';
+    if (!formData.time) newErrors.time = 'Please select a time';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
     setLocalLoading(true);
     setError(null);
 
@@ -486,12 +503,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
         console.log(`✅ Appointment created. Submitting checklists for ${formData.serviceIds.length} services...`);
 
-        // Submit checklists for each selected service linked to this SINGLE appointment
         await Promise.all(formData.serviceIds.map(async (serviceId) => {
           const selectedService = services.find(s => s.id?.toString() === serviceId?.toString());
           const responses = checklistResponses[serviceId];
 
-          if (responses && createdAppointment?.id && selectedService?.checklistTemplateId) {
+          if (enabledChecklists[serviceId] && responses && createdAppointment?.id && selectedService?.checklistTemplateId) {
             try {
               await api.post(`/checklists/submit`, {
                 appointmentId: createdAppointment.id,
@@ -526,6 +542,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       setEditingAppointment(null);
       setShowChecklistInCreate(false);
       setChecklistResponses({});
+      setEnabledChecklists({});
       // fetchAppointments(); // Handled by Redux update
       setFormData({
         customerId: '',
@@ -627,6 +644,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     setIsViewModalOpen(true);
     setShowChecklistInline(false); // Reset while checking
     setIsChecklistFilled(false);
+    setChecklistStatuses({});
 
     // Check for existing checklist submission
     try {
@@ -634,11 +652,36 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       const templateId = row.service?.checklistTemplateId || linkedService?.checklistTemplateId;
 
       if (templateId) {
-        const submissionRes = await api.get(`/checklists/submission/appointment/${row.id}`);
-        if (submissionRes.data && submissionRes.data.data) {
+        // ... previous logic for single checklist ...
+        const submissionRes = await api.get(`/checklists/submission/appointment/${row.id}?templateId=${templateId}&serviceId=${row.serviceId}`);
+        if (submissionRes.data) {
           setIsChecklistFilled(true);
-          setShowChecklistInline(true);
           setActiveChecklistId(templateId);
+          setActiveServiceId(row.serviceId?.toString());
+          setChecklistStatuses(prev => ({
+            ...prev,
+            [`${templateId}-${row.serviceId}`]: submissionRes.data.data?.status || 'COMPLETED'
+          }));
+        } else {
+          setIsChecklistFilled(false);
+          setActiveChecklistId(null);
+          setActiveServiceId(null);
+        }
+      }
+
+      // Fetch statuses for ALL services with checklists to show green buttons
+      const servicesWithChecklists = (row.services || []).filter(s => s.checklistTemplateId);
+      for (const s of servicesWithChecklists) {
+        try {
+          const res = await api.get(`/checklists/submission/appointment/${row.id}?templateId=${s.checklistTemplateId}&serviceId=${s.id}`);
+          if (res.data && res.data.data) {
+            setChecklistStatuses(prev => ({
+              ...prev,
+              [`${s.checklistTemplateId}-${s.id}`]: res.data.data.status || 'COMPLETED'
+            }));
+          }
+        } catch (e) {
+          // Ignore if no submission
         }
       }
     } catch (error) {
@@ -1241,46 +1284,29 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
           <div className="grid grid-cols-2 gap-x-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: '1.5rem', rowGap: '0.75rem' }}>
             <div className="input-group" style={{ position: 'relative', marginBottom: '0.75rem' }}>
               <label className="input-label">Customer</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Type customer name..."
-                  value={customerSearch}
-                  readOnly // Make this read-only to force using the dropdown/internal search for better UX
-                  onClick={() => setShowCustomerOptions(!showCustomerOptions)}
-                  onFocus={() => setShowCustomerOptions(true)}
-                  style={{
-                    paddingRight: '2.5rem',
-                    cursor: 'pointer',
-                    backgroundColor: 'white'
-                  }}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowCustomerOptions(!showCustomerOptions);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    right: '0.75rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-light)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '4px'
-                  }}
-                >
-                  <ChevronDown size={18} style={{ transform: showCustomerOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                </button>
+              <div
+                onClick={() => setShowCustomerOptions(!showCustomerOptions)}
+                className="form-control"
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: 'white',
+                  minHeight: '44px'
+                }}
+              >
+                <div style={{ fontSize: '0.875rem', color: customerSearch ? '#1e293b' : '#94a3b8' }}>
+                  {customerSearch || "Type customer name..."}
+                </div>
+                <ChevronDown size={18} style={{ transform: showCustomerOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#64748b' }} />
               </div>
+              {formErrors.customerId && (
+                <div style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  {formErrors.customerId}
+                </div>
+              )}
 
               {/* Custom Dropdown */}
               {showCustomerOptions && (
@@ -1423,6 +1449,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 </div>
                 <ChevronDown size={18} style={{ color: '#64748b', transform: showServiceOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </div>
+              {formErrors.serviceIds && (
+                <div style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  {formErrors.serviceIds}
+                </div>
+              )}
 
               {showServiceOptions && (
                 <div style={{
@@ -1577,14 +1608,41 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                             <div key={s.id} style={{ background: 'white', borderRadius: '0.75rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                               <div style={{ padding: '0.625rem 0.75rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase' }}>{s.name}</span>
-                                <span style={{ fontSize: '0.65rem', color: '#1e40af', background: '#dbeafe', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>Action Required</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 500 }}>Fill Checklist?</span>
+                                  <div
+                                    onClick={() => setEnabledChecklists(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                    style={{
+                                      width: '36px',
+                                      height: '20px',
+                                      background: enabledChecklists[s.id] ? 'var(--primary)' : '#cbd5e1',
+                                      borderRadius: '10px',
+                                      position: 'relative',
+                                      cursor: 'pointer',
+                                      transition: 'background 0.2s'
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: '16px',
+                                      height: '16px',
+                                      background: 'white',
+                                      borderRadius: '50%',
+                                      position: 'absolute',
+                                      top: '2px',
+                                      left: enabledChecklists[s.id] ? '18px' : '2px',
+                                      transition: 'left 0.2s'
+                                    }} />
+                                  </div>
+                                </div>
                               </div>
-                              <div style={{ padding: '0.75rem' }}>
-                                <ChecklistForm
-                                  templateId={s.checklistTemplateId || s.checklistId}
-                                  onDataChange={(res, rem) => handleChecklistDataChange(s.id.toString(), res, rem)}
-                                />
-                              </div>
+                              {enabledChecklists[s.id] && (
+                                <div style={{ padding: '0.75rem' }}>
+                                  <ChecklistForm
+                                    templateId={s.checklistTemplateId || s.checklistId}
+                                    onDataChange={(res, rem) => handleChecklistDataChange(s.id.toString(), res, rem)}
+                                  />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1614,6 +1672,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                   setShowSpecialistOptions(true);
                   if (!e.target.value) setFormData(prev => ({ ...prev, stylistId: '' }));
                 }}
+                onClick={() => setShowSpecialistOptions(true)}
                 onFocus={() => {
                   setShowSpecialistOptions(true);
                   if (formData.stylistId && !specialistSearch) {
@@ -1685,6 +1744,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 disabled={!specialistSearch}
                 className="mb-0"
               />
+              {formErrors.date && (
+                <div style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  {formErrors.date}
+                </div>
+              )}
               {(() => {
                 const selectedSpecialist = specialists.find(s => s.id.toString() === formData.stylistId);
                 if (selectedSpecialist && selectedSpecialist.leaves && formData.date && selectedSpecialist.leaves.includes(formData.date)) {
@@ -1700,7 +1764,12 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
             {/* Tabbed Time Slot Picker */}
             <div style={{ gridColumn: 'span 2' }}>
-              <label className="input-label" style={{ display: 'block', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>Select Time Slot</label>
+              <label className="input-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>Select Time Slot</label>
+              {formErrors.time && (
+                <div style={{ color: 'red', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                  {formErrors.time}
+                </div>
+              )}
               {(() => {
                 const selectedSpecialist = specialists.find(s => s.id.toString() === formData.stylistId);
                 const isSpecialistOnLeave = selectedSpecialist && selectedSpecialist.leaves && formData.date && selectedSpecialist.leaves.includes(formData.date);
@@ -1774,10 +1843,18 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                       });
 
                       const selectedDateTime = new Date(`${formData.date}T${timeString}`);
+                      const totalDuration = formData.serviceIds.reduce((acc, id) => {
+                        const s = services.find(srv => srv.id?.toString() === id.toString());
+                        return acc + (s?.duration || 0);
+                      }, 0) || 30; // Fallback to 30 mins
+
+                      const newApptEnd = new Date(selectedDateTime.getTime() + totalDuration * 60000);
+
                       const isBooked = unavailableSlots.some(slot => {
-                        const start = new Date(slot.startTime);
-                        const end = new Date(slot.endTime);
-                        return selectedDateTime >= start && selectedDateTime < end;
+                        const existingStart = new Date(slot.startTime);
+                        const existingEnd = new Date(slot.endTime);
+                        // Overlap condition: (newStart < existingEnd) && (newEnd > existingStart)
+                        return selectedDateTime < existingEnd && newApptEnd > existingStart;
                       });
                       const isSelected = formData.time === timeString;
 
@@ -1982,6 +2059,12 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                   }
                 }}
                 list="customers-list-edit"
+                onClick={() => {
+                  // For datalist inputs, we can't easily toggle the native list via JS, 
+                  // but we can ensure it shows up by triggering a focus if needed.
+                  // However, if the user wants a custom dropdown like the Create modal, we'd need more changes.
+                  // For now, let's just make sure it's focused.
+                }}
                 required
               />
               <datalist id="customers-list-edit">
@@ -2000,48 +2083,158 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
             </div>
 
             <div className="input-group" style={{ position: 'relative', marginBottom: '0.25rem' }}>
-              <label className="input-label">Service</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Type service name..."
-                value={serviceSearch}
-                onChange={(e) => {
-                  setServiceSearch(e.target.value);
-                  setShowServiceOptions(true);
-                  if (!e.target.value) setFormData(prev => ({ ...prev, serviceId: '' }));
+              <label className="input-label">Service (Multi-select)</label>
+              <div
+                onClick={() => setShowServiceOptions(!showServiceOptions)}
+                style={{
+                  padding: '0.625rem 0.875rem',
+                  background: 'var(--bg-card)',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  minHeight: '42px',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                 }}
-                onFocus={() => {
-                  setShowServiceOptions(true);
-                  if (formData.serviceId && !serviceSearch) {
-                    const s = services.find(srv => srv.id?.toString() === formData.serviceId?.toString());
-                    if (s) setServiceSearch(s.name);
-                  }
-                }}
-                onBlur={() => setTimeout(() => setShowServiceOptions(false), 200)}
-                required
-              />
-              {showServiceOptions && (serviceSearch || document.activeElement === document.querySelector('input[placeholder="Type service name..."]')) && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', marginTop: '0.25rem' }}>
-                  {services
-                    .filter(s => (s.name || '').toLowerCase().includes((serviceSearch || '').toLowerCase()))
-                    .map(s => (
-                      <div
-                        key={s.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setServiceSearch(s.name);
-                          setFormData(prev => ({ ...prev, serviceId: s.id }));
-                          setShowServiceOptions(false);
-                        }}
-                        style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-dark)', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9' }}
-                        className="hover:bg-gray-50"
-                      >
-                        <span>{s.name}</span>
-                        <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{symbol}{s.price}</span>
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = showServiceOptions ? 'var(--primary)' : '#e2e8f0'}
+              >
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {formData.serviceIds.length > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                        {formData.serviceIds.length}
                       </div>
-                    ))
-                  }
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>
+                        Service{formData.serviceIds.length > 1 ? 's' : ''} Selected
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Select services...</span>
+                  )}
+                </div>
+                <ChevronDown size={18} style={{ color: '#64748b', transform: showServiceOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              </div>
+
+              {showServiceOptions && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'white',
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                  zIndex: 100,
+                  border: '1px solid #e2e8f0',
+                  marginTop: '0.5rem',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '0.75rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Search services..."
+                        value={serviceSearch}
+                        onChange={(e) => setServiceSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ paddingLeft: '2.25rem', fontSize: '0.875rem', background: 'white', marginBottom: 0 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '0.25rem' }}>
+                    {services
+                      .filter(s => (s.name || '').toLowerCase().includes((serviceSearch || '').toLowerCase()))
+                      .map(s => {
+                        const isSelected = formData.serviceIds.includes(String(s.id));
+                        return (
+                          <label
+                            key={s.id}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.5rem 0.75rem',
+                              cursor: 'pointer',
+                              borderRadius: '0.375rem',
+                              transition: 'all 0.15s',
+                              background: isSelected ? 'rgba(var(--primary-rgb), 0.05)' : 'transparent',
+                              marginBottom: '1px'
+                            }}
+                            className="hover:bg-gray-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData(prev => ({ ...prev, serviceIds: [...prev.serviceIds, String(s.id)] }));
+                                } else {
+                                  setFormData(prev => ({ ...prev, serviceIds: prev.serviceIds.filter(id => String(id) !== String(s.id)) }));
+                                }
+                              }}
+                              style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', border: '2px solid #cbd5e1' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.875rem', fontWeight: isSelected ? 600 : 500, color: isSelected ? 'var(--primary)' : '#1e293b' }}>{s.name}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{s.duration} mins</span>
+                              </div>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1e293b' }}>{symbol}{s.price}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {formErrors.serviceIds && (
+                <div style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  {formErrors.serviceIds}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Services Summary in Edit Modal */}
+            <div className="input-group" style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                {formData.serviceIds.map((id, index) => {
+                  const s = services.find(srv => srv.id?.toString() === id.toString());
+                  if (!s) return null;
+                  return (
+                    <div key={`${id}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{s.duration} mins • {symbol}{s.price}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, serviceIds: prev.serviceIds.filter((_, i) => i !== index) }))}
+                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Totals Summary */}
+              {formData.serviceIds.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem', padding: '0.5rem 0.75rem', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 600 }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Clock size={14} />
+                    <span>Total Duration: {formData.serviceIds.reduce((acc, id) => acc + (services.find(s => s.id?.toString() === id.toString())?.duration || 0), 0)} mins</span>
+                  </div>
+                  <span>Total Price: {symbol}{formData.serviceIds.reduce((acc, id) => acc + (services.find(s => s.id?.toString() === id.toString())?.price || 0), 0)}</span>
                 </div>
               )}
             </div>
@@ -2073,6 +2266,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                   setShowSpecialistOptions(true);
                   if (!e.target.value) setFormData(prev => ({ ...prev, stylistId: '' }));
                 }}
+                onClick={() => setShowSpecialistOptions(true)}
                 onFocus={() => {
                   setShowSpecialistOptions(true);
                   if (formData.stylistId && !specialistSearch) {
@@ -2223,10 +2417,18 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                       });
 
                       const selectedDateTime = new Date(`${formData.date}T${timeString}`);
+                      const totalDuration = formData.serviceIds.reduce((acc, id) => {
+                        const s = services.find(srv => srv.id?.toString() === id.toString());
+                        return acc + (s?.duration || 0);
+                      }, 0) || 30; // Fallback to 30 mins
+
+                      const newApptEnd = new Date(selectedDateTime.getTime() + totalDuration * 60000);
+
                       const isBooked = unavailableSlots.some(slot => {
-                        const start = new Date(slot.startTime);
-                        const end = new Date(slot.endTime);
-                        return selectedDateTime >= start && selectedDateTime < end;
+                        const existingStart = new Date(slot.startTime);
+                        const existingEnd = new Date(slot.endTime);
+                        // Overlap condition: (newStart < existingEnd) && (newEnd > existingStart)
+                        return selectedDateTime < existingEnd && newApptEnd > existingStart;
                       });
                       const isSelected = formData.time === timeString;
 
@@ -2596,7 +2798,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
                 {/* INLINE CHECKLIST SECTION */}
                 <AnimatePresence>
-                  {showChecklistInline && viewAppointment && activeChecklistId && (
+                  {showChecklistInline && viewAppointment && activeChecklistId && activeServiceId && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -2607,8 +2809,15 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         <ChecklistForm
                           templateId={activeChecklistId}
                           appointmentId={viewAppointment.id}
+                          serviceId={activeServiceId}
                           onSuccess={() => {
                             dispatch(fetchAppointments());
+                            if (activeChecklistId && activeServiceId) {
+                              setChecklistStatuses(prev => ({
+                                ...prev,
+                                [`${activeChecklistId}-${activeServiceId}`]: 'COMPLETED'
+                              }));
+                            }
                           }}
                           readOnly={(viewAppointment.status || '').toUpperCase() === 'COMPLETED'}
                         />
@@ -2657,7 +2866,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {servicesWithChecklists.map((s, idx) => {
-                          const isActive = activeChecklistId === s.checklistTemplateId && showChecklistInline;
+                          const isActive = activeChecklistId === s.checklistTemplateId && activeServiceId === s.id?.toString() && showChecklistInline;
+                          const isCompleted = checklistStatuses[`${s.checklistTemplateId}-${s.id}`] === 'COMPLETED';
                           return (
                             <button
                               key={idx}
@@ -2665,14 +2875,16 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                                 if (isActive) {
                                   setShowChecklistInline(false);
                                   setActiveChecklistId(null);
+                                  setActiveServiceId(null);
                                 } else {
                                   setActiveChecklistId(s.checklistTemplateId);
+                                  setActiveServiceId(s.id?.toString());
                                   setShowChecklistInline(true);
                                 }
                               }}
                               style={{
                                 padding: '0.5rem 1rem',
-                                background: isActive ? '#64748B' : 'var(--primary)',
+                                background: isActive ? '#64748B' : (isCompleted ? '#10B981' : 'var(--primary)'),
                                 border: 'none',
                                 color: 'white',
                                 borderRadius: '0.5rem',

@@ -403,7 +403,12 @@ const Sales: React.FC<SalesProps> = ({
                 description: comboDef?.description
               },
               purchaseDate: s.createdAt,
-              expiryDate: null,
+              expiryDate: (() => {
+                if (!comboDef || !comboDef.validityDays || comboDef.validityDays === 0) return null;
+                const d = new Date(s.createdAt);
+                d.setDate(d.getDate() + comboDef.validityDays);
+                return d.toISOString();
+              })(),
               usageDetails: comboDef?.items?.map(ci => ({
                 name: ci.name,
                 itemId: ci.name, // Use name as ID for matching
@@ -1538,7 +1543,10 @@ const Sales: React.FC<SalesProps> = ({
           name: item.name,
           quantity: item.quantity,
           price: item.price,
-          redeemedFromPackageId: item.redeemedFromPackageId,
+          // SUCCESSFUL FIX: Strip 'combo-' prefix as per Senior Dev Integration Guide
+          redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-') 
+            ? item.redeemedFromPackageId.split('-')[1] 
+            : item.redeemedFromPackageId,
           redeemedItemId: item.redeemedItemId,
           redeemedQuantity: item.redeemedQuantity,
           specialistId: selectedSpecialistId || undefined,
@@ -1701,7 +1709,10 @@ const Sales: React.FC<SalesProps> = ({
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        redeemedFromPackageId: item.redeemedFromPackageId,
+        // SUCCESSFUL FIX: Strip 'combo-' prefix as per Senior Dev Integration Guide
+        redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-') 
+          ? item.redeemedFromPackageId.split('-')[1] 
+          : item.redeemedFromPackageId,
         redeemedItemId: item.redeemedItemId,
         redeemedQuantity: item.redeemedQuantity,
         specialistId: selectedSpecialistId || undefined,
@@ -1866,7 +1877,10 @@ const Sales: React.FC<SalesProps> = ({
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        redeemedFromPackageId: item.redeemedFromPackageId,
+        // SUCCESSFUL FIX: Strip 'combo-' prefix as per Senior Dev Integration Guide
+        redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-') 
+          ? item.redeemedFromPackageId.split('-')[1] 
+          : item.redeemedFromPackageId,
         redeemedItemId: item.redeemedItemId,
         redeemedQuantity: item.redeemedQuantity
       }));
@@ -2319,6 +2333,11 @@ const Sales: React.FC<SalesProps> = ({
               filteredItems.map(item => {
                 // NEW: Aggregate logic to show total available redemptions across all packages
                 const allMatchingUsageItems = customerPackages.flatMap(pkg => {
+                  // NEW: Skip expired packages/combos for redemption visibility
+                  if (pkg.expiryDate && new Date(pkg.expiryDate) < new Date()) {
+                    return [];
+                  }
+
                   const items = pkg.usageDetails?.filter((u: any) =>
                     (u.itemId === item.id || u.name === item.name) && u.remainingQuantity > 0
                   ) || [];

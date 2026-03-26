@@ -492,7 +492,7 @@ export const ChecklistBuilder: React.FC = () => {
                                                     >
                                                         {item.options?.map((opt, idx) => (
                                                             <Reorder.Item
-                                                                key={`${item.id}-opt-${idx}-${opt}`}
+                                                                key={`${item.id}-opt-${idx}`}
                                                                 value={opt}
                                                                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1E293B', fontSize: '0.875rem' }}
                                                             >

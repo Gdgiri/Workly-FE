@@ -25,6 +25,7 @@ interface ChecklistFormProps {
     onSuccess?: () => void;
     onDataChange?: (data: any, remarks: any) => void;
     readOnly?: boolean;
+    serviceId?: string;
 }
 
 const ChecklistForm: React.FC<ChecklistFormProps> = ({
@@ -32,7 +33,8 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
     appointmentId,
     onSuccess,
     onDataChange,
-    readOnly = false
+    readOnly = false,
+    serviceId
 }) => {
     const { showToast } = useToast();
     const [template, setTemplate] = useState<any>(null);
@@ -45,10 +47,13 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
 
     useEffect(() => {
         fetchData();
-    }, [templateId, appointmentId]);
+    }, [templateId, appointmentId, serviceId]);
 
     const fetchData = async () => {
         setLoading(true);
+        setExistingSubmission(null);
+        setResponses({});
+        setRemarks({});
         try {
             // 1. Fetch template
             const templateRes = await api.get(`/checklists/templates/${templateId}`);
@@ -58,8 +63,8 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
             // 2. Check for existing submission if appointmentId is provided
             if (appointmentId) {
                 try {
-                    console.log('🔍 Checking for submission - Appointment:', appointmentId);
-                    const submissionRes = await api.get(`/checklists/submission/appointment/${appointmentId}`);
+                    console.log('🔍 Checking for submission - Appointment:', appointmentId, 'Template:', templateId, 'Service:', serviceId);
+                    const submissionRes = await api.get(`/checklists/submission/appointment/${appointmentId}?templateId=${templateId}${serviceId ? `&serviceId=${serviceId}` : ''}`);
                     if (submissionRes.data && submissionRes.data.data) {
                         const submission = submissionRes.data.data;
                         console.log('✅ Submission found:', submission.id);
@@ -119,6 +124,7 @@ const ChecklistForm: React.FC<ChecklistFormProps> = ({
             await api.post('/checklists/submit', {
                 appointmentId,
                 templateId,
+                serviceId,
                 data: responses,
                 remarks: remarks,
                 severityScore: 0

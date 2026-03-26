@@ -168,6 +168,7 @@ const Inventory: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [removeBgAddEnabled, setRemoveBgAddEnabled] = useState(false);
   const [removeBgEditEnabled, setRemoveBgEditEnabled] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Bulk State
   interface BulkItem {
@@ -267,10 +268,21 @@ const Inventory: React.FC = () => {
     e.preventDefault();
 
     try {
-      if (!newProduct.category) {
-        showToast('Please select a valid category from the list.', 'error');
+      // VALIDATION
+      const newErrors: Record<string, string> = {};
+      if (!newProduct.name.trim()) newErrors.name = 'Product name is required';
+      if (!newProduct.category) newErrors.category = 'Category is required';
+      if (!newProduct.sku.trim()) newErrors.sku = 'SKU is required';
+      if (!newProduct.price || parseFloat(newProduct.price) <= 0) newErrors.price = 'Price must be greater than 0';
+      if (newProduct.stock === '' || parseInt(newProduct.stock) < 0) newErrors.stock = 'Stock cannot be negative';
+
+      if (Object.keys(newErrors).length > 0) {
+        setFormErrors(newErrors);
+        showToast('Please fill all required fields', 'error');
         return;
       }
+
+      setFormErrors({});
       setSavingProduct(true);
       const response = await api.post('/inventory', {
         name: newProduct.name,
@@ -300,6 +312,22 @@ const Inventory: React.FC = () => {
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editProduct) return;
+
+    // VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!editProduct.name.trim()) newErrors.name = 'Product name is required';
+    if (!editProduct.category) newErrors.category = 'Category is required';
+    if (!editProduct.sku.trim()) newErrors.sku = 'SKU is required';
+    if (editProduct.price <= 0) newErrors.price = 'Price must be greater than 0';
+    if (editProduct.stock < 0) newErrors.stock = 'Stock cannot be negative';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    setFormErrors({});
 
     // Block deactivation if product is used in any package
     if (!editProduct.isActive) {
@@ -1257,28 +1285,31 @@ const Inventory: React.FC = () => {
         title="Add New Product"
       >
         <form className="space-y-6" onSubmit={handleCreateProduct}>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
+          <div className="grid md-grid-cols-2 gap-4">
+            <div className="flex flex-col">
               <Input
                 label="Product Name"
                 placeholder="e.g. Daily Shine Shampoo"
                 value={newProduct.name}
                 onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                required
               />
+              {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.name}</span>}
             </div>
 
-            <SearchableSelect
-              label="Category"
-              name="category"
-              placeholder="Select category"
-              value={newProduct.category}
-              onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-              options={productCategories
-                .filter(cat => cat && cat.trim().toLowerCase() !== 'select category' && cat.trim().toLowerCase() !== 'dadad')
-                .map(cat => ({ value: cat, label: cat }))}
-              allowCustom={false}
-            />
+            <div className="flex flex-col">
+              <SearchableSelect
+                label="Category"
+                name="category"
+                placeholder="Select category"
+                value={newProduct.category}
+                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                options={productCategories
+                  .filter(cat => cat && cat.trim().toLowerCase() !== 'select category' && cat.trim().toLowerCase() !== 'dadad')
+                  .map(cat => ({ value: cat, label: cat }))}
+                allowCustom={false}
+              />
+              {formErrors.category && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.category}</span>}
+            </div>
 
             {/* Image Upload */}
             <div style={{ gridColumn: 'span 2' }}>
@@ -1369,30 +1400,36 @@ const Inventory: React.FC = () => {
             </div>
 
             <div className="grid md-grid-cols-3 gap-4" style={{ gridColumn: 'span 2' }}>
-              <Input
-                label="SKU / Barcode"
-                placeholder="SCAN-0000"
-                value={newProduct.sku}
-                onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-                required
-              />
-
-              <Input
-                label={`Price (${symbol})`}
-                type="number"
-                step="0.01"
-                value={newProduct.price}
-                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                required
-              />
-              <Input
-                label="Initial Stock"
-                type="number"
-                value={newProduct.stock}
-                onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                required
-              />
-
+              <div className="flex flex-col">
+                <Input
+                  label="SKU / Barcode"
+                  placeholder="e.g. SHAM-001"
+                  value={newProduct.sku}
+                  onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                />
+                {formErrors.sku && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.sku}</span>}
+              </div>
+              <div className="flex flex-col">
+                <Input
+                  label={`Price (${symbol})`}
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={newProduct.price}
+                  onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                />
+                {formErrors.price && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.price}</span>}
+              </div>
+              <div className="flex flex-col">
+                <Input
+                  label="Initial Stock"
+                  type="number"
+                  placeholder="0"
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                />
+                {formErrors.stock && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.stock}</span>}
+              </div>
               <Select
                 label="Status"
                 value={newProduct.isActive ? 'active' : 'inactive'}

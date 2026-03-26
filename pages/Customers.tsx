@@ -98,6 +98,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     });
     const [acceptedTerms, setAcceptedTerms] = useState(true);
     const [termsError, setTermsError] = useState('');
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -317,6 +318,18 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         }
         setTermsError('');
 
+        // VALIDATION
+        const newErrors: Record<string, string> = {};
+        if (!formData.name.trim()) newErrors.name = 'Customer name is required';
+        if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+
+        if (Object.keys(newErrors).length > 0) {
+            setFormErrors(newErrors);
+            showToast('Please fill all required fields', 'error');
+            return;
+        }
+
+        setFormErrors({});
         setError(null);
         const token = localStorage.getItem('accessToken');
 
@@ -555,7 +568,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
     // --- Export Functionality ---
     const handleExportCSV = () => {
-        const headers = ['Name', 'Email', 'Phone', 'City', 'Visit Count', 'Total Spend', 'Last Visit'];
+        const headers = ['Name', 'Email', 'Phone', 'City', 'Visit Count', 'Total Spend', 'Last Visit', 'DOB'];
         const rows = filteredCustomers.map(c => [
             c.name,
             c.email,
@@ -563,7 +576,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
             c.city || '',
             c.visitCount,
             c.totalSpend,
-            c.lastVisit ? new Date(c.lastVisit).toLocaleDateString() : ''
+            c.lastVisit ? new Date(c.lastVisit).toLocaleDateString() : '',
+            c.dateOfBirth ? new Date(c.dateOfBirth).toLocaleDateString() : ''
         ]);
 
         const csvContent = [
@@ -582,8 +596,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     };
 
     const handleDownloadTemplate = () => {
-        const headers = ['Name', 'Email', 'Phone', 'City', 'Status'];
-        const sampleRow = ['John Doe', 'john@example.com', '12345678', 'New York', 'Active'];
+        const headers = ['Name', 'Email', 'Phone', 'City', 'Status', 'DOB'];
+        const sampleRow = ['John Doe', 'john@example.com', '12345678', 'New York', 'Active', '1990-01-01'];
         const csvContent = [headers.join(','), sampleRow.join(',')].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -622,6 +636,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                     else if (header.includes('phone')) columnMap.phone = index;
                     else if (header.includes('city')) columnMap.city = index;
                     else if (header.includes('status') || header.includes('role')) columnMap.role = index;
+                    else if (header.includes('dob') || header.includes('birth')) columnMap.dateOfBirth = index;
                 });
 
                 // Validation
@@ -645,6 +660,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                             email: values[columnMap.email],
                             phone: values[columnMap.phone] || '',
                             city: values[columnMap.city] || '',
+                            dateOfBirth: columnMap.dateOfBirth !== undefined ? values[columnMap.dateOfBirth] : '',
                             role: (values[columnMap.role]?.toLowerCase() === 'inactive' || values[columnMap.role]?.toLowerCase() === '0') ? 'INACTIVE' : 'CUSTOMER'
                         };
 
@@ -1054,14 +1070,16 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                 <form className="space-y-6" onSubmit={handleSubmit}>
                     {error && <div style={{ color: 'red', fontSize: '0.875rem' }}>{error}</div>}
                     <div className="grid md-grid-cols-3 gap-4">
-                        <Input
-                            label="Name"
-                            name="name"
-                            placeholder="e.g. John Doe"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            required
-                        />
+                        <div className="flex flex-col">
+                            <Input
+                                label="Name"
+                                name="name"
+                                placeholder="e.g. John Doe"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                            />
+                            {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '1rem', display: 'block' }}>{formErrors.name}</span>}
+                        </div>
                         <Input
                             label="Email Address"
                             name="email"
@@ -1087,13 +1105,16 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                     </div>
 
                     <div className="grid md-grid-cols-4 gap-4">
-                        <Input
-                            label="Phone Number"
-                            name="phone"
-                            placeholder="(555) 000-0000"
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                        />
+                        <div className="flex flex-col">
+                            <Input
+                                label="Phone Number"
+                                name="phone"
+                                placeholder="(555) 000-0000"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                            />
+                            {formErrors.phone && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{formErrors.phone}</span>}
+                        </div>
                         <Input
                             label="Location"
                             name="city"

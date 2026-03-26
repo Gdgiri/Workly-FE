@@ -23,6 +23,7 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Pagination State
   const RECORDS_PER_PAGE = 15;
@@ -97,8 +98,25 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
     e.preventDefault();
     const finalCode = autoCode ? generateCode() : customCode.toUpperCase();
 
-    if (!finalCode || !campaignValue || !campaignExpiryDays) return;
+    if (autoCode ? false : !customCode.trim()) {
+      showToast('Please provide a custom code or use auto-generate', 'error');
+      return;
+    }
 
+    // VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!campaignName.trim()) newErrors.name = 'Voucher name is required';
+    if (!campaignValue || parseFloat(campaignValue) <= 0) newErrors.value = 'Value must be greater than 0';
+    if (!campaignSellingPrice || parseFloat(campaignSellingPrice) < 0) newErrors.sellingPrice = 'Selling price cannot be negative';
+    if (!campaignExpiryDays || parseInt(campaignExpiryDays) < 0) newErrors.expiry = 'Expiry days cannot be negative';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    setFormErrors({});
     setIsSubmitting(true);
 
     try {
@@ -483,13 +501,25 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="New Voucher">
         <form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }} onSubmit={handleCreateCampaign}>
           <div className="grid md-grid-cols-3" style={{ gap: '1rem' }}>
-            <Input label="Voucher Name" required placeholder="e.g. VIP Rewards" value={campaignName} onChange={e => setCampaignName(e.target.value)} />
-            <Input label="Expiry Days" type="number" required value={campaignExpiryDays} onChange={e => setCampaignExpiryDays(e.target.value)} placeholder="0 for no expiry" />
-            <Input label={`Voucher Value (${symbol})`} type="number" step="0.01" required value={campaignValue} onChange={e => setCampaignValue(e.target.value)} />
+            <div className="flex flex-col">
+              <Input label="Voucher Name" placeholder="e.g. VIP Rewards" value={campaignName} onChange={e => setCampaignName(e.target.value)} />
+              {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', display: 'block' }}>{formErrors.name}</span>}
+            </div>
+            <div className="flex flex-col">
+              <Input label="Expiry Days" type="number" value={campaignExpiryDays} onChange={e => setCampaignExpiryDays(e.target.value)} placeholder="0 for no expiry" />
+              {formErrors.expiry && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', display: 'block' }}>{formErrors.expiry}</span>}
+            </div>
+            <div className="flex flex-col">
+              <Input label={`Voucher Value (${symbol})`} type="number" step="0.01" value={campaignValue} onChange={e => setCampaignValue(e.target.value)} />
+              {formErrors.value && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', display: 'block' }}>{formErrors.value}</span>}
+            </div>
           </div>
 
           <div className="grid md-grid-cols-2" style={{ gap: '1rem' }}>
-            <Input label={`Selling Price (${symbol})`} type="number" step="0.01" required value={campaignSellingPrice} onChange={e => setCampaignSellingPrice(e.target.value)} />
+            <div className="flex flex-col">
+              <Input label={`Selling Price (${symbol})`} type="number" step="0.01" value={campaignSellingPrice} onChange={e => setCampaignSellingPrice(e.target.value)} />
+              {formErrors.sellingPrice && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', display: 'block' }}>{formErrors.sellingPrice}</span>}
+            </div>
             <div>
               <label className="input-label mb-2">Status</label>
               <select

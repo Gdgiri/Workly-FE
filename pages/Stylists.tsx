@@ -198,7 +198,8 @@ const Stylists: React.FC = () => {
   // Edit Stylist State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingStylist, setEditingStylist] = useState<Stylist | null>(null);
-  const [newStylistPermissions, setNewStylistPermissions] = useState<string[]>([]); // New state
+  const [newStylistPermissions, setNewStylistPermissions] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({}); // New state
 
   // Roster Management State
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
@@ -458,9 +459,22 @@ const Stylists: React.FC = () => {
       const accountStatusSelect = form.querySelector('select[name="accountStatus"]') as HTMLSelectElement;
       const isAvailable = accountStatusSelect ? accountStatusSelect.value === 'active' : true;
 
-      // Get Gender
       const genderSelect = form.querySelector('select[name="gender"]') as HTMLSelectElement;
       const gender = genderSelect ? genderSelect.value : undefined;
+
+      // VALIDATION
+      const newErrors: Record<string, string> = {};
+      if (!nameInput.value.trim()) newErrors.name = 'Specialist name is required';
+      if (!gender) newErrors.gender = 'Gender is required';
+      if (!phoneInput.value.trim()) newErrors.phone = 'Phone number is required';
+
+      if (Object.keys(newErrors).length > 0) {
+        setFormErrors(newErrors);
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+
+      setFormErrors({});
 
       const newStylist = {
         name: nameInput.value,
@@ -493,9 +507,21 @@ const Stylists: React.FC = () => {
   };
 
   const handleEditStylist = async (e: React.FormEvent) => {
-    e.preventDefault();
     if (!editingStylist) return;
 
+    // VALIDATION
+    const newErrors: Record<string, string> = {};
+    if (!editingStylist.name.trim()) newErrors.name = 'Specialist name is required';
+    if (!editingStylist.gender) newErrors.gender = 'Gender is required';
+    if (!editingStylist.phone.trim()) newErrors.phone = 'Phone number is required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    setFormErrors({});
     setIsSubmitting(true);
 
     try {
@@ -1636,25 +1662,33 @@ const Stylists: React.FC = () => {
               </div>
 
               <div className="grid md-grid-cols-3 gap-4">
-                <Input label="Full Name" placeholder="e.g. Jessica Smith" required />
-                <Select
-                  label="Gender"
-                  name="gender"
-                  value={newStylistGender}
-                  onChange={(e) => handleGenderChange(e.target.value, false)}
-                  options={[
-                    { value: '', label: 'Select gender' },
-                    { value: 'male', label: 'Male' },
-                    { value: 'female', label: 'Female' },
-                    { value: 'other', label: 'Other' }
-                  ]}
-                  required
-                />
+                <div className="flex flex-col">
+                  <Input label="Full Name" placeholder="e.g. Jessica Smith" />
+                  {formErrors.name && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.name}</span>}
+                </div>
+                <div className="flex flex-col">
+                  <Select
+                    label="Gender"
+                    name="gender"
+                    value={newStylistGender}
+                    onChange={(e) => handleGenderChange(e.target.value, false)}
+                    options={[
+                      { value: '', label: 'Select gender' },
+                      { value: 'male', label: 'Male' },
+                      { value: 'female', label: 'Female' },
+                      { value: 'other', label: 'Other' }
+                    ]}
+                  />
+                  {formErrors.gender && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.gender}</span>}
+                </div>
                 <Input label="Email" type="email" placeholder="jessica@lumiere.com" />
               </div>
 
               <div className="grid md-grid-cols-3 gap-4">
-                <Input label="Phone" placeholder="(555) 000-0000" />
+                <div className="flex flex-col">
+                  <Input label="Phone" placeholder="(555) 000-0000" />
+                  {formErrors.phone && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.phone}</span>}
+                </div>
                 <Select
                   label="Account Status"
                   name="accountStatus"
