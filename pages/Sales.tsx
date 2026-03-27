@@ -2548,33 +2548,81 @@ const Sales: React.FC<SalesProps> = ({
                   }}>
                     <User size={20} style={{ color: selectedCustomerId === 'WALK_IN' ? 'var(--text-gray)' : 'var(--primary)' }} />
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                     <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>{selectedCustomer?.name}</p>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)', fontWeight: 500 }}>
-                      {(isStaff && fraudProtection) ? maskPhone(selectedCustomer?.phone) : selectedCustomer?.phone}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)', fontWeight: 500 }}>
+                        {(isStaff && fraudProtection) ? maskPhone(selectedCustomer?.phone) : selectedCustomer?.phone}
+                      </p>
+                      {selectedSpecialistName && (
+                        <>
+                          <span style={{ color: 'var(--border)', fontSize: '0.75rem', opacity: 0.5 }}>|</span>
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                            {selectedSpecialistName}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleClearCustomer}
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-gray)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-gray)'}
-                >
-                  <X size={14} strokeWidth={2.5} />
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setIsSpecialistModalOpen(true)}
+                    title={selectedSpecialistName ? "Change Specialist" : "Select Specialist"}
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      color: selectedSpecialistName ? 'var(--primary)' : 'var(--text-gray)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: selectedSpecialistName ? '0 2px 4px rgba(79, 70, 229, 0.1)' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--primary)';
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.background = 'var(--bg-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = selectedSpecialistName ? 'var(--primary)' : 'var(--text-gray)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.background = 'var(--bg-card)';
+                    }}
+                  >
+                    <UserCog size={16} />
+                  </button>
+                  <button
+                    onClick={handleClearCustomer}
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-gray)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--danger)';
+                      e.currentTarget.style.borderColor = 'var(--danger)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--text-gray)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={{ position: 'relative' }}>

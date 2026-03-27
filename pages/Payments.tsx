@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
     Search, Filter, Download, DollarSign, CreditCard, Smartphone,
     Calendar, CheckCircle, Clock, XCircle, ArrowUpRight, ArrowDownLeft, Eye,
-    FileText, Printer, Trash2, ChevronLeft, ChevronRight, Play, TrendingUp, Wallet, MessageCircle, Paperclip, ExternalLink, RefreshCw, AlertTriangle
+    FileText, Printer, Trash2, ChevronLeft, ChevronRight, Play, TrendingUp, Wallet, MessageCircle, Paperclip, ExternalLink, RefreshCw, AlertTriangle, Package
 } from 'lucide-react';
 import { Card, Table, Button, Input, Select, KPICard, Modal } from '../components/UI';
 import { Skeleton } from '../components/Skeleton';
@@ -340,7 +340,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         };
         if (dateRange.start) params.startDate = dateRange.start;
         if (dateRange.end) params.endDate = dateRange.end;
-        if (paymentMethod !== 'ALL') params.paymentMethod = paymentMethod;
+        
+        // Only send paymentMethod to backend if it's a real stored method
+        // PACKAGE and VOUCHER are system-calculated client-side from zero-amount sales
+        if (paymentMethod !== 'ALL' && paymentMethod !== 'PACKAGE' && paymentMethod !== 'VOUCHER') {
+            params.paymentMethod = paymentMethod;
+        }
+        
         if (status !== 'ALL') params.status = status;
         if (selectedSpecialist !== 'ALL') params.specialist = selectedSpecialist;
         if (debouncedSearch) {
@@ -446,7 +452,24 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     // Memoize the combined list of real payments + synthesized pending appointments
     const combinedPayments = React.useMemo(() => {
         // 1. Base payments from API
-        let list = [...payments];
+        // Normalize amounts for redemptions to ensure consistency with Sales History ($0 cash impact)
+        let list = payments.map(p => {
+            let method = p.paymentMethod?.toUpperCase() || 'UNKNOWN';
+            if (p.notes && typeof p.notes === 'string' && p.notes.includes('Method:')) {
+                const match = p.notes.match(/Method:\s*([^|]+)/);
+                if (match && match[1]) method = match[1].trim().toUpperCase();
+            }
+
+            // Broad check for redemptions
+            const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || method === 'REDEEM' || 
+                                (p.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0));
+            
+            // If it's a redemption payment, it shouldn't show a cash impact in this list (consistent with Sales History)
+            if (isRedemption && p.amount !== 0) {
+                return { ...p, amount: 0, originalAmount: p.amount };
+            }
+            return p;
+        });
 
         // 2. Synthesize pending payments from CONFIRMED appointments
         if (appointments && appointments.length > 0) {
@@ -537,11 +560,25 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         },
         {
             header: 'Amount',
-            accessor: (row: Payment) => (
-                <div className="font-bold text-slate-800 dark:text-slate-100">
-                    {formatPrice(row.amount)}
-                </div>
-            )
+            accessor: (row: Payment) => {
+                // Ensure redemptions show $0 to match Sales History (cash impact view)
+                let method = row.paymentMethod?.toUpperCase() || 'UNKNOWN';
+                if (row.notes && (row.notes as string).includes('Method:')) {
+                    const match = (row.notes as string).match(/Method:\s*([^|]+)/);
+                    if (match && match[1]) method = match[1].trim().toUpperCase();
+                }
+
+                const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || 
+                                    (row.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0));
+                
+                const displayAmount = (isRedemption && row.amount !== 0) ? 0 : row.amount;
+
+                return (
+                    <div className="font-bold text-slate-800 dark:text-slate-100">
+                        {formatPrice(displayAmount)}
+                    </div>
+                );
+            }
         },
         {
             header: 'Specialist',
@@ -564,11 +601,18 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     }
                 }
 
-                // Check for Voucher/Redemption (Zero amount completed sales)
-                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN') &&
+                // Check for Voucher/Package Redemption (Zero amount completed sales)
+                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN' || displayMethod === 'CASH') &&
                     row.amount === 0 &&
                     (row.sale?.saleStatus === 'COMPLETED' || row.paymentStatus === 'COMPLETED')) {
-                    displayMethod = 'VOUCHER';
+                    
+                    // Distinguish between Package and Voucher
+                    const isPackageRedemption = row.sale?.items?.some((item: any) => item.redeemedFromPackageId);
+                    if (isPackageRedemption) {
+                        displayMethod = 'PACKAGE';
+                    } else {
+                        displayMethod = 'VOUCHER';
+                    }
                 }
 
                 const method = displayMethod;
@@ -592,6 +636,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             return { bg: '#ecfeff', text: '#0891b2', border: '#cffafe', icon: <Smartphone size={12} /> };
                         case 'VOUCHER':
                             return { bg: '#fce7f3', text: '#be185d', border: '#fbcfe8', icon: <Wallet size={12} /> };
+                        case 'PACKAGE':
+                            return { bg: '#fef3c7', text: '#92400e', border: '#fde68a', icon: <Package size={12} /> };
                         default:
                             return { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0', icon: <CreditCard size={12} /> };
                     }
@@ -862,6 +908,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
                             options={[
                                 { value: 'ALL', label: 'All Methods' },
+                                { value: 'PACKAGE', label: 'Package' },
+                                { value: 'VOUCHER', label: 'Voucher' },
                                 ...paymentMethods.map(m => ({
                                     value: m.id.toUpperCase(),
                                     label: m.name
@@ -989,8 +1037,14 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     const match = p.notes.match(/Method:\s*([^|]+)/);
                                     if (match && match[1]) displayMethod = match[1].trim().toUpperCase();
                                 }
-                                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN') && p.amount === 0 && (p.sale?.saleStatus === 'COMPLETED' || p.paymentStatus === 'COMPLETED')) {
-                                    displayMethod = 'VOUCHER';
+
+                                // Sync filter detection with table display logic
+                                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN' || displayMethod === 'CASH') &&
+                                    p.amount === 0 &&
+                                    (p.sale?.saleStatus === 'COMPLETED' || p.paymentStatus === 'COMPLETED')) {
+
+                                    const isPackageRedemption = p.sale?.items?.some((item: any) => item.redeemedFromPackageId);
+                                    displayMethod = isPackageRedemption ? 'PACKAGE' : 'VOUCHER';
                                 }
                                 return displayMethod === paymentMethod;
                             });
