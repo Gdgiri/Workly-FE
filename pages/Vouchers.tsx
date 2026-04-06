@@ -7,6 +7,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useCurrency } from '../components/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
 
 interface VouchersProps {
   vouchers: Voucher[];
@@ -19,6 +20,8 @@ interface VouchersProps {
 const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaims, setVoucherClaims, customers = [] }) => {
   const { showToast } = useToast();
   const { symbol, formatPrice } = useCurrency();
+  const { hasPermission } = useAuth();
+  const canAdd = hasPermission('vouchers', 'add');
   const [activeTab, setActiveTab] = useState<'campaigns' | 'claims'>('campaigns');
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -343,8 +346,13 @@ const Vouchers: React.FC<VouchersProps> = ({ vouchers, setVouchers, voucherClaim
           >
             <RefreshCcw size={18} />
           </button>
-          <Button onClick={() => setIsCreateModalOpen(true)}
-          // icon={<Plus size={18} />}
+          <Button onClick={() => {
+              if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+              setIsCreateModalOpen(true);
+          }}
+          disabled={!canAdd}
+          title={!canAdd ? "Ask Admin for permission" : ""}
+          style={{ opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
           >
             New Voucher</Button>
         </div>

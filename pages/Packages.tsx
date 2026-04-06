@@ -179,9 +179,9 @@ const Packages: React.FC = () => {
 
   const { showToast } = useToast();
   const { symbol, formatPrice } = useCurrency();
-  const { user, isStaff, isAdmin, isManager } = useAuth();
-  const canAdd = isAdmin || isManager || (isStaff && user?.permissions?.includes('packages.add'));
-  const canEdit = isAdmin || isManager || (isStaff && user?.permissions?.includes('packages.edit'));
+  const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
+  const canAdd = hasPermission('packages', 'add');
+  const canEdit = hasPermission('packages', 'edit');
   const [isModalOpen, setIsModalOpen] = useState(false);
   // packages is from Redux
   const [searchTerm, setSearchTerm] = useState('');
@@ -523,9 +523,11 @@ const Packages: React.FC = () => {
       header: 'Actions',
       accessor: (row: ComboPackage) => (
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {canEdit && (
-            <button
-              onClick={() => openEditModal(row)}
+          <button
+              onClick={() => {
+                  if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                  openEditModal(row);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -535,18 +537,19 @@ const Packages: React.FC = () => {
                 border: 'none',
                 background: 'var(--primary)',
                 color: 'white',
-                cursor: 'pointer',
+                cursor: !canEdit ? 'not-allowed' : 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: 500,
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                opacity: !canEdit ? 0.5 : 1
               }}
+              disabled={!canEdit}
+              title={!canEdit ? "Ask Admin for permission" : "Edit Package"}
               className="hover:opacity-90"
-              title="Edit Package"
             >
               {/* <Edit2 size={16} /> */}
               Edit
             </button>
-          )}
         </div>
       ),
       skeleton: <Skeleton width="60px" height="2.2rem" borderRadius="0.5rem" />,
@@ -589,15 +592,18 @@ const Packages: React.FC = () => {
 
 
           {/* Create */}
-          {canAdd && (
-            <Button
-              onClick={openCreateModal}
+          <Button
+              onClick={() => {
+                  if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                  openCreateModal();
+              }}
+              disabled={!canAdd}
+              title={!canAdd ? "Ask Admin for permission" : ""}
               // icon={<Plus size={18} />}
-              style={{ height: '40px', whiteSpace: 'nowrap' }}
+              style={{ height: '40px', whiteSpace: 'nowrap', opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
             >
               Add Package
             </Button>
-          )}
         </div>
       </div>
 

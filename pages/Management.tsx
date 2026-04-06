@@ -27,9 +27,9 @@ export const ServicesView: React.FC = () => {
 
   const { showToast } = useToast();
   const { symbol, formatPrice } = useCurrency();
-  const { user, isStaff, isAdmin, isManager } = useAuth();
-  const canAdd = isAdmin || isManager || (isStaff && user?.permissions?.includes('services.add'));
-  const canEdit = isAdmin || isManager || (isStaff && user?.permissions?.includes('services.edit'));
+  const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
+  const canAdd = hasPermission('services', 'add');
+  const canEdit = hasPermission('services', 'edit');
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -424,12 +424,32 @@ export const ServicesView: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              {canAdd && (
-                <>
-                  <Button onClick={() => setIsImportModalOpen(true)} variant="secondary" icon={<FileSpreadsheet size={18} />}>Import Excel</Button>
-                  <Button onClick={() => setIsAddModalOpen(true)} >Add Service</Button>
-                </>
-              )}
+              <>
+                <Button 
+                    onClick={() => {
+                        if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                        setIsImportModalOpen(true);
+                    }} 
+                    variant="secondary" 
+                    icon={<FileSpreadsheet size={18} />}
+                    disabled={!canAdd}
+                    title={!canAdd ? "Ask Admin for permission" : ""}
+                    style={{ opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
+                >
+                    Import Excel
+                </Button>
+                <Button 
+                    onClick={() => {
+                        if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                        setIsAddModalOpen(true);
+                    }}
+                    disabled={!canAdd}
+                    title={!canAdd ? "Ask Admin for permission" : ""}
+                    style={{ opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
+                >
+                    Add Service
+                </Button>
+              </>
             </div>
           </div>
 
@@ -484,15 +504,25 @@ export const ServicesView: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border)', marginTop: 'auto' }}>
                         <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>{formatPrice(service.price)}</span>
                         <div className="flex space-x-2">
-                          {canEdit && (
-                            <button
-                              onClick={() => { setEditingService(service); setIsEditModalOpen(true); }}
-                              style={{ color: 'var(--primary)', border: 'none', background: 'none', cursor: 'pointer', padding: '0.25rem' }}
-                              title="Edit Service"
+                          <button
+                              onClick={(e) => { 
+                                  if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                                  setEditingService(service); 
+                                  setIsEditModalOpen(true); 
+                              }}
+                              style={{ 
+                                  color: 'var(--primary)', 
+                                  border: 'none', 
+                                  background: 'none', 
+                                  cursor: !canEdit ? 'not-allowed' : 'pointer', 
+                                  padding: '0.25rem',
+                                  opacity: !canEdit ? 0.5 : 1
+                              }}
+                              disabled={!canEdit}
+                              title={!canEdit ? "Ask Admin for permission" : "Edit Service"}
                             >
                               <Edit2 size={16} />
                             </button>
-                          )}
                         </div>
                       </div>
                     </Card>

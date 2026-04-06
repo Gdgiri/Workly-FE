@@ -88,10 +88,10 @@ const Inventory: React.FC = () => {
 
   const { showToast } = useToast();
   const { symbol, formatPrice } = useCurrency();
-  const { user, isStaff, isAdmin, isManager } = useAuth();
+  const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
 
-  const canAdd = isAdmin || isManager || (isStaff && user?.permissions?.includes('inventory.add'));
-  const canEdit = isAdmin || isManager || (isStaff && user?.permissions?.includes('inventory.edit'));
+  const canAdd = hasPermission('inventory', 'add');
+  const canEdit = hasPermission('inventory', 'edit');
   // View State
   const [activeTab, setActiveTab] = useState<'stock' | 'history'>('stock');
 
@@ -1105,21 +1105,38 @@ const Inventory: React.FC = () => {
 
               {/* Action Buttons on Right */}
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                {canAdd && (
-                  <>
-                    <Button onClick={() => openModal('import')} variant="secondary" icon={<MdTableChart size={20} />}>
-                      Import
-                    </Button>
-                    <Button onClick={() => openModal('bulk-receive')} variant="secondary" icon={<MdLayers size={20} />}>
-                      Bulk Movement
-                    </Button>
-                    <Button onClick={() => openModal('create')}
-                      // icon={<MdAdd size={20} />} 
-                      style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)' }}>
-                      Add New Product
-                    </Button>
-                  </>
-                )}
+                <Button 
+                  onClick={() => openModal('import')} 
+                  variant="secondary" 
+                  icon={<MdTableChart size={20} />}
+                  disabled={!canAdd}
+                  title={!canAdd ? "Ask Admin for permission" : ""}
+                  style={{ opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
+                >
+                  Import
+                </Button>
+                <Button 
+                  onClick={() => openModal('bulk-receive')} 
+                  variant="secondary" 
+                  icon={<MdLayers size={20} />}
+                  disabled={!canAdd}
+                  title={!canAdd ? "Ask Admin for permission" : ""}
+                  style={{ opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
+                >
+                  Bulk Movement
+                </Button>
+                <Button 
+                  onClick={() => openModal('create')}
+                  disabled={!canAdd}
+                  title={!canAdd ? "Ask Admin for permission" : ""}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)', 
+                    boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)',
+                    opacity: !canAdd ? 0.5 : 1, 
+                    cursor: !canAdd ? 'not-allowed' : 'pointer'
+                  }}>
+                  Add New Product
+                </Button>
               </div>
             </>
           )}

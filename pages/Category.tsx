@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ServiceAvatar } from '../components/ServiceAvatar';
 import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary';
 import { removeImageBackground } from '../utils/backgroundRemoval';
+import { useAuth } from '../hooks/useAuth';
 
 interface Category {
     id: string;
@@ -34,6 +35,9 @@ const Category: React.FC = () => {
     } = useSelector((state: RootState) => state.categories);
 
     const { showToast } = useToast();
+    const { hasPermission } = useAuth();
+    const canAdd = hasPermission('category', 'add');
+    const canEdit = hasPermission('category', 'edit');
     const [activeTab, setActiveTab] = useState<'service' | 'product' | 'expense'>('service');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -180,14 +184,20 @@ const Category: React.FC = () => {
             accessor: (cat: Category) => (
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                     <button
-                        onClick={() => handleEditCategory(cat)}
+                        onClick={() => {
+                            if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                            handleEditCategory(cat);
+                        }}
+                        title={!canEdit ? "Ask Admin for permission" : ""}
+                        disabled={!canEdit}
                         style={{
                             padding: '0.5rem 1rem',
                             borderRadius: '0.5rem',
                             border: '1px solid var(--border)',
                             background: 'var(--bg-card)',
                             color: 'var(--text-gray)',
-                            cursor: 'pointer',
+                            cursor: !canEdit ? 'not-allowed' : 'pointer',
+                            opacity: !canEdit ? 0.5 : 1,
                             transition: 'all 0.2s',
                             fontSize: '0.8125rem',
                             fontWeight: 600,
@@ -199,14 +209,20 @@ const Category: React.FC = () => {
                         <MdEdit size={16} /> Edit
                     </button>
                     <button
-                        onClick={() => handleDeleteCategory(cat)}
+                        onClick={() => {
+                            if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                            handleDeleteCategory(cat);
+                        }}
+                        title={!canEdit ? "Ask Admin for permission" : ""}
+                        disabled={!canEdit}
                         style={{
                             padding: '0.5rem',
                             borderRadius: '0.5rem',
                             border: '1px solid var(--danger)40',
                             background: 'rgba(239, 68, 68, 0.1)',
                             color: 'var(--danger)',
-                            cursor: 'pointer',
+                            cursor: !canEdit ? 'not-allowed' : 'pointer',
+                            opacity: !canEdit ? 0.5 : 1,
                             transition: 'all 0.2s'
                         }}
                     >
@@ -403,9 +419,14 @@ const Category: React.FC = () => {
                             <MdSearch size={20} />
                         </span>
                     </div>
-                    <Button onClick={handleAddCategory}
+                    <Button onClick={() => {
+                            if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                            handleAddCategory();
+                        }}
                         icon={<MdAdd size={20} />}
-                        style={{ height: '44px', padding: '0 1.5rem' }}
+                        disabled={!canAdd}
+                        title={!canAdd ? "Ask Admin for permission" : ""}
+                        style={{ height: '44px', padding: '0 1.5rem', opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
                     >
                         New Category
                     </Button>

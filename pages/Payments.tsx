@@ -117,7 +117,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const { settings } = useSelector((state: RootState) => state.settings); // Use global settings
 
     const navigate = useNavigate();
-    const { user, isStaff, isAdmin, isManager } = useAuth();
+    const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
+    const canCancel = hasPermission('payments', 'edit');
     const { showToast } = useToast();
     const { formatPrice, currency, symbol } = useCurrency();
 
@@ -582,11 +583,28 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         },
         {
             header: 'Specialist',
-            accessor: (row: Payment) => (
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                    {row.appointment?.stylist?.name || row.sale?.specialist?.name || '-'}
-                </div>
-            )
+            accessor: (row: Payment) => {
+                // Collect unique specialists from all items
+                const itemSpecialists = row.sale?.items
+                    ?.map((item: any) => item.specialistName)
+                    .filter((name: string | undefined): name is string => !!name) || [];
+                
+                const uniqueSpecialists = [...new Set(itemSpecialists)];
+                
+                if (uniqueSpecialists.length > 0) {
+                    return (
+                        <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                            {uniqueSpecialists.join(', ')}
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                        {row.appointment?.stylist?.name || row.sale?.specialist?.name || '-'}
+                    </div>
+                );
+            }
         },
         {
             header: 'Method',
@@ -743,7 +761,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     >
                         View
                     </Button>
-                    {(isAdmin || isManager) && row.sale?.saleStatus !== 'CANCELLED' && row.appointment?.status?.toUpperCase() !== 'CANCELLED' && (
+                    {row.sale?.saleStatus !== 'CANCELLED' && row.appointment?.status?.toUpperCase() !== 'CANCELLED' && (
                         <Button
                             variant="ghost"
                             icon={<XCircle size={16} />}
@@ -753,11 +771,16 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 border: '1px solid rgba(239, 68, 68, 0.2)',
                                 padding: '0.4rem 0.75rem',
                                 borderRadius: '0.625rem',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
+                                opacity: !canCancel ? 0.5 : 1,
+                                cursor: !canCancel ? 'not-allowed' : 'pointer'
                             }}
                             className="hover:bg-red-100"
+                            disabled={!canCancel}
+                            title={!canCancel ? "Ask Admin for permission" : ""}
                             onClick={(e) => {
                                 e.stopPropagation();
+                                if (!canCancel) { showToast("Ask Admin for permission", "error"); return; }
                                 setSelectedPayment(row);
                                 setIsCancelModalOpen(true);
                             }}
@@ -862,24 +885,28 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             onChange={(e) => setCustomerSearch(e.target.value)}
                         />
                     </div>
-                    <div className="space-y-1 min-w-[110px]">
-                        <label className="text-xs font-semibold text-slate-500 block">Start Date</label>
-                        <Input
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
-                        />
-                    </div>
-                    <div className="space-y-1 min-w-[110px]">
-                        <label className="text-xs font-semibold text-slate-500 block">End Date</label>
-                        <Input
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                            style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
-                        />
-                    </div>
+                    {isAdmin && (
+                        <>
+                            <div className="space-y-1 min-w-[110px]">
+                                <label className="text-xs font-semibold text-slate-500 block">Start Date</label>
+                                <Input
+                                    type="date"
+                                    value={dateRange.start}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                    style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                                />
+                            </div>
+                            <div className="space-y-1 min-w-[110px]">
+                                <label className="text-xs font-semibold text-slate-500 block">End Date</label>
+                                <Input
+                                    type="date"
+                                    value={dateRange.end}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                    style={{ height: '44px', paddingTop: '0', paddingBottom: '0' }}
+                                />
+                            </div>
+                        </>
+                    )}
                     <div className="space-y-1 min-w-[180px]">
                         <label className="text-xs font-semibold text-slate-500 block">Amount</label>
                         <Select

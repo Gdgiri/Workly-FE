@@ -39,9 +39,17 @@ import { allMenuItems } from '../components/Layout';
 const PermissionsSelector = ({ permissions, onChange }: { permissions: string[], onChange: (p: string[]) => void }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const { user } = useAuth();
+  const appId = (user as any)?.app_id || 'salon';
+
   // Dynamically generate modules from Sidebar items that are accessible to STAFF
   const modules = allMenuItems
-    .filter(item => item.roles.includes('STAFF') && item.id !== 'dashboard' && item.id !== 'ask-ai')
+    .filter(item => {
+      if (item.id === 'dashboard' || item.id === 'ask-ai') return false;
+      if (!item.roles.includes('STAFF')) return false;
+      if (item.id === 'checklist' && appId !== 'workly-service') return false;
+      return true;
+    })
     .map(item => ({
       id: item.id,
       label: item.label,
@@ -174,10 +182,9 @@ const isValidAvatar = (url: string | null | undefined): boolean => {
 
 const Stylists: React.FC = () => {
   const { showToast } = useToast();
-  const { user, isStaff, isAdmin, isManager } = useAuth();
-  const canAdd = isAdmin || isManager || (isStaff && user?.permissions?.includes('stylists.add'));
-  const canEdit = isAdmin || isManager || (isStaff && user?.permissions?.includes('stylists.edit'));
-
+  const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
+  const canAdd = hasPermission('stylists', 'add');
+  const canEdit = hasPermission('stylists', 'edit');
   const [viewMode, setViewMode] = useState<'list' | 'roaster'>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -912,7 +919,6 @@ const Stylists: React.FC = () => {
                 </div>
               </div>
 
-              {canAdd && (
                 <Button
                   onClick={() => {
                     setNewStylistImgUrl('');
@@ -922,16 +928,19 @@ const Stylists: React.FC = () => {
                     setIsModalOpen(true);
                   }}
                   icon={<MdAdd size={18} />}
+                  disabled={!canAdd}
+                  title={!canAdd ? "Ask Admin for permission" : ""}
                   style={{
                     height: '44px',
                     padding: '0 1.5rem',
                     fontWeight: 600,
-                    letterSpacing: '0.01em'
+                    letterSpacing: '0.01em',
+                    opacity: !canAdd ? 0.5 : 1,
+                    cursor: !canAdd ? 'not-allowed' : 'pointer'
                   }}
                 >
                   Add Specialist
                 </Button>
-              )}
             </div>
           </div>
 
@@ -1274,10 +1283,13 @@ const Stylists: React.FC = () => {
                                     </div>
                                   </div>
                                 </div>
-                                {canEdit && (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      if (!canEdit) {
+                                          showToast("Ask Admin for permission", "error");
+                                          return;
+                                      }
                                       const rawSpecs = stylist.specialization
                                         ? (typeof stylist.specialization === 'string' ? stylist.specialization.split(',') : (Array.isArray(stylist.specialization) ? stylist.specialization : [stylist.specialization]))
                                         : [];
@@ -1292,36 +1304,41 @@ const Stylists: React.FC = () => {
                                       setEditingStylist(stylistToEdit);
                                       setIsEditModalOpen(true);
                                     }}
+                                    disabled={!canEdit}
                                     style={{
                                       color: 'var(--primary)',
                                       border: 'none',
                                       background: 'var(--primary-light)',
-                                      cursor: 'pointer',
+                                      cursor: !canEdit ? 'not-allowed' : 'pointer',
                                       padding: '0.5rem',
                                       borderRadius: 'var(--radius-md)',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       transition: 'all var(--transition-base)',
-                                      boxShadow: 'var(--shadow-sm)'
+                                      boxShadow: 'var(--shadow-sm)',
+                                      opacity: !canEdit ? 0.5 : 1
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = 'var(--primary)';
-                                      e.currentTarget.style.color = 'white';
-                                      e.currentTarget.style.transform = 'scale(1.1)';
-                                      e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                                      if (canEdit) {
+                                        e.currentTarget.style.background = 'var(--primary)';
+                                        e.currentTarget.style.color = 'white';
+                                        e.currentTarget.style.transform = 'scale(1.1)';
+                                        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                                      }
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.background = 'var(--primary-light)';
-                                      e.currentTarget.style.color = 'var(--primary)';
-                                      e.currentTarget.style.transform = 'scale(1)';
-                                      e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                                      if (canEdit) {
+                                        e.currentTarget.style.background = 'var(--primary-light)';
+                                        e.currentTarget.style.color = 'var(--primary)';
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                                      }
                                     }}
-                                    title="Edit Specialist"
+                                    title={!canEdit ? "Ask Admin for permission" : "Edit Specialist"}
                                   >
                                     <MdEdit size={18} />
                                   </button>
-                                )}
                               </div>
 
                               <div className="space-y-2" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>

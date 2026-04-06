@@ -81,7 +81,9 @@ const Sales: React.FC<SalesProps> = ({
 
   const { formatPrice, currency, symbol } = useCurrency();
   const { showToast } = useToast();
-  const { user, isStaff, isAdmin } = useAuth(); // Get user, isStaff and isAdmin from auth hook
+  const { user, isStaff, isAdmin, hasPermission } = useAuth(); // Get user, isStaff and isAdmin from auth hook
+  const canAddSale = hasPermission('sales', 'add');
+  const canAddCustomer = hasPermission('customer', 'add');
   const { appId: appIdParam, businessName: businessNameParam } = useParams<{ appId: string; businessName: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -368,6 +370,7 @@ const Sales: React.FC<SalesProps> = ({
   const [successMessage, setSuccessMessage] = useState('');
   const [pendingAutoCheckout, setPendingAutoCheckout] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
 
   const fetchCustomerPackages = async (customerId: string) => {
     try {
@@ -709,6 +712,12 @@ const Sales: React.FC<SalesProps> = ({
         redeemedItemId: redemptionInfo?.itemId
       }];
     });
+  };
+  
+  const updateItemSpecialist = (id: string, specialistId: string | number, specialistName: string) => {
+    setCart(prev => prev.map(item =>
+      item.id === id ? { ...item, specialistId, specialistName } : item
+    ));
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -1291,16 +1300,19 @@ const Sales: React.FC<SalesProps> = ({
       selectedCustomerId !== 'WALK_IN';
 
     if (shouldVerifyOTP) {
+      setIsSummaryModalOpen(false);
       setPendingAction({ type: 'checkout' });
       await handleRequestOTP();
       return;
     }
 
+    setIsSummaryModalOpen(false);
     await executeCheckout();
   };
 
   const executeCompleteOrder = async () => {
     try {
+      setIsProcessingOrder(true);
       // Ensure payment values are reset to 0 for free orders
       setPaymentModal(prev => ({
         ...prev,
@@ -1313,6 +1325,8 @@ const Sales: React.FC<SalesProps> = ({
       // Process directly without payment modal
       const sale = await processDirectPayment();
 
+      setIsSummaryModalOpen(false);
+
       // Show success modal
       const invoiceNumber = sale?.invoices?.[0]?.invoiceNumber || sale?.saleNumber || sale?.id;
       setSuccessMessage(`Order completed successfully! All items redeemed from package.\nInvoice #${invoiceNumber}`);
@@ -1322,6 +1336,8 @@ const Sales: React.FC<SalesProps> = ({
       console.error('Complete order error:', error);
       showToast(error.response?.data?.error || 'Failed to complete order', 'error');
       setPaymentModal(prev => ({ ...prev, processing: false }));
+    } finally {
+      setIsProcessingOrder(false);
     }
   };
 
@@ -1333,6 +1349,7 @@ const Sales: React.FC<SalesProps> = ({
       selectedCustomerId !== 'WALK_IN';
 
     if (shouldVerifyOTP) {
+      setIsSummaryModalOpen(false);
       setPendingAction({ type: 'completeOrder' });
       await handleRequestOTP();
       return;
@@ -1549,8 +1566,8 @@ const Sales: React.FC<SalesProps> = ({
             : item.redeemedFromPackageId,
           redeemedItemId: item.redeemedItemId,
           redeemedQuantity: item.redeemedQuantity,
-          specialistId: selectedSpecialistId || undefined,
-          specialistName: selectedSpecialistName || undefined
+          specialistId: item.specialistId || selectedSpecialistId || undefined,
+          specialistName: item.specialistName || selectedSpecialistName || undefined
         })),
         customerId: selectedCustomerId === 'WALK_IN' ? null : (selectedCustomerId || null),
         specialistId: (selectedSpecialistId && selectedSpecialistId !== 'none' ? String(selectedSpecialistId) : null),
@@ -1590,29 +1607,28 @@ const Sales: React.FC<SalesProps> = ({
       const response = await api.post('/sales', saleData);
       const sale = response.data.sale;
 
-      // 3. Update vouchers if applied
-      if (appliedVouchers.length > 0) {
-        let remainingDeduction = voucherDeduction;
+      // 3. Update vouchers from response
+      if (response.data.vouchers && response.data.vouchers.length > 0) {
+        setVoucherClaims(prev => {
+          const newClaims = [...prev];
+          response.data.vouchers.forEach((v: any) => {
+            const index = newClaims.findIndex(c => c.id === v.claim.id);
+            if (index >= 0) {
+              newClaims[index] = {
+                ...newClaims[index],
+                balance: v.claim.balance,
+                status: v.claim.status
+              };
+            } else {
+              newClaims.push(v.claim);
+            }
+          });
+          return newClaims;
+        });
 
-        setVoucherClaims(prev => prev.map(c => {
-          const usedVoucher = appliedVouchers.find(v => v.code === c.voucherCode);
-          if (usedVoucher && remainingDeduction > 0) {
-            const amountUsed = Math.min(c.balance, remainingDeduction);
-            remainingDeduction -= amountUsed;
-            const newBalance = Math.max(0, c.balance - amountUsed);
-            return {
-              ...c,
-              balance: newBalance,
-              status: newBalance <= 0 ? 'redeemed' : 'partially_redeemed'
-            };
-          }
-          return c;
-        }));
-
-        // Update redeemed counts locally (approximate)
         setVouchers(prev => prev.map(v =>
           appliedVouchers.some(av => av.id === v.id)
-            ? { ...v, redeemedQty: v.redeemedQty + 1 }
+            ? { ...v, redeemedQty: (v.redeemedQty || 0) + 1 }
             : v
         ));
       }
@@ -1715,8 +1731,8 @@ const Sales: React.FC<SalesProps> = ({
           : item.redeemedFromPackageId,
         redeemedItemId: item.redeemedItemId,
         redeemedQuantity: item.redeemedQuantity,
-        specialistId: selectedSpecialistId || undefined,
-        specialistName: selectedSpecialistName || undefined
+        specialistId: item.specialistId || selectedSpecialistId || undefined,
+        specialistName: item.specialistName || selectedSpecialistName || undefined
       }));
 
       const calculatedSubtotal = calculatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -1797,27 +1813,30 @@ const Sales: React.FC<SalesProps> = ({
             });
             // handlePaymentSuccess(verifyResponse.data); // Removed to fix ReferenceError
 
-            // 5. Update vouchers if applied
-            if (appliedVouchers.length > 0) {
-              setVoucherClaims(prev => prev.map(c => {
-                const usedVoucher = appliedVouchers.find(v => v.code === c.voucherCode);
-                if (usedVoucher) {
-                  const redeemedAmount = Math.min(c.balance, calculatedTotal); // Cap at what's needed
-                  // Note: This logic might need refinement for multiple vouchers to decrement remainingTotal
-                  const newBalance = Math.max(0, c.balance - redeemedAmount);
-                  return {
-                    ...c,
-                    balance: newBalance,
-                    status: newBalance <= 0 ? 'redeemed' : 'partially_redeemed',
-                    redeemedAt: newBalance <= 0 ? new Date().toISOString().split('T')[0] : c.redeemedAt
-                  };
-                }
-                return c;
-              }));
+            // 5. Update vouchers from response if any were returned in verify or sale
+            // The Senior Developer stated that the createSale POST /sales returns the updated vouchers.
+            // We apply it here after verification to ensure we only update local state upon success.
+            if (saleResponse.data?.vouchers && saleResponse.data.vouchers.length > 0) {
+              setVoucherClaims(prev => {
+                const newClaims = [...prev];
+                saleResponse.data.vouchers.forEach((v: any) => {
+                  const index = newClaims.findIndex(c => c.id === v.claim.id);
+                  if (index >= 0) {
+                    newClaims[index] = {
+                      ...newClaims[index],
+                      balance: v.claim.balance,
+                      status: v.claim.status
+                    };
+                  } else {
+                    newClaims.push(v.claim);
+                  }
+                });
+                return newClaims;
+              });
 
               setVouchers(prev => prev.map(v =>
                 appliedVouchers.some(av => av.id === v.id)
-                  ? { ...v, redeemedQty: v.redeemedQty + 1 }
+                  ? { ...v, redeemedQty: (v.redeemedQty || 0) + 1 }
                   : v
               ));
             }
@@ -2903,15 +2922,21 @@ const Sales: React.FC<SalesProps> = ({
                         <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
                           <p style={{ margin: 0, fontSize: '0.85rem', marginBottom: '0.5rem' }}>No matching customers.</p>
                           <button
-                            onClick={() => setIsAddCustomerModalOpen(true)}
+                            onClick={() => {
+                                if (!canAddCustomer) { showToast("Ask Admin for permission", "error"); return; }
+                                setIsAddCustomerModalOpen(true);
+                            }}
+                            disabled={!canAddCustomer}
+                            title={!canAddCustomer ? "Ask Admin for permission" : ""}
                             style={{
                               background: 'none',
                               border: 'none',
                               color: 'var(--primary)',
                               fontSize: '0.85rem',
                               fontWeight: 600,
-                              cursor: 'pointer',
-                              textDecoration: 'underline'
+                              cursor: !canAddCustomer ? 'not-allowed' : 'pointer',
+                              textDecoration: 'underline',
+                              opacity: !canAddCustomer ? 0.5 : 1
                             }}
                           >
                             Add new customer?
@@ -3066,6 +3091,48 @@ const Sales: React.FC<SalesProps> = ({
                         <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#234C6A', fontWeight: 600, opacity: 0.8 }}>
                           {item.redeemedQuantity === item.quantity ? 'Package Redemption' : formatPrice(item.price)}
                         </p>
+                      </div>
+
+                      {/* Specialist Selection */}
+                      <div style={{ marginRight: '0.25rem' }}>
+                        <select
+                          value={item.specialistId || ''}
+                          onChange={(e) => {
+                            const sId = e.target.value;
+                            const sName = stylists.find(s => s.id.toString() === sId.toString())?.name || '';
+                            updateItemSpecialist(item.id, sId, sName);
+                          }}
+                          style={{
+                            fontSize: '0.65rem',
+                            padding: '0.15rem 0.6rem',
+                            borderRadius: '2rem',
+                            border: item.specialistId ? '1.5px solid var(--primary)' : '1.5px dashed var(--text-light)',
+                            background: item.specialistId ? 'var(--primary-light)' : 'white',
+                            color: item.specialistId ? 'var(--primary)' : 'var(--text-light)',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            maxWidth: '85px',
+                            outline: 'none',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--primary)';
+                            e.currentTarget.style.color = 'var(--primary)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!item.specialistId) {
+                                e.currentTarget.style.borderColor = 'var(--text-light)';
+                                e.currentTarget.style.color = 'var(--text-light)';
+                            }
+                          }}
+                        >
+                          <option value="">+ Staff</option>
+                          {stylists.map(s => (
+                            <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Quantity Controls */}
@@ -3671,18 +3738,22 @@ const Sales: React.FC<SalesProps> = ({
                     alignItems: 'center',
                     gap: '0.75rem'
                   }}
-                  disabled={cart.length === 0 || !selectedCustomerId || isVerifyingOTP}
-                  onClick={handleCheckoutClick}
+                  disabled={cart.length === 0 || !selectedCustomerId || isVerifyingOTP || !canAddSale}
+                  title={!canAddSale ? "Ask Admin for permission" : ""}
+                  onClick={() => {
+                      if (!canAddSale) { showToast("Ask Admin for permission", "error"); return; }
+                      handleCheckoutClick();
+                  }}
                   icon={finalTotal === 0 ? <CheckCircle size={20} strokeWidth={2.5} /> : <CreditCard size={20} strokeWidth={2.5} />}
-                  whileHover={(!selectedCustomerId || cart.length === 0 || isVerifyingOTP) ? {} : {
+                  whileHover={(!selectedCustomerId || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : {
                     scale: 1.02,
                     boxShadow: finalTotal === 0
                       ? '0 10px 25px rgba(16, 185, 129, 0.35)'
                       : '0 10px 25px rgba(79, 70, 229, 0.35)'
                   }}
-                  whileTap={(!selectedCustomerId || cart.length === 0 || isVerifyingOTP) ? {} : { scale: 0.98 }}
+                  whileTap={(!selectedCustomerId || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : { scale: 0.98 }}
                 >
-                  {isVerifyingOTP ? 'Sending OTP...' : (!selectedCustomerId && cart.length > 0 ? 'Select Customer' : (finalTotal === 0 ? 'Complete Order' : 'Checkout'))}
+                  {isVerifyingOTP ? 'Sending OTP...' : (!selectedCustomerId && cart.length > 0 ? 'Select Customer' : (finalTotal === 0 ? 'Complete Order' : (!canAddSale ? 'Locked' : 'Checkout')))}
                 </Button>
               </div>
             </div>
@@ -3788,8 +3859,8 @@ const Sales: React.FC<SalesProps> = ({
             <Button
               variant="primary"
               fullWidth
+              disabled={isProcessingOrder}
               onClick={() => {
-                setIsSummaryModalOpen(false);
                 if (finalTotal === 0) {
                   handleCompleteOrder();
                 } else {
@@ -3803,7 +3874,7 @@ const Sales: React.FC<SalesProps> = ({
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
               }}
             >
-              Confirm & {finalTotal === 0 ? 'Complete' : 'Pay'}
+              {isProcessingOrder ? 'Processing...' : `Confirm & ${finalTotal === 0 ? 'Complete' : 'Pay'}`}
             </Button>
           </div>
         </div>

@@ -13,6 +13,8 @@ import { RootState } from '../redux/store';
 import { useNotifications } from '../hooks/useNotifications';
 import { useTheme } from '../hooks/useTheme';
 import { useCurrency } from './CurrencyContext';
+import { useAuth } from '../hooks/useAuth';
+import { useToast } from './ToastContext';
 
 interface SidebarProps {
   onLogout: () => void;
@@ -245,15 +247,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
 
     if (!roleMatches) return false;
 
-    // Check permissions for STAFF (Specialists)
-    if (normalizedUserRole === 'STAFF') {
-      const perms = user?.permissions || [];
-      if (item.id === 'appointments' && !perms.includes('appointments.view')) return false;
-      if (item.id === 'inventory' && !perms.includes('inventory.view')) return false;
-      if (item.id === 'stylists' && !perms.includes('stylists.view')) return false;
-      if (item.id === 'services' && !perms.includes('services.view')) return false;
-      if (item.id === 'packages' && !perms.includes('packages.view')) return false;
-    }
+    // We no longer strictly hide modules based on .view permission here.
+    // Instead we let them render, and gate access upon clicking (with an Ask Admin toast).
 
     if (item.id === 'checklist' && appId !== 'workly-service') {
       return false;
@@ -266,7 +261,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
   const currentPath = location.pathname.split('/').pop();
   const activeTab = currentPath || 'dashboard';
 
+  const { hasPermission } = useAuth();
+  const { showToast } = useToast();
+
   const handleNavigate = (id: string) => {
+    const freeModules = ['dashboard', 'ask-ai', 'settings'];
+    if (!freeModules.includes(id) && !hasPermission(id, 'view')) {
+      showToast(`Access Denied: Please ask your Admin for permission to view this module.`, 'error');
+      return;
+    }
     navigate(`/${appId}/${businessName}/${id}`);
   };
 

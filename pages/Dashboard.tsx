@@ -17,6 +17,7 @@ import { PendingPaymentsCard } from '../components/dashboard/PendingPaymentsCard
 import { InventoryAlertsCard } from '../components/dashboard/InventoryAlertsCard';
 import { CashierSummaryCard } from '../components/dashboard/CashierSummaryCard';
 import { NewCustomersCard } from '../components/dashboard/NewCustomersCard';
+import { SpecialistStatsCard } from '../components/dashboard/SpecialistStatsCard';
 
 /* 
   GET /appointments/upcoming -> Array<Appointment>
@@ -714,8 +715,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Top Specialists Only */}
-        <div>
+        <div className="space-y-6">
           <TopStylists data={specialistData} loading={statsLoading} />
+          <SpecialistStatsCard />
         </div>
       </motion.div>
       {/* <div style={{

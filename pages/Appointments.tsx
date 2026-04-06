@@ -45,15 +45,15 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   const { showToast } = useToast();
 
   const { symbol, formatPrice } = useCurrency();
-  const { user, isStaff, isAdmin, isManager } = useAuth();
+  const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
 
   const maskPhone = (phone: string | undefined) => {
     if (!phone) return 'N/A';
     if (phone.length <= 4) return phone;
     return phone.slice(0, phone.length - 4) + '****';
   };
-  const canAdd = isAdmin || isManager || (isStaff && user?.permissions?.includes('appointments.add'));
-  const canEdit = isAdmin || isManager || (isStaff && user?.permissions?.includes('appointments.edit'));
+  const canAdd = hasPermission('appointments', 'add');
+  const canEdit = hasPermission('appointments', 'edit');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('today');
 
@@ -997,21 +997,27 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
             {(status !== 'COMPLETED' && status !== 'CANCELLED') && (
               <>
                 <button
-                  onClick={() => handleEdit(row)}
+                  onClick={() => {
+                      if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                      handleEdit(row);
+                  }}
                   style={{
                     color: '#475569',
                     background: '#f1f5f9',
                     border: '1px solid #e2e8f0',
-                    cursor: 'pointer',
+                    cursor: !canEdit ? 'not-allowed' : 'pointer',
                     fontSize: '0.875rem',
                     padding: '0.375rem 0.75rem',
                     borderRadius: '0.375rem',
                     fontWeight: 500,
                     marginRight: '0.5rem',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    opacity: !canEdit ? 0.5 : 1
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                  disabled={!canEdit}
+                  title={!canEdit ? "Ask Admin for permission" : ""}
+                  onMouseEnter={(e) => { if (canEdit) e.currentTarget.style.background = '#e2e8f0'; }}
+                  onMouseLeave={(e) => { if (canEdit) e.currentTarget.style.background = '#f1f5f9'; }}
                 >
                   Edit
                 </button>
@@ -1104,15 +1110,17 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
           <div style={{ flex: 1 }} />
 
           <div className="flex items-center" style={{ gap: '1.5rem' }}>
-            {canAdd && (
               <Button
-                onClick={handleCreateOpen}
-                // icon={<Plus size={18} />}
-                style={{ minWidth: '180px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => {
+                    if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                    handleCreateOpen();
+                }}
+                disabled={!canAdd}
+                title={!canAdd ? "Ask Admin for permission" : ""}
+                style={{ minWidth: '180px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
               >
                 New Schedule
               </Button>
-            )}
 
             <Button
               onClick={handleRefresh}

@@ -34,7 +34,9 @@ interface CustomersProps {
 const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const { showToast } = useToast();
     const { symbol } = useCurrency();
-    const { isStaff } = useAuth();
+    const { isStaff, hasPermission } = useAuth();
+    const canAdd = hasPermission('customers', 'add');
+    const canEdit = hasPermission('customers', 'edit');
     const { user } = useSelector((state: RootState) => state.auth);
     const { appId: appIdParam, businessName: businessNameParam } = useParams<{ appId: string; businessName: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -466,31 +468,40 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => handleEdit(row)}
+                        onClick={() => {
+                            if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                            handleEdit(row);
+                        }}
+                        title={!canEdit ? "Ask Admin for permission" : "Edit Customer"}
                         style={{
                             color: 'var(--text-dark)',
                             background: 'var(--bg-hover)',
                             border: '1px solid var(--border)',
                             padding: '0.5rem 1rem',
                             borderRadius: 'var(--radius-md)',
-                            cursor: 'pointer',
+                            cursor: !canEdit ? 'not-allowed' : 'pointer',
                             fontSize: '0.8125rem',
                             fontWeight: 600,
                             whiteSpace: 'nowrap',
                             boxShadow: 'var(--shadow-sm)',
-                            transition: 'all var(--transition-base)'
+                            transition: 'all var(--transition-base)',
+                            opacity: !canEdit ? 0.5 : 1
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-active)';
-                            e.currentTarget.style.borderColor = 'var(--primary)';
-                            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            if (canEdit) {
+                                e.currentTarget.style.background = 'var(--bg-active)';
+                                e.currentTarget.style.borderColor = 'var(--primary)';
+                                e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-hover)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                            e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                            e.currentTarget.style.transform = 'translateY(0)';
+                            if (canEdit) {
+                                e.currentTarget.style.background = 'var(--bg-hover)';
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }
                         }}
                     >
                         Edit
@@ -886,9 +897,14 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         Export
                     </Button>
                     <Button
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => {
+                            if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                            setIsModalOpen(true);
+                        }}
                         icon={<Plus size={18} />}
-                        style={{ height: '44px', fontWeight: 600 }}
+                        disabled={!canAdd}
+                        title={!canAdd ? "Ask Admin for permission" : ""}
+                        style={{ height: '44px', fontWeight: 600, opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
                     >
                         Add Customer
                     </Button>
@@ -2149,7 +2165,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                         display: 'inline-block',
                                                         marginBottom: '0.25rem'
                                                     }}>
-                                                        Balance: {symbol}{claim.balance.toFixed(2)}
+                                                        Balance: {symbol}{(claim.balance ?? 0).toFixed(2)}
                                                     </span>
                                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>
                                                         Status: {claim.status.replace('_', ' ')}
@@ -2165,7 +2181,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                         {(Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any)).map((usage: any, idx: number) => (
                                                             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                                                                 <span style={{ color: 'var(--text-dark)' }}>Sale #{usage.saleId ? usage.saleId.substring(0, 8) : 'N/A'}</span>
-                                                                <span style={{ color: '#ef4444', fontWeight: 500 }}>-{symbol}{usage.amount.toFixed(2)}</span>
+                                                                <span style={{ color: '#ef4444', fontWeight: 500 }}>-{symbol}{(usage.amount ?? 0).toFixed(2)}</span>
                                                             </div>
                                                         ))}
                                                     </div>
