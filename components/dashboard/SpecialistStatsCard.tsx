@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../UI';
-import { Users, DollarSign, TrendingUp, User, Calendar, Target, Award, ChevronRight, Activity } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, User, Calendar, Target, Award, ChevronRight, Activity, Search, X } from 'lucide-react';
 import api from '../../utils/api';
 import { useCurrency } from '../CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +15,9 @@ export const SpecialistStatsCard: React.FC<SpecialistStatsCardProps> = () => {
     const [loading, setLoading] = useState(false);
     const [specialists, setSpecialists] = useState<any[]>([]);
     const [selectedSpecialistId, setSelectedSpecialistId] = useState<string>('');
+    const [searchTerm, setSearchTerm] = useState('Entire Team');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const [dateRange, setDateRange] = useState({
         from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
         to: new Date().toISOString().split('T')[0]
@@ -30,7 +33,25 @@ export const SpecialistStatsCard: React.FC<SpecialistStatsCardProps> = () => {
             }
         };
         fetchStylists();
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    const filteredSpecialists = specialists.filter(s => 
+        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleSelectSpecialist = (id: string, name: string) => {
+        setSelectedSpecialistId(id);
+        setSearchTerm(id ? name : 'Entire Team');
+        setIsDropdownOpen(false);
+    };
 
     const fetchStats = async () => {
         try {
@@ -100,26 +121,122 @@ export const SpecialistStatsCard: React.FC<SpecialistStatsCardProps> = () => {
                         </div>
                         <div style={{ flex: 1 }}>
                             <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Performance Target</p>
-                            <select
-                                value={selectedSpecialistId}
-                                onChange={(e) => setSelectedSpecialistId(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    fontSize: '1rem',
-                                    fontWeight: 800,
-                                    color: 'var(--text-dark)',
-                                    outline: 'none',
-                                    padding: '0.125rem 0',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <option value="">Entire Team</option>
-                                {specialists.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
+                            <div ref={dropdownRef} style={{ position: 'relative' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Search specialist..."
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setIsDropdownOpen(true);
+                                            if (!e.target.value) setSelectedSpecialistId('');
+                                        }}
+                                        onFocus={() => {
+                                            setIsDropdownOpen(true);
+                                            if(searchTerm === 'Entire Team') setSearchTerm('');
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            fontSize: '1rem',
+                                            fontWeight: 800,
+                                            color: 'var(--text-dark)',
+                                            outline: 'none',
+                                            padding: '0.125rem 0',
+                                        }}
+                                    />
+                                    {searchTerm && searchTerm !== 'Entire Team' && (
+                                        <X 
+                                            size={14} 
+                                            style={{ cursor: 'pointer', color: 'var(--text-light)' }} 
+                                            onClick={() => handleSelectSpecialist('', '')} 
+                                        />
+                                    )}
+                                </div>
+
+                                <AnimatePresence>
+                                    {isDropdownOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: '-3.5rem',
+                                                right: '-1rem',
+                                                background: 'white',
+                                                borderRadius: 'var(--radius-lg)',
+                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
+                                                border: '1px solid var(--border-light)',
+                                                zIndex: 50,
+                                                marginTop: '0.5rem',
+                                                maxHeight: '250px',
+                                                overflowY: 'auto'
+                                            }}
+                                            className="custom-scrollbar"
+                                        >
+                                            <div
+                                                onClick={() => handleSelectSpecialist('', '')}
+                                                style={{
+                                                    padding: '0.75rem 1rem',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 700,
+                                                    color: !selectedSpecialistId ? 'var(--primary)' : 'var(--text-dark)',
+                                                    background: !selectedSpecialistId ? 'var(--bg-body)' : 'transparent',
+                                                    cursor: 'pointer',
+                                                    borderBottom: '1px solid var(--border-light)'
+                                                }}
+                                            >
+                                                Entire Team
+                                            </div>
+                                            {filteredSpecialists.length > 0 ? (
+                                                filteredSpecialists.map(s => (
+                                                    <div
+                                                        key={s.id}
+                                                        onClick={() => handleSelectSpecialist(s.id, s.name)}
+                                                        style={{
+                                                            padding: '0.75rem 1rem',
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: 700,
+                                                            color: selectedSpecialistId === s.id ? 'var(--primary)' : 'var(--text-dark)',
+                                                            background: selectedSpecialistId === s.id ? 'var(--bg-body)' : 'transparent',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.75rem'
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: '2rem',
+                                                            height: '2rem',
+                                                            borderRadius: '50%',
+                                                            background: getAvatarColor(s.name),
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: 'white',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 900,
+                                                            flexShrink: 0
+                                                        }}>
+                                                            {s.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span style={{ flex: 1 }}>{s.name}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-light)', fontSize: '0.75rem' }}>
+                                                    <Search size={20} style={{ margin: '0 auto 0.5rem', opacity: 0.3 }} />
+                                                    No specialists found
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
 
