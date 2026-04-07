@@ -18,6 +18,7 @@ import { InventoryAlertsCard } from '../components/dashboard/InventoryAlertsCard
 import { CashierSummaryCard } from '../components/dashboard/CashierSummaryCard';
 import { NewCustomersCard } from '../components/dashboard/NewCustomersCard';
 import { SpecialistStatsCard } from '../components/dashboard/SpecialistStatsCard';
+import { useAuth } from '../hooks/useAuth';
 
 /* 
   GET /appointments/upcoming -> Array<Appointment>
@@ -120,6 +121,7 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   // Filter State
   const [filterType, setFilterType] = useState<FilterType>('today');
@@ -714,11 +716,13 @@ const Dashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Top Specialists Only */}
-        <div className="space-y-6">
-          <TopStylists data={specialistData} loading={statsLoading} />
-          <SpecialistStatsCard />
-        </div>
+        {/* Top Specialists and Stats - Admin Only */}
+        {isAdmin && (
+          <div className="space-y-6">
+            <TopStylists data={specialistData} loading={statsLoading} />
+            <SpecialistStatsCard />
+          </div>
+        )}
       </motion.div>
       {/* <div style={{
         position: 'fixed',
