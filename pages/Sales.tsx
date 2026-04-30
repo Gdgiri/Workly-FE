@@ -23,6 +23,8 @@ import { fetchPayments, invalidatePaymentCache } from '../redux/slices/paymentSl
 import { fetchCustomers, createCustomer, invalidateCustomerCache } from '../redux/slices/customerSlice';
 import { fetchSettings } from '../redux/slices/settingSlice';
 import { Skeleton } from '../components/Skeleton';
+import { Switch } from '../components/Switch';
+import { QuotationSystem } from '../components/QuotationSystem';
 
 interface SalesProps {
   paymentMethods: PaymentMethod[];
@@ -99,6 +101,7 @@ const Sales: React.FC<SalesProps> = ({
 
   const isIndianBeautyArt = user?.businessName?.toLowerCase() === 'indianbeautyart';
   const shouldHideFeatures = isIndianBeautyArt && (isAdmin || isStaff);
+  const [isQuotationMode, setIsQuotationMode] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'services' | 'products' | 'combos' | 'vouchers'>('services');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -614,7 +617,8 @@ const Sales: React.FC<SalesProps> = ({
         depositAmount: paidAmount || 0,
         pendingSaleId: saleId || null,
         appointmentId: null,
-        manualDiscount: '',
+        manualDiscount: location.state.partialPaymentData.discount?.toString() || '0',
+        showManualDiscount: (parseFloat(location.state.partialPaymentData.discount?.toString() || '0')) > 0,
         customerSearchTerm: customerName || ''
       };
 
@@ -1093,14 +1097,17 @@ const Sales: React.FC<SalesProps> = ({
   // Sync payment modal amount with final total (which includes manual discounts, vouchers, and deposits)
   useEffect(() => {
     if (paymentModal.open) {
-      setPaymentModal(prev => ({
-        ...prev,
-        amount: finalTotal,
-        // If it's not cash, sync tendered too. If cash, only sync if tendered was already equal to amount (initial state)
-        tendered: prev.method === 'CASH'
-          ? (prev.tendered === prev.amount ? finalTotal : prev.tendered)
-          : finalTotal
-      }));
+      setPaymentModal(prev => {
+        const currentRefreshedTotal = finalTotal;
+        return {
+          ...prev,
+          amount: currentRefreshedTotal,
+          // If it's not cash, sync tendered too. If cash, only sync if tendered was already equal to amount (initial state)
+          tendered: prev.method === 'CASH'
+            ? (prev.tendered === prev.amount ? currentRefreshedTotal : prev.tendered)
+            : currentRefreshedTotal
+        };
+      });
     }
   }, [finalTotal, paymentModal.open]);
 
@@ -1276,18 +1283,21 @@ const Sales: React.FC<SalesProps> = ({
     }
   };
 
-  const executeCheckout = async () => {
+  const executeCheckout = async (forcedAmount?: number) => {
     // Open payment modal
     setSplitPayments([]);
     setIsSplitPaymentMode(false);
-    setCurrentSplitAmount(finalTotal.toString());
+    
+    const checkoutAmount = forcedAmount !== undefined ? forcedAmount : finalTotal;
+    
+    setCurrentSplitAmount(checkoutAmount.toString());
     setCurrentSplitMethod('CASH');
 
     setPaymentModal({
       open: true,
       method: 'CASH',
-      amount: finalTotal,
-      tendered: finalTotal, // Default tendered to exact amount
+      amount: checkoutAmount,
+      tendered: checkoutAmount, // Default tendered to exact amount
       processing: false
     });
   };
@@ -1307,7 +1317,24 @@ const Sales: React.FC<SalesProps> = ({
     }
 
     setIsSummaryModalOpen(false);
-    await executeCheckout();
+
+    let forcedTotal: number | undefined = undefined;
+
+    // Final source-of-truth check for negotiated discounts
+    // If we have a pending auto-checkout from a negotiated sale, ensure we use the negotiated discount
+    if (location.state?.partialPaymentData?.discount !== undefined && pendingAutoCheckout) {
+      const negotiatedDiscount = parseFloat(location.state.partialPaymentData.discount.toString()) || 0;
+      if (negotiatedDiscount > 0) {
+        console.log(`POS: Locking in negotiated discount: ${negotiatedDiscount}`);
+        setManualDiscount(negotiatedDiscount.toString());
+        setShowManualDiscount(true);
+        
+        // Calculate forced total immediately to avoid waiting for next render
+        forcedTotal = Math.max(0, subtotal - negotiatedDiscount - depositAmount);
+      }
+    }
+
+    await executeCheckout(forcedTotal);
   };
 
   const executeCompleteOrder = async () => {
@@ -1374,19 +1401,24 @@ const Sales: React.FC<SalesProps> = ({
 
   // Trigger checkout/complete order once cart and customer are ready
   useEffect(() => {
-    if (pendingAutoCheckout && cart.length > 0 && selectedCustomerId) {
+    // Only trigger if we have everything and the subtotal has been calculated (not 0)
+    if (pendingAutoCheckout && cart.length > 0 && selectedCustomerId && subtotal > 0) {
       // Small delay to ensure all reactive calculations (discounts, packages, finalTotal) are settled
       const timer = setTimeout(() => {
-        setPendingAutoCheckout(false);
-        if (finalTotal === 0) {
-          handleCompleteOrder();
-        } else {
-          handleCheckout();
+        // Double check values right before firing
+        if (pendingAutoCheckout) {
+          console.log(`POS: Auto-checkout triggering with Total: ${finalTotal}, Discount: ${totalDiscount}`);
+          setPendingAutoCheckout(false);
+          if (finalTotal === 0) {
+            handleCompleteOrder();
+          } else {
+            handleCheckout();
+          }
         }
-      }, 500);
+      }, 800); // Increased delay slightly for stability
       return () => clearTimeout(timer);
     }
-  }, [cart.length, pendingAutoCheckout, selectedCustomerId, finalTotal, handleCheckout, handleCompleteOrder]);
+  }, [cart.length, pendingAutoCheckout, selectedCustomerId, finalTotal, subtotal]);
 
 
   // Helper for Split Payments
@@ -2059,12 +2091,25 @@ const Sales: React.FC<SalesProps> = ({
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-gray)'; }}
           >+</button>
+
+          {/* SERVICE SEGMENT TOGGLE */}
+          {appId.startsWith('workly-service') && (
+            <div style={{ marginLeft: '1rem', borderLeft: '1px solid var(--border)', paddingLeft: '1rem', display: 'flex', alignItems: 'center' }}>
+              <Switch 
+                isOn={isQuotationMode}
+                onToggle={() => setIsQuotationMode(!isQuotationMode)}
+                activeLabel="Quotes & Invoices"
+                inactiveLabel="Normal Sales"
+              />
+            </div>
+          )}
         </div>,
         document.getElementById('header-slot')!
       )}
 
       {/* CONTENT GRID */}
-      <div style={{
+      {!isQuotationMode ? (
+        <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 30rem',
         gap: '1.5rem',
@@ -3759,7 +3804,10 @@ const Sales: React.FC<SalesProps> = ({
             </div>
           </div>
         </Card >
-      </div>
+        </div>
+      ) : (
+        <QuotationSystem />
+      )}
 
       {/* Items Summary Modal */}
       <Modal

@@ -569,8 +569,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     if (match && match[1]) method = match[1].trim().toUpperCase();
                 }
 
-                const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || 
-                                    (row.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0));
+                const isRedemption = !row.isPendingSale && (method === 'VOUCHER' || method === 'PACKAGE' || 
+                                    (row.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0)));
                 
                 const displayAmount = (isRedemption && row.amount !== 0) ? 0 : row.amount;
 
@@ -620,8 +620,10 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 }
 
                 // Check for Voucher/Package Redemption (Zero amount completed sales)
-                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN' || displayMethod === 'CASH') &&
+                // [FIX] Ensure we don't label PENDING invoices (like converted quotations) as Vouchers
+                if ((displayMethod === 'UNKNOWN' || displayMethod === 'CASH') &&
                     row.amount === 0 &&
+                    !row.isPendingSale &&
                     (row.sale?.saleStatus === 'COMPLETED' || row.paymentStatus === 'COMPLETED')) {
                     
                     // Distinguish between Package and Voucher
@@ -721,12 +723,19 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 className="hover:bg-blue-200"
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    const subtotalAmount = (row.sale as any)?.subtotal || (row.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+                                    const totalPayable = (row.sale as any)?.totalAmount || row.amount || 0;
+                                    const explicitDiscount = (row.sale as any)?.discount || 0;
+                                    // Fail-safe: if explicit discount is 0 but total < subtotal, infer the discount
+                                    const effectiveDiscount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotalAmount - totalPayable);
+
                                     const partialData = {
                                         customerId: row.appointment?.customer?.id || (row.sale as any)?.customer?.id,
                                         customerName: row.appointment?.customer?.name || (row.sale as any)?.customer?.name,
                                         customerPhone: row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile,
-                                        paidAmount: row.sale?.paidAmount ?? row.amount,
+                                        paidAmount: row.sale?.paidAmount ?? 0,
                                         items: (row.sale as any)?.items || [],
+                                        discount: effectiveDiscount,
                                         transactionId: row.transactionId || row.id,
                                         saleId: row.sale?.id,
                                         saleNumber: (row.sale as any)?.saleNumber,
@@ -761,7 +770,10 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     >
                         View
                     </Button>
-                    {row.sale?.saleStatus !== 'CANCELLED' && row.appointment?.status?.toUpperCase() !== 'CANCELLED' && (
+                    {row.sale?.saleStatus !== 'CANCELLED' && 
+                     row.appointment?.status?.toUpperCase() !== 'CANCELLED' && 
+                     row.sale?.saleStatus !== 'COMPLETED' && 
+                     row.paymentStatus !== 'COMPLETED' && (
                         <Button
                             variant="ghost"
                             icon={<XCircle size={16} />}
@@ -1505,21 +1517,32 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                 {formatPrice((selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0))}
                                             </span>
                                         </div>
-                                        {((selectedPayment.sale as any).discount > 0) && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                <span style={{ color: 'var(--text-gray)' }}>Discount</span>
-                                                <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice((selectedPayment.sale as any).discount)}</span>
-                                            </div>
-                                        )}
+                                        {(() => {
+                                            const sub = (selectedPayment.sale as any).subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+                                            const total = selectedPayment.amount || (selectedPayment.sale as any).totalAmount || 0;
+                                            const explicitDisc = (selectedPayment.sale as any).discount || 0;
+                                            const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, sub - total);
+                                            
+                                            if (effectiveDisc <= 0) return null;
+                                            
+                                            return (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                    <span style={{ color: 'var(--text-gray)' }}>Discount</span>
+                                                    <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
+                                                </div>
+                                            );
+                                        })()}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
                                             <span style={{ color: 'var(--text-gray)', fontWeight: 600 }}>Balance Due</span>
                                             <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
                                                 {(() => {
                                                     const sub = (selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-                                                    const disc = (selectedPayment.sale as any).discount || 0;
-                                                    const total = sub - disc;
+                                                    const total = selectedPayment.amount || (selectedPayment.sale as any).totalAmount || 0;
+                                                    const explicitDisc = (selectedPayment.sale as any).discount || 0;
+                                                    const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, sub - total);
+                                                    
                                                     const paid = (selectedPayment.sale as any).paidAmount || 0;
-                                                    const balance = total - paid;
+                                                    const balance = (sub - effectiveDisc) - paid;
                                                     return formatPrice(Math.max(0, balance));
                                                 })()}
                                             </span>
@@ -1668,12 +1691,19 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     style={{ height: '3rem', borderRadius: 'var(--radius-xl)', backgroundColor: '#4f46e5' }}
                                     icon={<Play size={18} />}
                                     onClick={() => {
+                                        const subtotalAmount = (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+                                        const totalPayable = (selectedPayment.sale as any)?.totalAmount || selectedPayment.amount || 0;
+                                        const explicitDiscount = (selectedPayment.sale as any)?.discount || 0;
+                                        // Fail-safe: if explicit discount is 0 but total < subtotal, infer the discount
+                                        const effectiveDiscount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotalAmount - totalPayable);
+
                                         const partialData = {
                                             customerId: selectedPayment.appointment?.customer?.id || (selectedPayment.sale as any)?.customer?.id,
                                             customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name,
                                             customerPhone: selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile,
-                                            paidAmount: (selectedPayment.sale as any)?.paidAmount || selectedPayment.amount,
+                                            paidAmount: (selectedPayment.sale as any)?.paidAmount || 0,
                                             items: (selectedPayment.sale as any)?.items || [],
+                                            discount: effectiveDiscount,
                                             transactionId: selectedPayment.transactionId || selectedPayment.id,
                                             saleId: selectedPayment.sale?.id,
                                             saleNumber: (selectedPayment.sale as any)?.saleNumber,

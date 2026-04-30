@@ -27,30 +27,39 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Add business name context if available in URL or fallback to localStorage
+        // Add business name and appId context if available in URL
         const pathParts = window.location.pathname.split('/').filter(p => p);
+        let appId = null;
         let businessName = null;
 
         if (pathParts.length >= 2) {
             // URL format: /appId/businessName/...
+            appId = pathParts[0];
             businessName = pathParts[1];
         }
 
-        // Fallback to localStorage if not in URL
+        // Fallback for businessName to localStorage if not in URL
         if (!businessName) {
             try {
                 const userJson = localStorage.getItem('user');
                 if (userJson) {
                     const userData = JSON.parse(userJson);
                     businessName = userData.businessName;
+                    appId = appId || userData.appId || userData.app_id;
                 }
             } catch (e) {
-                console.warn('Failed to parse user from localStorage for business name header');
+                console.warn('Failed to parse user from localStorage for context headers');
             }
         }
 
         if (businessName) {
             config.headers['x-business-name'] = businessName;
+        }
+
+        if (appId) {
+            // Normalize appId (convert workly_service to workly-service)
+            const normalizedAppId = appId.replace('_', '-');
+            config.headers['x-app-id'] = normalizedAppId;
         }
 
         return config;

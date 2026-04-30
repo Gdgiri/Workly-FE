@@ -781,28 +781,59 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
               top: dropdownDirection === 'down' ? '100%' : 'auto',
               bottom: dropdownDirection === 'up' ? '100%' : 'auto',
               left: 0, right: 0,
-              background: 'var(--bg-card)', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              zIndex: 50, maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)',
+              background: 'var(--bg-card)', 
+              borderRadius: 'var(--radius-lg)', 
+              boxShadow: 'var(--shadow-xl)',
+              zIndex: 9999, 
+              maxHeight: '250px', 
+              overflowY: 'auto', 
+              border: '1px solid var(--border)',
               marginTop: dropdownDirection === 'down' ? '0.25rem' : '0',
               marginBottom: dropdownDirection === 'up' ? '0.25rem' : '0'
             }}
           >
             {filteredOptions.length > 0 ? (
-              filteredOptions.map(opt => (
+              filteredOptions.map((opt) => (
                 <div
                   key={opt.value}
                   onClick={() => handleSelect(opt)}
-                  style={{ padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-dark)' }}
-                  className="hover:bg-gray-50"
-                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  style={{ 
+                    padding: '0.75rem 1rem', 
+                    cursor: 'pointer', 
+                    fontSize: '0.875rem', 
+                    color: 'var(--text-dark)',
+                    transition: 'background-color 0.2s ease',
+                    borderBottom: '1px solid var(--border-light)'
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                  }}
                 >
-                  {opt.label}
+                  <div style={{ fontWeight: 600 }}>{opt.label}</div>
                 </div>
               ))
             ) : (
               searchTerm && allowCustom && (
-                <div style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', color: 'var(--text-gray)' }}>
-                  Use "{searchTerm}"
+                <div 
+                  onClick={() => handleSelect({ value: searchTerm, label: searchTerm })}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={{ 
+                    padding: '0.75rem 1rem', 
+                    fontSize: '0.85rem', 
+                    color: 'var(--primary)', 
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Create "{searchTerm}"
                 </div>
               )
             )}
