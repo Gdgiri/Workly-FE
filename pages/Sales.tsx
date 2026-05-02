@@ -2044,7 +2044,7 @@ const Sales: React.FC<SalesProps> = ({
                   borderRadius: '0.625rem',
                   cursor: 'pointer',
                   background: isActive ? 'var(--primary)' : 'var(--bg-card)',
-                  color: isActive ? '#fff' : 'var(--text-gray)',
+                  color: isActive ? '#fff' : 'var(--text-black)',
                   border: isActive ? '1.5px solid var(--primary)' : '1.5px solid var(--border)',
                   fontWeight: 600, fontSize: '0.82rem',
                   whiteSpace: 'nowrap', flexShrink: 0,
@@ -2084,12 +2084,12 @@ const Sales: React.FC<SalesProps> = ({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: '2.1rem', height: '2.1rem', flexShrink: 0,
               borderRadius: '0.5rem', border: '1.5px dashed var(--border)',
-              background: 'transparent', color: 'var(--text-gray)',
+              background: 'transparent', color: 'var(--text-black)',
               cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
               transition: 'all 0.2s'
             }}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-gray)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-black)'; }}
           >+</button>
 
           {/* SERVICE SEGMENT TOGGLE */}
@@ -2173,7 +2173,7 @@ const Sales: React.FC<SalesProps> = ({
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     background: activeTab === 'services' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'services' ? 'var(--primary)' : 'var(--text-gray)',
+                    color: activeTab === 'services' ? 'var(--primary)' : 'var(--text-black)',
                     boxShadow: activeTab === 'services' ? 'var(--shadow-md)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
@@ -2191,7 +2191,7 @@ const Sales: React.FC<SalesProps> = ({
                   onMouseLeave={(e) => {
                     if (activeTab !== 'services') {
                       e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-gray)';
+                      e.currentTarget.style.color = 'var(--text-black)';
                       e.currentTarget.style.transform = 'none';
                     }
                   }}
@@ -2208,7 +2208,7 @@ const Sales: React.FC<SalesProps> = ({
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     background: activeTab === 'products' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'products' ? 'var(--primary)' : 'var(--text-gray)',
+                    color: activeTab === 'products' ? 'var(--primary)' : 'var(--text-black)',
                     boxShadow: activeTab === 'products' ? 'var(--shadow-md)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
@@ -2226,7 +2226,7 @@ const Sales: React.FC<SalesProps> = ({
                   onMouseLeave={(e) => {
                     if (activeTab !== 'products') {
                       e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-gray)';
+                      e.currentTarget.style.color = 'var(--text-black)';
                       e.currentTarget.style.transform = 'none';
                     }
                   }}
@@ -2243,7 +2243,7 @@ const Sales: React.FC<SalesProps> = ({
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     background: activeTab === 'combos' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'combos' ? 'var(--primary)' : 'var(--text-gray)',
+                    color: activeTab === 'combos' ? 'var(--primary)' : 'var(--text-black)',
                     boxShadow: activeTab === 'combos' ? 'var(--shadow-md)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
@@ -2261,7 +2261,7 @@ const Sales: React.FC<SalesProps> = ({
                   onMouseLeave={(e) => {
                     if (activeTab !== 'combos') {
                       e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-gray)';
+                      e.currentTarget.style.color = 'var(--text-black)';
                       e.currentTarget.style.transform = 'none';
                     }
                   }}
@@ -2278,7 +2278,7 @@ const Sales: React.FC<SalesProps> = ({
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     background: activeTab === 'vouchers' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'vouchers' ? 'var(--primary)' : 'var(--text-gray)',
+                    color: activeTab === 'vouchers' ? 'var(--primary)' : 'var(--text-black)',
                     boxShadow: activeTab === 'vouchers' ? 'var(--shadow-md)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
@@ -2296,7 +2296,7 @@ const Sales: React.FC<SalesProps> = ({
                   onMouseLeave={(e) => {
                     if (activeTab !== 'vouchers') {
                       e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-gray)';
+                      e.currentTarget.style.color = 'var(--text-black)';
                       e.currentTarget.style.transform = 'none';
                     }
                   }}
@@ -2314,7 +2314,7 @@ const Sales: React.FC<SalesProps> = ({
                     onChange={(e) => setShowInactive(e.target.checked)}
                     style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
                   />
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-gray)', fontWeight: 600, userSelect: 'none' }}>Show Inactive</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-black)', fontWeight: 600, userSelect: 'none' }}>Show Inactive</span>
                 </label>
               )} */}
 
@@ -2486,7 +2486,7 @@ const Sales: React.FC<SalesProps> = ({
                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.5rem' }}>
                       {/* Top Row: Name only */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <h4 className="text-slate-900 dark:text-slate-100" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.3, flex: 1, textAlign: 'left' }}>
+                        <h4 className="text-black dark:text-black" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.3, flex: 1, textAlign: 'left' }}>
                           {item.name}
                         </h4>
                       </div>
@@ -2502,7 +2502,7 @@ const Sales: React.FC<SalesProps> = ({
                           />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                          <p className="text-slate-600 dark:text-slate-400" style={{ margin: 0, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                          <p className="text-black dark:text-black" style={{ margin: 0, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
                             {activeTab === 'services'
                               ? `${(item as any).duration} mins`
                               : activeTab === 'products'
@@ -2518,7 +2518,7 @@ const Sales: React.FC<SalesProps> = ({
                                   : `${(item as any).items.length} items`
                             }
                           </p>
-                          <div className="text-slate-900 dark:text-white" style={{ fontWeight: 800, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
+                          <div className="text-black dark:text-white" style={{ fontWeight: 800, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
                             {formatPrice(activeTab === 'vouchers' ? (item as any).sellingPrice : item.price)}
                           </div>
                         </div>
@@ -2535,7 +2535,7 @@ const Sales: React.FC<SalesProps> = ({
                 background: 'var(--bg-card)',
                 borderRadius: '1rem',
                 border: '1px solid var(--border)',
-                color: 'var(--text-gray)'
+                color: 'var(--text-black)'
               }}>
                 <ShoppingBag size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                 <p style={{ fontWeight: 600 }}>No items found</p>
@@ -2610,12 +2610,12 @@ const Sales: React.FC<SalesProps> = ({
                     border: '1px solid var(--border)',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                   }}>
-                    <User size={20} style={{ color: selectedCustomerId === 'WALK_IN' ? 'var(--text-gray)' : 'var(--primary)' }} />
+                    <User size={20} style={{ color: selectedCustomerId === 'WALK_IN' ? 'var(--text-black)' : 'var(--primary)' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                     <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>{selectedCustomer?.name}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)', fontWeight: 500 }}>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)', fontWeight: 500 }}>
                         {(isStaff && fraudProtection) ? maskPhone(selectedCustomer?.phone) : selectedCustomer?.phone}
                       </p>
                       {selectedSpecialistName && (
@@ -2642,7 +2642,7 @@ const Sales: React.FC<SalesProps> = ({
                       justifyContent: 'center',
                       background: 'var(--bg-card)',
                       border: '1px solid var(--border)',
-                      color: selectedSpecialistName ? 'var(--primary)' : 'var(--text-gray)',
+                      color: selectedSpecialistName ? 'var(--primary)' : 'var(--text-black)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                       boxShadow: selectedSpecialistName ? '0 2px 4px rgba(79, 70, 229, 0.1)' : 'none'
@@ -2653,7 +2653,7 @@ const Sales: React.FC<SalesProps> = ({
                       e.currentTarget.style.background = 'var(--bg-hover)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = selectedSpecialistName ? 'var(--primary)' : 'var(--text-gray)';
+                      e.currentTarget.style.color = selectedSpecialistName ? 'var(--primary)' : 'var(--text-black)';
                       e.currentTarget.style.borderColor = 'var(--border)';
                       e.currentTarget.style.background = 'var(--bg-card)';
                     }}
@@ -2671,7 +2671,7 @@ const Sales: React.FC<SalesProps> = ({
                       justifyContent: 'center',
                       background: 'var(--bg-card)',
                       border: '1px solid var(--border)',
-                      color: 'var(--text-gray)',
+                      color: 'var(--text-black)',
                       cursor: 'pointer',
                       transition: 'all 0.2s'
                     }}
@@ -2680,7 +2680,7 @@ const Sales: React.FC<SalesProps> = ({
                       e.currentTarget.style.borderColor = 'var(--danger)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = 'var(--text-gray)';
+                      e.currentTarget.style.color = 'var(--text-black)';
                       e.currentTarget.style.borderColor = 'var(--border)';
                     }}
                   >
@@ -2693,7 +2693,7 @@ const Sales: React.FC<SalesProps> = ({
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                   {/* Search Input */}
                   <div style={{ position: 'relative', flex: 1 }}>
-                    <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', opacity: 0.5, pointerEvents: 'none' }} />
+                    <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', opacity: 0.5, pointerEvents: 'none' }} />
                     <input
                       type="text"
                       placeholder="Search Customer..."
@@ -2740,7 +2740,7 @@ const Sales: React.FC<SalesProps> = ({
                         transform: 'translateY(-50%)',
                         background: 'none',
                         border: 'none',
-                        color: 'var(--text-gray)',
+                        color: 'var(--text-black)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -2889,7 +2889,7 @@ const Sales: React.FC<SalesProps> = ({
                       zIndex: 10
                     }}>
                       <div style={{ position: 'relative' }}>
-                        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)' }} />
+                        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)' }} />
                         <input
                           type="text"
                           placeholder="Type to filter..."
@@ -2952,7 +2952,7 @@ const Sales: React.FC<SalesProps> = ({
                             >
                               <div>
                                 <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{c.name}</p>
-                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)' }}>
                                   {(isStaff && fraudProtection) ? maskPhone(c.phone) : c.phone}
                                 </p>
                               </div>
@@ -3032,7 +3032,7 @@ const Sales: React.FC<SalesProps> = ({
                           </div>
                           <div style={{ flex: 1 }}>
                             <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Quick Walk-in</p>
-                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-gray)' }}>No customer details needed</p>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)' }}>No customer details needed</p>
                           </div>
                         </div>
                       )}
@@ -3074,7 +3074,7 @@ const Sales: React.FC<SalesProps> = ({
                   <ShoppingBag size={56} strokeWidth={1} style={{ color: 'var(--primary)', position: 'relative', zIndex: 1 }} />
                 </div>
                 <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.75rem', letterSpacing: '-0.025em' }}>Your cart is empty</p>
-                <p style={{ fontSize: '0.9375rem', color: 'var(--text-gray)', textAlign: 'center', maxWidth: '260px', lineHeight: 1.6, fontWeight: 500 }}>
+                <p style={{ fontSize: '0.9375rem', color: 'var(--text-black)', textAlign: 'center', maxWidth: '260px', lineHeight: 1.6, fontWeight: 500 }}>
                   Select services or products from the catalogue to get started.
                 </p>
               </div>
@@ -3289,7 +3289,7 @@ const Sales: React.FC<SalesProps> = ({
                     <User size={18} style={{ color: 'var(--primary)' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-gray)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.125rem' }}>Specialist</p>
+                    <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-black)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.125rem' }}>Specialist</p>
                     <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-dark)' }}>
                       {selectedSpecialistName || 'Any Specialist'}
                     </p>
@@ -3401,7 +3401,7 @@ const Sales: React.FC<SalesProps> = ({
                   )}
                 </AnimatePresence>
               </div> */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', color: 'var(--text-gray)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', color: 'var(--text-black)' }}>
                 <span style={{ fontWeight: 500 }}>Subtotal</span>
                 <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(subtotal)}</span>
               </div>
@@ -3752,14 +3752,14 @@ const Sales: React.FC<SalesProps> = ({
                 borderTop: '1px solid var(--border)'
               }}>
                 <div>
-                  <p style={{ margin: '0 0 0.125rem 0', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <p style={{ margin: '0 0 0.125rem 0', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-black)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {depositAmount > 0 ? 'Balance Due' : 'Total Amount'}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
                     <p style={{ margin: 0, fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-dark)', letterSpacing: '-0.03em', lineHeight: 1 }}>
                       {formatPrice(finalTotal)}
                     </p>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-gray)' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-black)' }}>
                       ({totalItems} items)
                     </span>
                   </div>
@@ -3948,7 +3948,7 @@ const Sales: React.FC<SalesProps> = ({
               height: '4px',
               background: 'linear-gradient(90deg, transparent, var(--primary), transparent)'
             }} />
-            <p style={{ color: 'var(--text-gray)', fontSize: '0.8125rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Amount Due</p>
+            <p style={{ color: 'var(--text-black)', fontSize: '0.8125rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Amount Due</p>
             <h2 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, color: 'var(--text-dark)', letterSpacing: '-0.04em', lineHeight: 1 }}>{formatPrice(finalTotal)}</h2>
             {appliedVouchers.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
@@ -4099,7 +4099,7 @@ const Sales: React.FC<SalesProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       background: selectedPayment === method.id ? 'var(--primary-light)' : 'var(--bg-body)',
-                      color: selectedPayment === method.id ? 'var(--primary)' : 'var(--text-gray)',
+                      color: selectedPayment === method.id ? 'var(--primary)' : 'var(--text-black)',
                       transition: 'all 0.25s'
                     }}>
                       {method.id === 'CASH' ? <DollarSign size={18} /> : method.id === 'RAZORPAY' ? <CreditCard size={18} /> : <Wallet size={18} />}
@@ -4128,7 +4128,7 @@ const Sales: React.FC<SalesProps> = ({
       <Modal isOpen={isSpecialistModalOpen} onClose={() => { setIsSpecialistModalOpen(false); setSpecialistSearch(''); }} title="Select Specialist">
         {/* Search */}
         <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-          <Search size={14} style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', pointerEvents: 'none' }} />
+          <Search size={14} style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', pointerEvents: 'none' }} />
           <input
             type="text"
             placeholder="Search specialist..."
@@ -4171,11 +4171,11 @@ const Sales: React.FC<SalesProps> = ({
                 background: selectedSpecialistId === '' ? 'var(--primary)' : 'var(--bg-subtle)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <User size={18} style={{ color: selectedSpecialistId === '' ? 'white' : 'var(--text-gray)' }} />
+                <User size={18} style={{ color: selectedSpecialistId === '' ? 'white' : 'var(--text-black)' }} />
               </div> */}
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-dark)', lineHeight: 1.2 }}>Any</p>
-                <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-gray)', lineHeight: 1.2 }}>Auto-assign</p>
+                <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-black)', lineHeight: 1.2 }}>Auto-assign</p>
               </div>
             </motion.div>
           )}
@@ -4226,7 +4226,7 @@ const Sales: React.FC<SalesProps> = ({
 
           {/* Empty state */}
           {specialistSearch && !stylists.some(s => s.name.toLowerCase().includes(specialistSearch.toLowerCase())) && !('any specialist').includes(specialistSearch.toLowerCase()) && (
-            <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-gray)', fontSize: '0.82rem', padding: '1rem 0', margin: 0 }}>No specialist found</p>
+            <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-black)', fontSize: '0.82rem', padding: '1rem 0', margin: 0 }}>No specialist found</p>
           )}
         </div>
 
@@ -5166,8 +5166,8 @@ const Sales: React.FC<SalesProps> = ({
       >
         <div className="flex flex-col items-center p-4 space-y-6">
           <div className="text-center">
-            <p className="text-xl font-bold text-gray-800">{formatPrice(razorpayLinkData?.amount / 100 || 0)}</p>
-            <p className="text-sm text-gray-500">Scan this QR code with any UPI app</p>
+            <p className="text-xl font-bold text-black">{formatPrice(razorpayLinkData?.amount / 100 || 0)}</p>
+            <p className="text-sm text-black">Scan this QR code with any UPI app</p>
           </div>
 
           <div className="bg-white p-4 rounded-xl shadow-inner border">
@@ -5200,7 +5200,7 @@ const Sales: React.FC<SalesProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-black text-center">
             This window will close automatically once the payment is completed.
           </p>
         </div>

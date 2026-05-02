@@ -157,7 +157,7 @@ const Reports: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-gray)' }}>
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-black)' }}>
           Loading reports...
         </div>
       </div>
@@ -206,7 +206,7 @@ const Reports: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="justify-center flex" style={{ gap: '1rem', fontSize: '0.875rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+          <div className="justify-center flex" style={{ gap: '1rem', fontSize: '0.875rem', color: 'var(--text-black)', marginTop: '0.5rem' }}>
             {serviceData.map((entry, index) => (
               <div key={index} className="flex items-center">
                 <span style={{ width: 12, height: 12, borderRadius: '50%', marginRight: 8, backgroundColor: COLORS[index % COLORS.length] }}></span>

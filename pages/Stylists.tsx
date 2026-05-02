@@ -116,7 +116,7 @@ const PermissionsSelector = ({ permissions, onChange }: { permissions: string[],
                 borderBottom: '1px solid var(--border-light)',
                 fontWeight: 600,
                 fontSize: '0.85rem',
-                color: 'var(--text-gray)',
+                color: 'var(--text-black)',
                 textAlign: 'center'
               }}>
                 <div style={{ textAlign: 'left', paddingLeft: '0.5rem' }}>Module</div>
@@ -983,7 +983,7 @@ const Stylists: React.FC = () => {
                     {currentWeekDates.length > 0 && (
                       <div style={{
                         fontSize: '0.875rem',
-                        color: 'var(--text-gray)',
+                        color: 'var(--text-black)',
                         fontWeight: 500
                       }}>
                         {new Date(currentWeekDates[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(currentWeekDates[6].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1457,7 +1457,7 @@ const Stylists: React.FC = () => {
                                           background: 'var(--bg-body)',
                                           padding: '0.375rem 0.75rem',
                                           borderRadius: 'var(--radius-full)',
-                                          color: 'var(--text-gray)',
+                                          color: 'var(--text-black)',
                                           border: '1px solid var(--border)',
                                           fontWeight: 500
                                         }}>
@@ -1509,7 +1509,7 @@ const Stylists: React.FC = () => {
                       }}>
                         <div style={{
                           fontSize: '0.875rem',
-                          color: 'var(--text-gray)',
+                          color: 'var(--text-black)',
                           fontWeight: 500
                         }}>
                           Showing <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
@@ -1672,7 +1672,7 @@ const Stylists: React.FC = () => {
                     onChange={(e) => setRemoveBgAddEnabled(e.target.checked)}
                     style={{ accentColor: 'var(--primary)', width: '14px', height: '14px' }}
                   />
-                  <label htmlFor="removeBgAdd" style={{ fontSize: '0.8rem', color: 'var(--text-gray)', userSelect: 'none', cursor: 'pointer' }}>
+                  <label htmlFor="removeBgAdd" style={{ fontSize: '0.8rem', color: 'var(--text-black)', userSelect: 'none', cursor: 'pointer' }}>
                     Remove background using AI
                   </label>
                 </div>
@@ -1742,7 +1742,7 @@ const Stylists: React.FC = () => {
 
               <div style={{ paddingTop: '0.5rem' }}>
                 <label className="input-label" style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ display: 'flex', color: 'var(--text-gray)' }}><MdAccessTime size={16} /></span> Working Hours Configuration
+                  <span style={{ display: 'flex', color: 'var(--text-black)' }}><MdAccessTime size={16} /></span> Working Hours Configuration
                 </label>
                 <WorkingHoursConfig
                   value={newStylistWorkingHours}
@@ -1779,11 +1779,11 @@ const Stylists: React.FC = () => {
                 <div className="space-y-4">
                   <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-500">Stylist</span>
+                      <span className="text-black">Stylist</span>
                       <span className="font-semibold">{stylists.find(s => s.id === selectedRosterCell.stylistId)?.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Date</span>
+                      <span className="text-black">Date</span>
                       <span className="font-semibold">{selectedRosterCell.date}</span>
                     </div>
                   </div>
@@ -1932,7 +1932,7 @@ const Stylists: React.FC = () => {
                       onChange={(e) => setRemoveBgEditEnabled(e.target.checked)}
                       style={{ accentColor: 'var(--primary)', width: '14px', height: '14px' }}
                     />
-                    <label htmlFor="removeBgEdit" style={{ fontSize: '0.8rem', color: 'var(--text-gray)', userSelect: 'none', cursor: 'pointer' }}>
+                    <label htmlFor="removeBgEdit" style={{ fontSize: '0.8rem', color: 'var(--text-black)', userSelect: 'none', cursor: 'pointer' }}>
                       Remove background using AI
                     </label>
                   </div>
@@ -2018,11 +2018,11 @@ const Stylists: React.FC = () => {
 
                   {/* Display selected specializations as tags */}
                   {/* <div style={{ marginTop: '0.75rem' }}>
-                <label className="input-label" style={{ fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', color: 'var(--text-gray)' }}>Selected Specializations:</label>
+                <label className="input-label" style={{ fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', color: 'var(--text-black)' }}>Selected Specializations:</label>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minHeight: '2rem', padding: '0.5rem', background: 'var(--bg-body)', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
                   {(() => {
                     if (!editingStylist.specialization) {
-                      return <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)', fontStyle: 'italic' }}>No specializations selected</span>;
+                      return <span style={{ fontSize: '0.75rem', color: 'var(--text-black)', fontStyle: 'italic' }}>No specializations selected</span>;
                     }
 
                     const specs = typeof editingStylist.specialization === 'string'
@@ -2032,7 +2032,7 @@ const Stylists: React.FC = () => {
                         : [editingStylist.specialization];
 
                     if (specs.length === 0) {
-                      return <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)', fontStyle: 'italic' }}>No specializations selected</span>;
+                      return <span style={{ fontSize: '0.75rem', color: 'var(--text-black)', fontStyle: 'italic' }}>No specializations selected</span>;
                     }
 
                     return specs.map((spec, idx) => (
@@ -2061,7 +2061,7 @@ const Stylists: React.FC = () => {
                 {/* Working Hours Configuration */}
                 <div style={{ marginTop: '1rem' }}>
                   <label className="input-label" style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ display: 'flex', color: 'var(--text-gray)' }}><MdAccessTime size={16} /></span> Working Hours Configuration
+                    <span style={{ display: 'flex', color: 'var(--text-black)' }}><MdAccessTime size={16} /></span> Working Hours Configuration
                   </label>
 
                   <WorkingHoursConfig

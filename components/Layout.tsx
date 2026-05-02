@@ -331,7 +331,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
     >
       {/* Mobile Close Button */}
       <div className="mobile-only" style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 50 }}>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-gray)' }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-black)' }}>
           <X size={24} />
         </button>
       </div>
@@ -376,7 +376,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
               title={isCollapsed ? 'Expand Sidebar - Show full menu' : 'Collapse Sidebar - Show icons only'}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {isCollapsed ? <ChevronRight size={20} color="var(--text-gray)" /> : <ChevronLeft size={20} color="var(--text-gray)" />}
+              {isCollapsed ? <ChevronRight size={20} color="var(--text-black)" /> : <ChevronLeft size={20} color="var(--text-black)" />}
             </button>
           )}
         </div>
@@ -409,7 +409,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
                   : isHovered
                     ? 'var(--bg-hover)'
                     : 'transparent',
-                color: isActive ? 'var(--primary)' : 'var(--text-gray)',
+                color: isActive ? 'var(--primary)' : 'var(--text-black)',
                 marginBottom: '0.375rem',
                 cursor: 'pointer',
                 transition: 'all var(--transition-base)',
@@ -703,7 +703,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, subtitle, onMenuClick }) 
             fontSize: '1.5rem',
             fontWeight: 700,
             letterSpacing: '-0.025em',
-            background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-gray) 100%)',
+            background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -713,7 +713,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, subtitle, onMenuClick }) 
           {subtitle && (
             <p style={{
               fontSize: '0.8125rem',
-              color: 'var(--text-gray)',
+              color: 'var(--text-black)',
               margin: '-2px 0 0 0',
               fontWeight: 500,
               letterSpacing: '0.01em'
@@ -770,7 +770,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, subtitle, onMenuClick }) 
         <div style={{
           fontSize: '0.75rem',
           fontWeight: 600,
-          color: 'var(--text-gray)',
+          color: 'var(--text-black)',
           background: 'var(--bg-card)',
           padding: '0.375rem 0.875rem',
           borderRadius: 'var(--radius-full)',

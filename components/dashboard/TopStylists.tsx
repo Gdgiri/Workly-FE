@@ -54,7 +54,7 @@ export const TopStylists: React.FC<TopStylistsProps> = ({ data, title = "Top Per
                         </div>
                     ))
                 ) : data.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '3rem 1rem' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--text-black)', padding: '3rem 1rem' }}>
                         <div style={{
                             width: '4rem',
                             height: '4rem',

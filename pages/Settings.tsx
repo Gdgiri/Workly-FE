@@ -798,7 +798,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Link size={18} style={{ color: 'var(--primary)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                   Share this URL with your customers to book appointments online
                 </p>
               </div>
@@ -865,7 +865,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Key size={18} style={{ color: 'var(--primary)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                   Configure your Razorpay payment gateway credentials
                 </p>
               </div>
@@ -879,7 +879,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                     onChange={handleRazorpayChange}
                     placeholder="rzp_test_xxxxxxxxxxxxx"
                   />
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                     Your Razorpay Key ID (starts with rzp_test_ or rzp_live_)
                   </p>
                 </div>
@@ -915,7 +915,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        color: 'var(--text-gray)',
+                        color: 'var(--text-black)',
                         padding: '0.25rem',
                         display: 'flex',
                         alignItems: 'center'
@@ -925,7 +925,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                       {showKeySecret ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                     {loading ? (
                       "Loading settings..."
                     ) : (
@@ -969,7 +969,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               {/* List of Integrations */}
               {apiIntegrations.length === 0 && !showAddAPIModal ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)', background: '#f8fafc', borderRadius: '0.5rem', border: '1px dashed #e2e8f0' }}>
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-black)', background: '#f8fafc', borderRadius: '0.5rem', border: '1px dashed #e2e8f0' }}>
                   <p>No integrations configured.</p>
                   <p style={{ fontSize: '0.85rem' }}>Click "Add New" to connect an AI Assistant instance.</p>
                 </div>
@@ -987,12 +987,12 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                           <span style={{
                             fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px',
                             background: integration.enabled ? 'rgba(34, 197, 94, 0.1)' : 'rgba(100, 116, 139, 0.1)',
-                            color: integration.enabled ? 'var(--success)' : 'var(--text-gray)'
+                            color: integration.enabled ? 'var(--success)' : 'var(--text-black)'
                           }}>
                             {integration.enabled ? 'Active' : 'Disabled'}
                           </span>
                         </div>
-                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-gray)', fontFamily: 'monospace' }}>
+                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-black)', fontFamily: 'monospace' }}>
                           Key: {integration.apiKey.substring(0, 8)}...
                         </p>
                       </div>
@@ -1076,7 +1076,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                             onClick={() => setShowAPISecret(!showAPISecret)}
                             style={{
                               position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-gray)'
+                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-black)'
                             }}
                           >
                             {showAPISecret ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -1192,13 +1192,13 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                 />
                 {/* API Path Field with Dynamic Placeholder Support */}
                 {/* <div>
-                  <label className="input-label">API Path <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)', fontWeight: 'normal' }}>(Optional - supports placeholders)</span></label>
+                  <label className="input-label">API Path <span style={{ fontSize: '0.75rem', color: 'var(--text-black)', fontWeight: 'normal' }}>(Optional - supports placeholders)</span></label>
                   <Input
                     value={whatsappConfig.apiPath || ''}
                     onChange={(e) => setWhatsappConfig(prev => ({ ...prev, apiPath: e.target.value }))}
                     placeholder="e.g. {vendorUid}/contact/send-template-message"
                   />
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                     Available: {'{'}apiBaseUrl{'}'}, {'{'}vendorUid{'}'}, {'{'}businessAccountId{'}'}, {'{'}phoneNumberId{'}'}, {'{'}adminId{'}'}, {'{'}businessName{'}'}
                   </p>
                 </div> */}
@@ -1206,7 +1206,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                 {/* Provider Specific Fields - Sapprow (Phase 1) */}
                 {whatsappConfig.provider === 'sapprow' && (
                   <div className="space-y-4 pt-4 border-t border-dashed border-gray-200">
-                    <h4 className="font-medium text-sm text-gray-700">Sapprow Configuration</h4>
+                    <h4 className="font-medium text-sm text-black">Sapprow Configuration</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
                         <label className="input-label">API Key</label>
@@ -1228,7 +1228,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                             onClick={() => setShowWhatsappSecret(!showWhatsappSecret)}
                             style={{
                               position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-gray)'
+                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-black)'
                             }}
                           >
                             {showWhatsappSecret ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -1242,7 +1242,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                 {/* Meta Fields (Phase 2) */}
                 {whatsappConfig.provider === 'meta' && (
                   <div className="space-y-4 pt-4 border-t border-dashed border-gray-200">
-                    <h4 className="font-medium text-sm text-gray-700">Meta Configuration</h4>
+                    <h4 className="font-medium text-sm text-black">Meta Configuration</h4>
 
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
@@ -1265,7 +1265,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                             onClick={() => setShowWhatsappSecret(!showWhatsappSecret)}
                             style={{
                               position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-gray)'
+                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-black)'
                             }}
                           >
                             {showWhatsappSecret ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -1291,7 +1291,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
 
                     {/* Template Configuration */}
                     <div className="pt-2">
-                      <h5 className="font-medium text-sm text-gray-600 mb-3">Message Templates</h5>
+                      <h5 className="font-medium text-sm text-black mb-3">Message Templates</h5>
                       <div className="space-y-3 bg-gray-50 p-4 rounded-md border border-gray-100">
                         {Object.entries({
                           appointmentConfirmation: "Appointment Confirmation",
@@ -1348,7 +1348,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                             </div>
                           );
                         })}
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                           Enter the exact template names as created in your Meta Business Manager and select the language code.
                         </p>
                       </div>
@@ -1359,7 +1359,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                 {/* Custom Fields (Phase 3) */}
                 {whatsappConfig.provider === 'custom' && (
                   <div className="space-y-4 pt-4 border-t border-dashed border-gray-200">
-                    <h4 className="font-medium text-sm text-gray-700">Custom Provider Configuration</h4>
+                    <h4 className="font-medium text-sm text-black">Custom Provider Configuration</h4>
 
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
@@ -1382,7 +1382,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                             onClick={() => setShowWhatsappSecret(!showWhatsappSecret)}
                             style={{
                               position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-gray)'
+                              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-black)'
                             }}
                           >
                             {showWhatsappSecret ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -1428,13 +1428,13 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                           onChange={(e) => setWhatsappConfig(prev => ({ ...prev, requiresTemplate: e.target.checked }))}
                           className="w-4 h-4 text-blue-600 rounded border-gray-300"
                         />
-                        <span className="text-sm text-gray-700">This provider requires message templates</span>
+                        <span className="text-sm text-black">This provider requires message templates</span>
                       </label>
                     </div>
 
                     {whatsappConfig.requiresTemplate && (
                       <div className="pt-2">
-                        <h5 className="font-medium text-sm text-gray-600 mb-3">Message Templates</h5>
+                        <h5 className="font-medium text-sm text-black mb-3">Message Templates</h5>
                         <div className="space-y-3 bg-gray-50 p-4 rounded-md border border-gray-100">
                           <div>
                             <Input
@@ -1496,7 +1496,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                               placeholder="e.g. voucher_code_v1"
                             />
                           </div>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                             Enter the exact template names as created in your provider dashboard.
                           </p>
                         </div>
@@ -1523,7 +1523,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <CreditCard size={18} style={{ color: 'var(--primary)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                   Select the currency for your business transactions
                 </p>
               </div>
@@ -1553,7 +1553,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                   <option value="GBP">🇬🇧 GBP - British Pound (£)</option>
                   <option value="MYR">🇲🇾 MYR - Malaysian Ringgit (RM)</option>
                 </select>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                   This currency will be used throughout the admin and user apps.
                 </p>
               </div>
@@ -1572,7 +1572,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Ticket size={18} style={{ color: 'var(--primary)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                   Control whether customers need to verify an OTP when redeeming vouchers.
                 </p>
               </div>
@@ -1600,7 +1600,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                     }}></span>
                   </label>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', margin: 0 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', margin: 0 }}>
                   When ON, customers receive an OTP for voucher redemption. When OFF, OTP is skipped.
                 </p>
               </div>
@@ -1617,7 +1617,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldCheck size={18} style={{ color: 'var(--primary)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                   Control which payment options are available during checkout.
                 </p>
               </div>
@@ -1666,7 +1666,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                           fontSize: '0.875rem'
                         }}
                       />
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                         Require at least this % of total amount upfront.
                       </p>
                     </div>
@@ -1768,7 +1768,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                           <div>
                             <label className="input-label">Key ID / URL {method.name.toLowerCase().includes('razor') && <span className="text-red-500">*</span>}</label>
                             <div className="relative">
-                              {/* <Key size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
+                              {/* <Key size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black" /> */}
                               <Input
                                 value={(method as any).url || ''}
                                 onChange={(e) => handleCredentialChange(method.id, 'url', e.target.value)}
@@ -1787,7 +1787,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                         `}</style>
                             <label className="input-label">Key Secret {method.name.toLowerCase().includes('razor') && <span className="text-red-500">*</span>}</label>
                             <div className="relative">
-                              {/* <Key size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" /> */}
+                              {/* <Key size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black z-10" /> */}
                               <Input
                                 type="password"
                                 value={(method as any).secretKey || ''}
@@ -1836,14 +1836,14 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldCheck size={18} style={{ color: 'var(--primary)' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                   Enable fraud protection to secure your payment transactions
                 </p>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ShieldCheck size={18} style={{ color: paymentConfig.fraudProtection ? 'var(--success)' : 'var(--text-gray)' }} />
+                  <ShieldCheck size={18} style={{ color: paymentConfig.fraudProtection ? 'var(--success)' : 'var(--text-black)' }} />
                   <span style={{ fontWeight: 500, color: '#374151' }}>Enable Fraud Protection</span>
                 </div>
                 <label style={{ position: 'relative', display: 'inline-block', width: '2.75rem', height: '1.5rem', cursor: 'pointer' }}>
@@ -1943,7 +1943,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                     onChange={(e) => setSalesConfig({ salesIdPrefix: e.target.value })}
                     placeholder="e.g. SALE-"
                   />
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                     Prefix for generated Sale numbers (e.g. SALE-1001)
                   </p>
                   <div style={{ marginTop: '1rem' }}>
@@ -1954,7 +1954,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                       onChange={(e) => setSalesConfig(prev => ({ ...prev, invoiceStartNumber: e.target.value }))}
                       placeholder="e.g. 1001"
                     />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                       Starting sequence number for invoices (e.g. 1001)
                     </p>
                   </div>
@@ -1969,7 +1969,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                     </div>
                     {/* Toggle Switch */}
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: '0.8rem', color: inventoryConfig.enabled ? 'var(--success)' : 'var(--text-gray)' }}>
+                      <span style={{ fontSize: '0.8rem', color: inventoryConfig.enabled ? 'var(--success)' : 'var(--text-black)' }}>
                         {inventoryConfig.enabled ? 'Enabled' : 'Disabled'}
                       </span>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -2000,7 +2000,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                         resize: 'vertical'
                       }}
                     />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem' }}>
                       Comma-separated list of reasons for inventory adjustments
                     </p>
                   </div>

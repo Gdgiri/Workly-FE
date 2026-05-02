@@ -894,7 +894,7 @@ const Inventory: React.FC = () => {
     },
     {
       header: 'Remarks',
-      accessor: (row: InventoryMovement) => <span style={{ color: 'var(--text-gray)', fontStyle: 'italic', fontSize: '0.85rem' }}>{row.remarks || '-'}</span>,
+      accessor: (row: InventoryMovement) => <span style={{ color: 'var(--text-black)', fontStyle: 'italic', fontSize: '0.85rem' }}>{row.remarks || '-'}</span>,
       skeleton: <Skeleton width="200px" height="1rem" />
     },
     {
@@ -1503,12 +1503,12 @@ const Inventory: React.FC = () => {
             {importFile ? (
               <div>
                 <p style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{importFile.name}</p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>{(importFile.size / 1024).toFixed(2)} KB</p>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>{(importFile.size / 1024).toFixed(2)} KB</p>
               </div>
             ) : (
               <div>
                 <p style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click or Drag file to upload</p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>Support for .xlsx, .xls or .csv</p>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>Support for .xlsx, .xls or .csv</p>
               </div>
             )}
           </div>
@@ -1543,7 +1543,7 @@ const Inventory: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="input-group">
               <label className="input-label">Current Stock</label>
-              <div style={{ padding: '0.6rem 1rem', background: '#f1f5f9', borderRadius: '0.75rem', color: 'var(--text-gray)' }}>
+              <div style={{ padding: '0.6rem 1rem', background: '#f1f5f9', borderRadius: '0.75rem', color: 'var(--text-black)' }}>
                 {selectedProduct?.stock} Units
               </div>
             </div>
@@ -1605,7 +1605,7 @@ const Inventory: React.FC = () => {
               background: 'none',
               border: 'none',
               borderBottom: bulkType === 'receive' ? '2px solid var(--primary)' : '2px solid transparent',
-              color: bulkType === 'receive' ? 'var(--primary)' : 'var(--text-gray)',
+              color: bulkType === 'receive' ? 'var(--primary)' : 'var(--text-black)',
               fontWeight: bulkType === 'receive' ? 600 : 500,
               cursor: 'pointer',
               transition: 'all 0.2s'
@@ -1622,7 +1622,7 @@ const Inventory: React.FC = () => {
               background: 'none',
               border: 'none',
               borderBottom: bulkType === 'issue' ? '2px solid var(--primary)' : '2px solid transparent',
-              color: bulkType === 'issue' ? 'var(--primary)' : 'var(--text-gray)',
+              color: bulkType === 'issue' ? 'var(--primary)' : 'var(--text-black)',
               fontWeight: bulkType === 'issue' ? 600 : 500,
               cursor: 'pointer',
               transition: 'all 0.2s'
@@ -1634,7 +1634,7 @@ const Inventory: React.FC = () => {
 
         <form className="space-y-4" onSubmit={handleBulkReceive}>
           {/* <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)', margin: 0 }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-black)', margin: 0 }}>
               Add multiple products to receive stock in a single transaction.
             </p>
           </div> */}

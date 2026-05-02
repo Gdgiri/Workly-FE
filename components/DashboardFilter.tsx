@@ -71,9 +71,9 @@ export const DashboardFilter: React.FC<DashboardFilterProps> = ({
                 }}
                 className="hover:bg-slate-50"
             >
-                <Calendar size={18} className="text-slate-400" />
+                <Calendar size={18} className="text-black" />
                 <span>{getLabel()}</span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-black transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Dropdown Menu */}
@@ -144,7 +144,7 @@ export const DashboardFilter: React.FC<DashboardFilterProps> = ({
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>From</label>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>From</label>
                                         <input
                                             type="date"
                                             value={customRange?.start || ''}
@@ -160,7 +160,7 @@ export const DashboardFilter: React.FC<DashboardFilterProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>To</label>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>To</label>
                                         <input
                                             type="date"
                                             value={customRange?.end || ''}

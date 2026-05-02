@@ -182,7 +182,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     >
                         {displayBusinessName}<span style={{ color: 'var(--primary)' }}>.</span>
                     </motion.h1>
-                    {/* <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem', fontWeight: 500 }}>Beauty & Salon Management</p> */}
+                    {/* <p style={{ color: 'var(--text-black)', fontSize: '0.875rem', fontWeight: 500 }}>Beauty & Salon Management</p> */}
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-6">
@@ -190,7 +190,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     <Input label="Password" type="password" name="password" placeholder="••••••••" style={{ background: '#f9fafb' }} required />
 
                     <div className="flex justify-between items-center" style={{ fontSize: '0.875rem' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', color: 'var(--text-gray)', cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', color: 'var(--text-black)', cursor: 'pointer' }}>
                             <input type="checkbox" style={{ marginRight: '0.5rem' }} />
                             Remember me
                         </label>
@@ -209,7 +209,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
 
                     <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
                         <div style={{ flex: 1, borderTop: '1px solid var(--border)' }}></div>
-                        <span style={{ margin: '0 1rem', color: 'var(--text-gray)', fontSize: '0.75rem' }}>OR</span>
+                        <span style={{ margin: '0 1rem', color: 'var(--text-black)', fontSize: '0.75rem' }}>OR</span>
                         <div style={{ flex: 1, borderTop: '1px solid var(--border)' }}></div>
                     </div>
 
@@ -220,7 +220,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                     </div>
 
                     {/* <div className="text-center" style={{ marginTop: '1rem', fontSize: '0.875rem' }}>
-                        <span style={{ color: 'var(--text-gray)' }}>Don't have an account? </span>
+                        <span style={{ color: 'var(--text-black)' }}>Don't have an account? </span>
                         <button
                             type="button"
                             onClick={() => onNavigate('register')}

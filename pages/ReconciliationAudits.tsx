@@ -373,7 +373,7 @@ const ReconciliationAudits: React.FC = () => {
                     <div className="input-group" style={{ flex: '2 1 600px', maxWidth: '350px' }}>
                         <label className="input-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 600, fontSize: '0.75rem' }}>Search</label>
                         <div style={{ position: 'relative' }}>
-                            <Search style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', opacity: 0.5 }} size={14} />
+                            <Search style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', opacity: 0.5 }} size={14} />
                             <input
                                 type="text"
                                 placeholder="Search by name or notes..."
@@ -505,7 +505,7 @@ const ReconciliationAudits: React.FC = () => {
             {/* Audit Logs Table */}
             <Card>
                 {audits.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-gray)' }}>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-black)' }}>
                         <History size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
                         <p>No audit logs found</p>
                     </div>
@@ -515,13 +515,13 @@ const ReconciliationAudits: React.FC = () => {
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Timestamp</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>User</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Type</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Status</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Discrepancy</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Duration</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Actions</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>Timestamp</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>User</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>Type</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>Status</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>Discrepancy</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>Duration</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', textTransform: 'uppercase' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -538,7 +538,7 @@ const ReconciliationAudits: React.FC = () => {
                                         ))
                                     ) : audits.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-gray)' }}>
+                                            <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-black)' }}>
                                                 <History size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
                                                 <p>No audit logs found</p>
                                             </td>
@@ -562,7 +562,7 @@ const ReconciliationAudits: React.FC = () => {
                                                                 <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                                                                     {new Date(audit.attemptTimestamp).toLocaleDateString()}
                                                                 </div>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                                                                     {new Date(audit.attemptTimestamp).toLocaleTimeString()}
                                                                 </div>
                                                             </td>
@@ -570,7 +570,7 @@ const ReconciliationAudits: React.FC = () => {
                                                                 <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                                                                     {audit.userName || 'Unknown'}
                                                                 </div>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                                                                     {audit.userRole || 'N/A'}
                                                                 </div>
                                                             </td>
@@ -586,13 +586,13 @@ const ReconciliationAudits: React.FC = () => {
                                                                         <div style={{ fontWeight: 600, color: audit.discrepancyType === 'BALANCED' ? '#10B981' : '#EF4444' }}>
                                                                             {formatPrice(audit.discrepancyAmount)}
                                                                         </div>
-                                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                                                                             {audit.discrepancyType}
                                                                         </div>
                                                                     </div>
                                                                 ) : '—'}
                                                             </td>
-                                                            <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                                                            <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--text-black)' }}>
                                                                 {audit.duration ? `${audit.duration}ms` : '—'}
                                                             </td>
                                                             <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
@@ -652,7 +652,7 @@ const ReconciliationAudits: React.FC = () => {
                                                                         {audit.inputData?.notes && (
                                                                             <div style={{ gridColumn: 'span 2' }}>
                                                                                 <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>Notes</h4>
-                                                                                <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-gray)' }}>
+                                                                                <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-black)' }}>
                                                                                     {audit.inputData.notes}
                                                                                 </div>
                                                                             </div>
@@ -663,17 +663,17 @@ const ReconciliationAudits: React.FC = () => {
                                                                         <h4 style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>Metadata</h4>
                                                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                                                                             <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                                                                <div style={{ fontSize: '0.625rem', color: 'var(--text-gray)', marginBottom: '0.15rem', textTransform: 'uppercase' }}>IP Address</div>
+                                                                                <div style={{ fontSize: '0.625rem', color: 'var(--text-black)', marginBottom: '0.15rem', textTransform: 'uppercase' }}>IP Address</div>
                                                                                 <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>{audit.ipAddress || 'N/A'}</div>
                                                                             </div>
                                                                             <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                                                                <div style={{ fontSize: '0.625rem', color: 'var(--text-gray)', marginBottom: '0.15rem', textTransform: 'uppercase' }}>Request ID</div>
+                                                                                <div style={{ fontSize: '0.625rem', color: 'var(--text-black)', marginBottom: '0.15rem', textTransform: 'uppercase' }}>Request ID</div>
                                                                                 <div style={{ fontSize: '0.8125rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                                                     {audit.requestId ? audit.requestId.substring(0, 12) + '...' : 'N/A'}
                                                                                 </div>
                                                                             </div>
                                                                             <div style={{ background: 'white', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                                                                <div style={{ fontSize: '0.625rem', color: 'var(--text-gray)', marginBottom: '0.15rem', textTransform: 'uppercase' }}>Reconciliation ID</div>
+                                                                                <div style={{ fontSize: '0.625rem', color: 'var(--text-black)', marginBottom: '0.15rem', textTransform: 'uppercase' }}>Reconciliation ID</div>
                                                                                 <div style={{ fontSize: '0.8125rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                                                     {audit.reconciliationId ? audit.reconciliationId.substring(0, 12) + '...' : 'N/A'}
                                                                                 </div>
@@ -707,7 +707,7 @@ const ReconciliationAudits: React.FC = () => {
 
                         {/* Pagination */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                                 Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>

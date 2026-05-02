@@ -418,7 +418,7 @@ export const ServicesView: React.FC = () => {
                   width: '240px'
                 }}
               />
-              <div style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', display: 'flex' }}>
+              <div style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', display: 'flex' }}>
                 <ListIcon size={16} />
               </div>
             </div>
@@ -492,7 +492,7 @@ export const ServicesView: React.FC = () => {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>{service.category}</span>
-                            <span style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                            <span style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                               <Clock size={14} style={{ display: 'inline', marginRight: '0.25rem', verticalAlign: 'middle' }} />
                               {service.duration} min
                             </span>
@@ -533,8 +533,8 @@ export const ServicesView: React.FC = () => {
               {/* Pagination Controls */}
               {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-6 bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-                  <div className="text-sm text-slate-500 font-medium">
-                    Showing <span className="text-slate-900 font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-900 font-bold">{Math.min(currentPage * itemsPerPage, filteredServices.length)}</span> of <span className="text-slate-900 font-bold">{filteredServices.length}</span> results
+                  <div className="text-sm text-black font-medium">
+                    Showing <span className="text-black font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-black font-bold">{Math.min(currentPage * itemsPerPage, filteredServices.length)}</span> of <span className="text-black font-bold">{filteredServices.length}</span> results
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -556,7 +556,7 @@ export const ServicesView: React.FC = () => {
                             borderRadius: '0.5rem',
                             fontWeight: 'bold',
                             background: currentPage === i + 1 ? 'var(--primary)' : 'transparent',
-                            color: currentPage === i + 1 ? 'white' : 'var(--text-gray)',
+                            color: currentPage === i + 1 ? 'white' : 'var(--text-black)',
                             border: currentPage === i + 1 ? 'none' : '1px solid var(--border)',
                             cursor: 'pointer'
                           }}
@@ -578,7 +578,7 @@ export const ServicesView: React.FC = () => {
               )}
             </>
           ) : (
-            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-gray)' }}>
+            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-black)' }}>
               <p className="text-lg font-medium">No services found matching your search.</p>
             </div>
           )}
@@ -618,12 +618,12 @@ export const ServicesView: React.FC = () => {
                 {importFile ? (
                   <div>
                     <p style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{importFile.name}</p>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>{(importFile.size / 1024).toFixed(2)} KB</p>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>{(importFile.size / 1024).toFixed(2)} KB</p>
                   </div>
                 ) : (
                   <div>
                     <p style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click or Drag file to upload</p>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>Support for .xlsx, .xls or .csv</p>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>Support for .xlsx, .xls or .csv</p>
                   </div>
                 )}
               </div>
@@ -850,7 +850,7 @@ export const ServicesView: React.FC = () => {
                         ))
                       }
                       {serviceCategories.filter(cat => cat.toLowerCase().includes(newService.category.toLowerCase())).length === 0 && (
-                        <div style={{ padding: '0.5rem 1rem', color: 'var(--text-gray)', fontSize: '0.85rem' }}>Type to create a new category</div>
+                        <div style={{ padding: '0.5rem 1rem', color: 'var(--text-black)', fontSize: '0.85rem' }}>Type to create a new category</div>
                       )}
                     </div>
                   )}
@@ -1101,7 +1101,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ customers = [] }) 
 
   const columns = [
     { header: 'Name', accessor: 'name' as keyof Customer, className: 'font-medium' },
-    { header: 'Contact', accessor: (row: Customer) => <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>{row.email}<br />{row.phone}</div> },
+    { header: 'Contact', accessor: (row: Customer) => <div style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>{row.email}<br />{row.phone}</div> },
     { header: 'Visits', accessor: 'totalAppointments' as keyof Customer },
     { header: 'Total Spend', accessor: (row: Customer) => formatPrice(row.totalSpend) },
     { header: 'Last Visit', accessor: 'lastVisit' as keyof Customer },

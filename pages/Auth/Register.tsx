@@ -77,7 +77,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                     >
                         Create Account<span style={{ color: 'var(--primary)' }}>.</span>
                     </motion.h1>
-                    <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem', fontWeight: 500 }}>Join Lumière Salon Systems</p>
+                    <p style={{ color: 'var(--text-black)', fontSize: '0.875rem', fontWeight: 500 }}>Join Lumière Salon Systems</p>
                 </div>
 
                 <form onSubmit={handleRegister} className="space-y-6">
@@ -93,12 +93,12 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
 
                     <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
                         <div style={{ flex: 1, borderTop: '1px solid var(--border)' }}></div>
-                        <span style={{ margin: '0 1rem', color: 'var(--text-gray)', fontSize: '0.75rem' }}>OR</span>
+                        <span style={{ margin: '0 1rem', color: 'var(--text-black)', fontSize: '0.75rem' }}>OR</span>
                         <div style={{ flex: 1, borderTop: '1px solid var(--border)' }}></div>
                     </div>
 
                     <div className="text-center" style={{ fontSize: '0.875rem' }}>
-                        <span style={{ color: 'var(--text-gray)' }}>Already have an account? </span>
+                        <span style={{ color: 'var(--text-black)' }}>Already have an account? </span>
                         <button
                             type="button"
                             onClick={() => onNavigate('login')}

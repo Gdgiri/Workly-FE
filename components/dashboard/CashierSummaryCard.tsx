@@ -56,9 +56,9 @@ export const CashierSummaryCard: React.FC<CashierSummaryCardProps> = ({ sales, l
                             justifyContent: 'center',
                             margin: '0 auto 0.75rem auto'
                         }}>
-                            <Receipt className="text-slate-300" size={24} />
+                            <Receipt className="text-black" size={24} />
                         </div>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-gray)' }}>No transactions yet</p>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-black)' }}>No transactions yet</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -74,19 +74,19 @@ export const CashierSummaryCard: React.FC<CashierSummaryCardProps> = ({ sales, l
                                     <div className={`p-2 rounded-lg text-indigo-600 bg-indigo-100`}>
                                         <User size={18} />
                                     </div>
-                                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 capitalize">
+                                    <span className="font-semibold text-sm text-black dark:text-black capitalize">
                                         {item.name}
                                     </span>
                                 </div>
-                                <span className="font-bold text-slate-900 dark:text-white">
+                                <span className="font-bold text-black dark:text-white">
                                     {formatPrice(item.amount)}
                                 </span>
                             </motion.div>
                         ))}
 
                         <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center px-2">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Collected</span>
-                            <span className="text-lg font-black text-slate-900 dark:text-white">
+                            <span className="text-xs font-bold text-black uppercase tracking-wider">Total Collected</span>
+                            <span className="text-lg font-black text-black dark:text-white">
                                 {formatPrice(sales.reduce((sum, s) => sum + (s.amount !== undefined ? s.amount : (s.paidAmount || 0)), 0))}
                             </span>
                         </div>

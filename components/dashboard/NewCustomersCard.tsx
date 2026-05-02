@@ -62,7 +62,7 @@ export const NewCustomersCard: React.FC<NewCustomersCardProps> = ({ customers, l
                         }}>
                             <UserPlus style={{ color: 'var(--text-light)' }} size={32} />
                         </div>
-                        <p style={{ fontWeight: 600, color: 'var(--text-gray)' }}>No new customers today</p>
+                        <p style={{ fontWeight: 600, color: 'var(--text-black)' }}>No new customers today</p>
                     </div>
                 ) : (
                     <div className="custom-scrollbar" style={{

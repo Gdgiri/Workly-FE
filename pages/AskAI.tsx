@@ -815,7 +815,7 @@ ALWAYS prioritize clarity, accuracy, and usefulness.`
                             AI Assistant
                         </h2>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-gray)', fontWeight: 500 }}>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-black)', fontWeight: 500 }}>
                         Quick actions to get started
                     </p>
                 </div>
@@ -946,7 +946,7 @@ ALWAYS prioritize clarity, accuracy, and usefulness.`
                             <h1 className="text-gradient" style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--text-dark)', marginBottom: '1rem', letterSpacing: '-0.06em' }}>
                                 How can I help today?
                             </h1>
-                            <p style={{ fontSize: '1.25rem', color: 'var(--text-gray)', marginBottom: '3rem', lineHeight: '1.7', fontWeight: 500, maxWidth: '600px' }}>
+                            <p style={{ fontSize: '1.25rem', color: 'var(--text-black)', marginBottom: '3rem', lineHeight: '1.7', fontWeight: 500, maxWidth: '600px' }}>
                                 Your AI business companion is ready to assist with appointments, analytics, and everyday management tasks.
                             </p>
                             <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1086,7 +1086,7 @@ ALWAYS prioritize clarity, accuracy, and usefulness.`
                                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)', animation: 'bounce 1.4s infinite ease-in-out', opacity: 0.4 }} />
                                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)', animation: 'bounce 1.4s infinite ease-in-out 0.2s', opacity: 0.7 }} />
                                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)', animation: 'bounce 1.4s infinite ease-in-out 0.4s' }} />
-                                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-gray)', marginLeft: '0.5rem' }}>AI is thinking...</span>
+                                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-black)', marginLeft: '0.5rem' }}>AI is thinking...</span>
                                     </div>
                                 </motion.div>
                             )}

@@ -168,7 +168,7 @@ export const ChecklistList: React.FC = () => {
                 {loading ? (
                     <div style={{ padding: '4rem', textAlign: 'center' }}>
                         <LoadingSpinner />
-                        <p style={{ marginTop: '1rem', color: 'var(--text-gray)' }}>Loading checklists...</p>
+                        <p style={{ marginTop: '1rem', color: 'var(--text-black)' }}>Loading checklists...</p>
                     </div>
                 ) : filteredChecklists.length > 0 ? (
                     <Table
@@ -183,7 +183,7 @@ export const ChecklistList: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         textAlign: 'center',
-                        color: 'var(--text-gray)'
+                        color: 'var(--text-black)'
                     }}>
                         <div style={{
                             width: '64px',

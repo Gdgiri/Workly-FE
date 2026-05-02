@@ -39,7 +39,7 @@ export const InventoryAlertsCard: React.FC<InventoryAlertsCardProps> = ({ lowSto
                         background: 'var(--bg-hover)',
                         fontSize: '0.7rem',
                         fontWeight: 800,
-                        color: 'var(--text-gray)',
+                        color: 'var(--text-black)',
                         border: '1px solid var(--border-light)',
                         cursor: 'pointer',
                         textTransform: 'uppercase',
@@ -185,7 +185,7 @@ export const InventoryAlertsCard: React.FC<InventoryAlertsCardProps> = ({ lowSto
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-gray)' }}>+ {lowStockAlerts.length} more</span>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-black)' }}>+ {lowStockAlerts.length} more</span>
                                 </div>
                             </div>
                         </div> */}

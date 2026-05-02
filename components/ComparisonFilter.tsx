@@ -69,9 +69,9 @@ export const ComparisonFilter: React.FC<ComparisonFilterProps> = ({
                 }}
                 className="hover:bg-slate-50"
             >
-                <TrendingUp size={18} className="text-slate-400" />
+                <TrendingUp size={18} className="text-black" />
                 <span>{getLabel()}</span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-black transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             <AnimatePresence>
@@ -139,7 +139,7 @@ export const ComparisonFilter: React.FC<ComparisonFilterProps> = ({
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>Compare From</label>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>Compare From</label>
                                         <input
                                             type="date"
                                             value={customCompareRange?.start || ''}
@@ -155,7 +155,7 @@ export const ComparisonFilter: React.FC<ComparisonFilterProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>Compare To</label>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>Compare To</label>
                                         <input
                                             type="date"
                                             value={customCompareRange?.end || ''}

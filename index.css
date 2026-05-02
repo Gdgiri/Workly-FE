@@ -5,8 +5,8 @@
   --primary-light: #E8F4F8;
   --primary-dark: #1A3A52;
   --text-dark: #1E293B;
-  --text-gray: #64748B;
-  --text-light: #94A3B8;
+  --text-black: #000000;
+  --text-light: #000000;
   --border: #E2E8F0;
   --border-light: #F1F5F9;
   --bg-body: #F8FAFC;
@@ -71,7 +71,7 @@
   --primary-light: #0f172a;
   --primary-dark: #0c4a6e;
   --text-dark: #f1f5f9;
-  --text-gray: #94a3b8;
+  --text-black: #94a3b8;
   --text-light: #64748b;
   --border: #1e293b;
   --border-light: #334155;
@@ -209,7 +209,7 @@
 
 .table th {
   background: #ffffff;
-  color: var(--text-gray);
+  color: var(--text-black);
   font-weight: 600;
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -254,7 +254,7 @@ html.dark:root {
   /* Slate 900 */
   --text-dark: #F1F5F9;
   /* Slate 100 */
-  --text-gray: #94A3B8;
+  --text-black: #94A3B8;
   /* Slate 400 */
   --border: #1E293B;
   /* Slate 800 - darker border */
@@ -284,15 +284,15 @@ html.dark .bg-white {
   color: #F1F5F9 !important;
 }
 
-html.dark .text-slate-800,
-html.dark .text-stone-800,
-html.dark .text-gray-900 {
+html.dark .text-black,
+html.dark .text-black,
+html.dark .text-black {
   color: #F8FAFC !important;
 }
 
-html.dark .text-slate-500,
-html.dark .text-stone-500,
-html.dark .text-gray-500 {
+html.dark .text-black,
+html.dark .text-black,
+html.dark .text-black {
   color: #94A3B8 !important;
 }
 
@@ -496,7 +496,7 @@ html.dark .border-gray-200 {
 
 .btn-ghost {
   background: transparent;
-  color: var(--text-gray);
+  color: var(--text-black);
 }
 
 .btn-ghost:hover {
@@ -692,7 +692,7 @@ html.dark .border-gray-200 {
   padding: 0.75rem;
   text-align: left;
   font-weight: 600;
-  color: var(--text-gray);
+  color: var(--text-black);
   border-bottom: 2px solid var(--border);
   text-transform: uppercase;
   font-size: 0.7rem;

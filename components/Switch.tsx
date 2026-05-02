@@ -74,7 +74,7 @@ export const Switch: React.FC<SwitchProps> = ({
             letterSpacing: '0.1em',
             transition: 'opacity 0.2s ease',
             opacity: isOn ? 0 : 1,
-            color: 'var(--text-gray)'
+            color: 'var(--text-black)'
           }}>
             {inactiveLabel}
           </span>

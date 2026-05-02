@@ -62,7 +62,7 @@ const ItemSelector = ({
       justifyContent: 'space-between'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Icon size={16} className="text-slate-500" />
+        <Icon size={16} className="text-black" />
         <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.05em' }}>{title}</span>
       </div>
       <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>{items.length} available</span>
@@ -402,7 +402,7 @@ const Packages: React.FC = () => {
     },
     {
       header: 'Description',
-      accessor: (row: ComboPackage) => <span style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>{row.description}</span>,
+      accessor: (row: ComboPackage) => <span style={{ color: 'var(--text-black)', fontSize: '0.875rem' }}>{row.description}</span>,
       skeleton: <Skeleton width="120px" height="1rem" />,
       className: 'w-[3%]'
     },
@@ -496,7 +496,7 @@ const Packages: React.FC = () => {
     {
       header: 'Validity',
       accessor: (row: ComboPackage) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-gray)', whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-black)', whiteSpace: 'nowrap' }}>
           <CalendarClock size={14} />
           {row.validityDays > 0 ? `${row.validityDays} Days` : 'No Expiry'}
         </div>
@@ -584,7 +584,7 @@ const Packages: React.FC = () => {
                 transition: 'all 0.2s',
               }}
             />
-            <div style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', display: 'flex' }}>
+            <div style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', display: 'flex' }}>
               <Search size={16} />
             </div>
           </div>
@@ -700,7 +700,7 @@ const Packages: React.FC = () => {
                     {validity === '0' || validity === '' ? (
                       <span style={{ color: 'var(--success)', fontWeight: 500 }}>Currently set to No Expiration</span>
                     ) : (
-                      <span style={{ color: 'var(--text-gray)' }}>Expires {validity} days after purchase</span>
+                      <span style={{ color: 'var(--text-black)' }}>Expires {validity} days after purchase</span>
                     )}
                   </div>
                 </div>
@@ -797,7 +797,7 @@ const Packages: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="input-label">Included Items & Quantities</label>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '-0.25rem', marginBottom: '0.5rem' }}>Select items and specify quantity (e.g. 10 for a package)</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '-0.25rem', marginBottom: '0.5rem' }}>Select items and specify quantity (e.g. 10 for a package)</p>
                 {formErrors.items && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.items}</span>}
 
 

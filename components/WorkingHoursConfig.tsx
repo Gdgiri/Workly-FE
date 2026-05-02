@@ -132,7 +132,7 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                 gap: '0.25rem',
                 padding: '0.75rem'
             }}>
-                <div style={{ paddingLeft: '0.5rem', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ paddingLeft: '0.5rem', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-black)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Week Days
                 </div>
                 {WEEK_DAYS.map(day => {
@@ -190,13 +190,13 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
                     <div>
                         <h3 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{selectedDay}</h3>
-                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-gray)' }}>
+                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-black)' }}>
                             {isActive ? 'Configure working hours' : 'Set as non-working day'}
                         </p>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isActive ? 'var(--success)' : 'var(--text-gray)' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isActive ? 'var(--success)' : 'var(--text-black)' }}>
                             {isActive ? 'Active' : 'Rest Day'}
                         </span>
                         <Switch checked={isActive} onChange={() => toggleDay(selectedDay)} />
@@ -217,7 +217,7 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                             </div>
                             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
                                 <div style={{ flex: 1, background: 'var(--bg-card)', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>START</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>START</label>
                                     <input
                                         type="time"
                                         value={hours?.morning?.start || hours?.start || '09:00'}
@@ -225,9 +225,9 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                                         style={{ width: '100%', fontSize: '1.25rem', fontWeight: 600, border: 'none', background: 'transparent', color: 'var(--text-dark)' }}
                                     />
                                 </div>
-                                <div style={{ color: 'var(--text-gray)' }}>—</div>
+                                <div style={{ color: 'var(--text-black)' }}>—</div>
                                 <div style={{ flex: 1, background: 'var(--bg-card)', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>END</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>END</label>
                                     <input
                                         type="time"
                                         value={hours?.morning?.end || '13:00'}
@@ -248,7 +248,7 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                             </div>
                             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
                                 <div style={{ flex: 1, background: 'var(--bg-card)', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>START</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>START</label>
                                     <input
                                         type="time"
                                         value={hours?.afternoon?.start || '14:00'}
@@ -256,9 +256,9 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                                         style={{ width: '100%', fontSize: '1.25rem', fontWeight: 600, border: 'none', background: 'transparent', color: 'var(--text-dark)' }}
                                     />
                                 </div>
-                                <div style={{ color: 'var(--text-gray)' }}>—</div>
+                                <div style={{ color: 'var(--text-black)' }}>—</div>
                                 <div style={{ flex: 1, background: 'var(--bg-card)', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-gray)', marginBottom: '0.25rem', display: 'block' }}>END</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-black)', marginBottom: '0.25rem', display: 'block' }}>END</label>
                                     <input
                                         type="time"
                                         value={hours?.afternoon?.end || hours?.end || '18:00'}
@@ -296,7 +296,7 @@ export const WorkingHoursConfig: React.FC<WorkingHoursConfigProps> = ({ value, o
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'var(--text-gray)',
+                        color: 'var(--text-black)',
                         padding: '1rem',
                         background: 'var(--bg-card)',
                         borderRadius: '1rem',

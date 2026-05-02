@@ -767,7 +767,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
             <span style={{ fontWeight: 500 }}>{date}</span>
-            <span style={{ color: 'var(--text-gray)' }}>{time}</span>
+            <span style={{ color: 'var(--text-black)' }}>{time}</span>
           </div>
         );
       }
@@ -866,7 +866,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     //         ) : (
     //           <Paperclip size={14} style={{ color: 'var(--primary)' }} />
     //         )}
-    //         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)' }}>
+    //         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)' }}>
     //           {row.attachments?.length}
     //         </span>
     //       </div>
@@ -1066,7 +1066,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 borderRadius: '0.5rem',
                 border: 'none',
                 background: activeFilter === filter ? 'var(--primary)' : 'transparent',
-                color: activeFilter === filter ? 'white' : 'var(--text-gray)',
+                color: activeFilter === filter ? 'white' : 'var(--text-black)',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -1093,7 +1093,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 width: '240px'
               }}
             />
-            <div style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', display: 'flex' }}>
+            <div style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', display: 'flex' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
           </div>
@@ -1204,7 +1204,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
               {/* Pagination Controls */}
               {filteredAppointments.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0.5rem 0' }}>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                     Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAppointments.length)} of {filteredAppointments.length} results
                   </div>
 
@@ -1400,7 +1400,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                             <span>{c.name}</span>
                             {formData.customerId === c.id && <span style={{ color: 'var(--primary)', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase' }}>Selected</span>}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-black)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             <span>{c.mobile || 'No mobile'}</span>
                             {c.email && <span style={{ opacity: 0.5 }}>•</span>}
                             <span>{c.email}</span>
@@ -1560,7 +1560,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     <div key={`${id}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{s.duration} mins • {symbol}{s.price}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>{s.duration} mins • {symbol}{s.price}</span>
                       </div>
                       <button
                         type="button"
@@ -1720,7 +1720,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         className="hover:bg-gray-50"
                       >
                         <div style={{ fontWeight: 500 }}>{s.name}</div>
-                        {s.specialization && <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{s.specialization}</div>}
+                        {s.specialization && <div style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>{s.specialization}</div>}
                       </div>
                     ))
                   }
@@ -1944,7 +1944,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                               borderRadius: '0.5rem',
                               border: 'none',
                               background: activeTab === tab.id ? 'white' : 'transparent',
-                              color: activeTab === tab.id ? 'var(--primary)' : (tab.count === 0 ? '#94a3b8' : 'var(--text-gray)'),
+                              color: activeTab === tab.id ? 'var(--primary)' : (tab.count === 0 ? '#94a3b8' : 'var(--text-black)'),
                               boxShadow: activeTab === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                               cursor: tab.count === 0 ? 'not-allowed' : 'pointer',
                               display: 'flex',
@@ -1971,7 +1971,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         padding: '2px'
                       }}>
                         {activeSlots.length > 0 ? activeSlots : (
-                          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: 'var(--text-gray)', fontSize: '0.875rem' }}>
+                          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: 'var(--text-black)', fontSize: '0.875rem' }}>
                             No slots available for this period
                           </div>
                         )}
@@ -1981,7 +1981,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                 }
 
                 return (
-                  <div style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid var(--border)', color: 'var(--text-gray)', fontSize: '0.875rem' }}>
+                  <div style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid var(--border)', color: 'var(--text-black)', fontSize: '0.875rem' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📅</div>
                     Select Date & Stylist to view slots
                   </div>
@@ -2221,7 +2221,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     <div key={`${id}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{s.duration} mins • {symbol}{s.price}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>{s.duration} mins • {symbol}{s.price}</span>
                       </div>
                       <button
                         type="button"
@@ -2314,7 +2314,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         className="hover:bg-gray-50"
                       >
                         <div style={{ fontWeight: 500 }}>{s.name}</div>
-                        {s.specialization && <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{s.specialization}</div>}
+                        {s.specialization && <div style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>{s.specialization}</div>}
                       </div>
                     ))
                   }
@@ -2497,20 +2497,20 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                           { id: 'afternoon', label: 'Afternoon', icon: '🌤️', count: afternoonSlots.length },
                           { id: 'evening', label: 'Evening', icon: '🌙', count: eveningSlots.length }
                         ].map(tab => (
-                          <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as any)} disabled={tab.count === 0} style={{ flex: 1, padding: '0.625rem 0.5rem', fontSize: '0.75rem', fontWeight: 600, borderRadius: '0.5rem', border: 'none', background: activeTab === tab.id ? 'white' : 'transparent', color: activeTab === tab.id ? 'var(--primary)' : (tab.count === 0 ? '#94a3b8' : 'var(--text-gray)'), boxShadow: activeTab === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: tab.count === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'all 0.2s ease' }}>
+                          <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id as any)} disabled={tab.count === 0} style={{ flex: 1, padding: '0.625rem 0.5rem', fontSize: '0.75rem', fontWeight: 600, borderRadius: '0.5rem', border: 'none', background: activeTab === tab.id ? 'white' : 'transparent', color: activeTab === tab.id ? 'var(--primary)' : (tab.count === 0 ? '#94a3b8' : 'var(--text-black)'), boxShadow: activeTab === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: tab.count === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'all 0.2s ease' }}>
                             <span>{tab.icon}</span>
                             <span>{tab.label}</span>
                           </button>
                         ))}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.75rem', minHeight: '100px', maxHeight: '250px', overflowY: 'auto', padding: '2px' }}>
-                        {activeSlots.length > 0 ? activeSlots : (<div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: 'var(--text-gray)', fontSize: '0.875rem' }}>No slots available for this period</div>)}
+                        {activeSlots.length > 0 ? activeSlots : (<div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: 'var(--text-black)', fontSize: '0.875rem' }}>No slots available for this period</div>)}
                       </div>
                     </div>
                   );
                 }
                 return (
-                  <div style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid var(--border)', color: 'var(--text-gray)', fontSize: '0.875rem' }}>
+                  <div style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid var(--border)', color: 'var(--text-black)', fontSize: '0.875rem' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📅</div>
                     Select Date & Stylist to view slots
                   </div>
@@ -2569,7 +2569,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
         title="Cancel Appointment"
       >
         <div className="space-y-4">
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
             Please provide a reason for canceling this appointment:
           </p>
 
@@ -2706,9 +2706,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
 
               {/* Attachments Section */}
               <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '0.75rem', border: '1px dashed #cbd5e1' }}>
-                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-bold text-black mb-3 flex items-center gap-2">
                   Attachments
-                  <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-normal text-black bg-slate-100 px-2 py-0.5 rounded-full">
                     {viewAttachments.length} Files
                   </span>
                 </h3>

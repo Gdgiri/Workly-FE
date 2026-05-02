@@ -85,7 +85,7 @@ const MessageLog: React.FC = () => {
                 <h1 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.5rem' }}>
                     Communication Central
                 </h1>
-                <p style={{ color: 'var(--text-gray)', fontSize: '1rem' }}>
+                <p style={{ color: 'var(--text-black)', fontSize: '1rem' }}>
                     Track all automated messages sent to your customers.
                 </p>
             </div> */}
@@ -130,7 +130,7 @@ const MessageLog: React.FC = () => {
                                     gap: '0.5rem',
                                     transition: 'all 0.2s',
                                     background: activeFilter === filter.id ? 'var(--primary)' : 'transparent',
-                                    color: activeFilter === filter.id ? 'white' : 'var(--text-gray)',
+                                    color: activeFilter === filter.id ? 'white' : 'var(--text-black)',
                                     border: 'none',
                                     boxShadow: activeFilter === filter.id ? '0 4px 12px rgba(79, 70, 229, 0.3)' : 'none',
                                     cursor: 'pointer'
@@ -142,7 +142,7 @@ const MessageLog: React.FC = () => {
                                     background: activeFilter === filter.id ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
                                     padding: '0.1rem 0.4rem',
                                     borderRadius: '99px',
-                                    color: activeFilter === filter.id ? 'white' : 'var(--text-gray)'
+                                    color: activeFilter === filter.id ? 'white' : 'var(--text-black)'
                                 }}>{filter.count}</span>
                             </button>
                         ))}
@@ -453,7 +453,7 @@ const MessageLog: React.FC = () => {
                                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '0.25rem' }}>
                                         No messages found
                                     </h3>
-                                    <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>
+                                    <p style={{ color: 'var(--text-black)', fontSize: '0.9rem' }}>
                                         There are no {activeFilter} messages to display right now.
                                     </p>
                                 </div>
@@ -487,7 +487,7 @@ const MessageLog: React.FC = () => {
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.5rem' }}>
                             Are you sure?
                         </h3>
-                        <p style={{ color: 'var(--text-gray)', lineHeight: '1.5' }}>
+                        <p style={{ color: 'var(--text-black)', lineHeight: '1.5' }}>
                             This will resend the message automatically via Meta WhatsApp API to the customer.
                         </p>
                     </div>

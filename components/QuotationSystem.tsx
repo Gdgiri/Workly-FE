@@ -517,7 +517,7 @@ export const QuotationSystem: React.FC = () => {
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '0.5rem', padding: '0.75rem', backgroundColor: 'white', borderBottom: i === viewingQuotation.items.length - 1 ? 'none' : '1px solid var(--border-light)', fontSize: '0.85rem' }}>
                                 <div>
                                     <div style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{itemName}</div>
-                                    {itemDesc && <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.25rem', fontStyle: 'italic' }}>{itemDesc}</div>}
+                                    {itemDesc && <div style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.25rem', fontStyle: 'italic' }}>{itemDesc}</div>}
                                 </div>
                                 <div style={{ textAlign: 'center' }}>{item.quantity}</div>
                                 <div style={{ textAlign: 'right' }}>{formatPrice(item.unitPrice)}</div>
@@ -570,7 +570,7 @@ export const QuotationSystem: React.FC = () => {
                                     <span style={{ fontWeight: 800 }}>{formatPrice(n.negotiatedAmount)}</span>
                                     <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{new Date(n.createdAt).toLocaleString()}</span>
                                 </div>
-                                {n.description && <p style={{ margin: 0, color: 'var(--text-gray)', fontStyle: 'italic' }}>"{n.description}"</p>}
+                                {n.description && <p style={{ margin: 0, color: 'var(--text-black)', fontStyle: 'italic' }}>"{n.description}"</p>}
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                                     Previous: {formatPrice(n.previousAmount)}
                                 </div>
@@ -599,7 +599,7 @@ export const QuotationSystem: React.FC = () => {
       }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-dark)', letterSpacing: '-0.03em', margin: 0 }}>Quotation Hub</h2>
-          <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Create and manage service estimates for your clients.</p>
+          <p style={{ color: 'var(--text-black)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Create and manage service estimates for your clients.</p>
         </div>
         <Button 
             onClick={() => setIsModalOpen(true)}
@@ -709,7 +709,7 @@ export const QuotationSystem: React.FC = () => {
                     />
                   </div>
                   <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-gray)', textTransform: 'uppercase' }}>Subtotal</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-black)', textTransform: 'uppercase' }}>Subtotal</span>
                     <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-dark)' }}>{formatPrice(item.total)}</span>
                   </div>
                   <div style={{ gridColumn: 'span 1', display: 'flex', justifyContent: 'center', paddingBottom: '0.75rem' }}>

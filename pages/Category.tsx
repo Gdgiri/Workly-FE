@@ -119,7 +119,7 @@ const Category: React.FC = () => {
             accessor: (cat: Category) => (
                 <div style={{
                     fontSize: '0.875rem',
-                    color: 'var(--text-gray)',
+                    color: 'var(--text-black)',
                     maxWidth: '400px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -195,7 +195,7 @@ const Category: React.FC = () => {
                             borderRadius: '0.5rem',
                             border: '1px solid var(--border)',
                             background: 'var(--bg-card)',
-                            color: 'var(--text-gray)',
+                            color: 'var(--text-black)',
                             cursor: !canEdit ? 'not-allowed' : 'pointer',
                             opacity: !canEdit ? 0.5 : 1,
                             transition: 'all 0.2s',
@@ -379,7 +379,7 @@ const Category: React.FC = () => {
                                 fontSize: '0.875rem',
                                 cursor: 'pointer',
                                 background: activeTab === tab.id ? 'var(--grad-primary)' : 'transparent',
-                                color: activeTab === tab.id ? 'white' : 'var(--text-gray)',
+                                color: activeTab === tab.id ? 'white' : 'var(--text-black)',
                                 boxShadow: activeTab === tab.id ? 'var(--shadow-md)' : 'none',
                                 transition: 'all var(--transition-base)',
                                 display: 'flex',
@@ -453,7 +453,7 @@ const Category: React.FC = () => {
                         padding: '1.5rem',
                         borderTop: '1px solid var(--border-light)'
                     }}>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                             Showing <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{startIndex + 1}</span> to{' '}
                             <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
                                 {Math.min(startIndex + itemsPerPage, filteredCategories.length)}
@@ -471,7 +471,7 @@ const Category: React.FC = () => {
                                         borderRadius: '0.5rem',
                                         border: '1px solid var(--border)',
                                         background: currentPage === page ? 'var(--primary)' : 'var(--bg-card)',
-                                        color: currentPage === page ? 'white' : 'var(--text-gray)',
+                                        color: currentPage === page ? 'white' : 'var(--text-black)',
                                         cursor: 'pointer',
                                         transition: 'all 0.2s',
                                         fontSize: '0.875rem',
@@ -513,7 +513,7 @@ const Category: React.FC = () => {
                                     : activeTab === 'product'
                                         ? <MdShoppingBag size={18} color="var(--primary)" />
                                         : <MdAttachMoney size={18} color="var(--primary)" />}
-                                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-gray)' }}>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-black)' }}>
                                     {activeTab === 'service' ? 'Service' : activeTab === 'product' ? 'Product' : 'Expense'}
                                 </span>
                             </div>
@@ -572,7 +572,7 @@ const Category: React.FC = () => {
                                     onChange={(e) => editingCategory ? setRemoveBgEditEnabled(e.target.checked) : setRemoveBgAddEnabled(e.target.checked)}
                                     style={{ width: '1rem', height: '1rem', cursor: 'pointer', accentColor: 'var(--primary)' }}
                                 />
-                                <label htmlFor="remove-bg-category" style={{ fontSize: '0.85rem', color: 'var(--text-gray)', cursor: 'pointer' }}>
+                                <label htmlFor="remove-bg-category" style={{ fontSize: '0.85rem', color: 'var(--text-black)', cursor: 'pointer' }}>
                                     Remove background using AI
                                 </label>
                             </div>

@@ -948,7 +948,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                 }}>
                     <div style={{
                         fontSize: '0.875rem',
-                        color: 'var(--text-gray)',
+                        color: 'var(--text-black)',
                         fontWeight: 500
                     }}>
                         Showing <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
@@ -1015,7 +1015,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             background: pageNum === currentPage
                                                 ? 'linear-gradient(135deg, var(--primary-light) 0%, rgba(232, 244, 248, 0.6) 100%)'
                                                 : 'var(--bg-card)',
-                                            color: pageNum === currentPage ? 'var(--primary)' : 'var(--text-gray)',
+                                            color: pageNum === currentPage ? 'var(--primary)' : 'var(--text-black)',
                                             fontWeight: pageNum === currentPage ? 700 : 500,
                                             cursor: 'pointer',
                                             fontSize: '0.875rem',
@@ -1453,7 +1453,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 fontWeight: 700,
                                 marginBottom: '1rem',
                                 letterSpacing: '-0.025em',
-                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-gray) 100%)',
+                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text'
@@ -1643,9 +1643,9 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 </button>
                             </div>
                             {loadingPackages ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '1rem' }}>Loading packages...</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem' }}>Loading packages...</p>
                             ) : activePackages.length === 0 ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '1rem', fontSize: '0.9rem' }}>No active packages</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem', fontSize: '0.9rem' }}>No active packages</p>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     {activePackages.map(pkg => (
@@ -1660,10 +1660,10 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                     <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{pkg.package?.name}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>
+                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
                                                         Purchased: {pkg.purchaseDate ? new Date(pkg.purchaseDate).toLocaleDateString() : 'N/A'}
                                                     </span>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>
+                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
                                                         Expires: {pkg.expiryDate ? new Date(pkg.expiryDate).toLocaleDateString() : 'Never'}
                                                     </span>
                                                 </div>
@@ -1688,8 +1688,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             ) : pkg.isCombo ? (
                                                 /* Combo purchase fallback if definition not found */
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                                                    <Ticket size={14} style={{ color: 'var(--text-gray)' }} />
-                                                    <span style={{ color: 'var(--text-gray)', fontStyle: 'italic' }}>
+                                                    <Ticket size={14} style={{ color: 'var(--text-black)' }} />
+                                                    <span style={{ color: 'var(--text-black)', fontStyle: 'italic' }}>
                                                         Combo items available for redemption
                                                     </span>
                                                 </div>
@@ -1728,7 +1728,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             </a>
                                             <div style={{ padding: '0.5rem' }}>
                                                 <div style={{ fontWeight: 500, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{att.title || 'Untitled'}</div>
-                                                {att.remarks && <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{att.remarks}</div>}
+                                                {att.remarks && <div style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>{att.remarks}</div>}
                                             </div>
                                         </div>
                                     ))}
@@ -1747,7 +1747,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 fontWeight: 700,
                                 marginBottom: '1rem',
                                 letterSpacing: '-0.025em',
-                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-gray) 100%)',
+                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text'
@@ -1755,9 +1755,9 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 Appointment History
                             </h3>
                             {loadingAppointments ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>Loading appointments...</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>Loading appointments...</p>
                             ) : customerAppointments.length === 0 ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>No appointments found</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>No appointments found</p>
                             ) : (
                                 <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                     {customerAppointments.map((appointment, index) => (
@@ -1829,7 +1829,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                         </h4>
                                                         <p style={{
                                                             fontSize: '0.8125rem',
-                                                            color: 'var(--text-gray)',
+                                                            color: 'var(--text-black)',
                                                             margin: 0
                                                         }}>
                                                             with {appointment.stylist?.name || 'Unassigned'}
@@ -1870,11 +1870,11 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                     borderRadius: 'var(--radius-md)',
                                                     border: '1px solid var(--border-light)'
                                                 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-gray)' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-black)' }}>
                                                         <Calendar size={14} />
                                                         <span>{new Date(appointment.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                                     </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-gray)' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-black)' }}>
                                                         <span>🕐</span>
                                                         <span>{new Date(appointment.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
@@ -1920,7 +1920,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 fontWeight: 700,
                                 marginBottom: '1rem',
                                 letterSpacing: '-0.025em',
-                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-gray) 100%)',
+                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text'
@@ -1928,9 +1928,9 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 Sales History
                             </h3>
                             {loadingSales ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>Loading sales...</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>Loading sales...</p>
                             ) : customerSales.length === 0 ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>No sales found</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>No sales found</p>
                             ) : (
                                 <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                                     {customerSales.map((sale, index) => (
@@ -2041,10 +2041,10 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                                     </div>
                                                                 ))
                                                             ) : (
-                                                                <span style={{ fontStyle: 'italic', color: 'var(--text-gray)' }}>No items listed</span>
+                                                                <span style={{ fontStyle: 'italic', color: 'var(--text-black)' }}>No items listed</span>
                                                             )}
                                                         </div>
-                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>
+                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
                                                             {sale.saleNumber}
                                                         </p>
                                                     </div>
@@ -2077,7 +2077,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                     borderRadius: 'var(--radius-md)',
                                                     border: '1px solid var(--border-light)'
                                                 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-gray)' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-black)' }}>
                                                         <Calendar size={14} />
                                                         <span>{new Date(sale.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                                     </div>
@@ -2122,7 +2122,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 fontWeight: 700,
                                 marginBottom: '1rem',
                                 letterSpacing: '-0.025em',
-                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-gray) 100%)',
+                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text'
@@ -2130,9 +2130,9 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 Voucher History
                             </h3>
                             {loadingVoucherClaims ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>Loading vouchers...</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>Loading vouchers...</p>
                             ) : customerVoucherClaims.length === 0 ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>No voucher history found</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>No voucher history found</p>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
                                     {customerVoucherClaims.map((claim) => (
@@ -2149,7 +2149,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                         {claim.voucherCode}
                                                     </h4>
                                                     {claim.voucher && (
-                                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-gray)' }}>
+                                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-black)' }}>
                                                             {claim.voucher.name}
                                                         </p>
                                                     )}
@@ -2176,7 +2176,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             {/* Usage History */}
                                             {claim.usageHistory && (Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any)).length > 0 && (
                                                 <div style={{ background: 'var(--bg-body)', padding: '0.75rem', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
-                                                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-gray)' }}>Usage Activity</p>
+                                                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)' }}>Usage Activity</p>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                         {(Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any)).map((usage: any, idx: number) => (
                                                             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
@@ -2197,7 +2197,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
                             <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Package Usage History</h3>
                             {loadingSales || loadingPackages ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>Loading history...</p>
+                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>Loading history...</p>
                             ) : (
                                 <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                     {/* 1. Group items by Package ID */}
@@ -2213,7 +2213,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             );
 
                                         if (redeemedItems.length === 0) {
-                                            return <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '2rem' }}>No usage history found</p>;
+                                            return <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '2rem' }}>No usage history found</p>;
                                         }
 
                                         // Helper to render a list of items
@@ -2235,7 +2235,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                             <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
                                                                 {usage.quantity > 1 ? `${usage.quantity}x ` : ''}{usage.name}
                                                             </span>
-                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
                                                                 {new Date(usage.saleDate).toLocaleDateString()} • {new Date(usage.saleDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
@@ -2354,10 +2354,10 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                             htmlFor="customer-csv-upload"
                             style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}
                         >
-                            <Download size={40} className="text-gray-400" />
+                            <Download size={40} className="text-black" />
                             <div>
                                 <p style={{ fontWeight: 600 }}>{importFile ? importFile.name : 'Click to upload or drag and drop'}</p>
-                                <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>CSV files only</p>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>CSV files only</p>
                             </div>
                         </label>
                     </div>

@@ -157,7 +157,7 @@ const ExpenseList: React.FC = () => {
         { header: 'Date', accessor: (e: Expense) => new Date(e.date).toLocaleDateString() },
         { header: 'Title', accessor: 'title' as const },
         { header: 'Category', accessor: 'category' as const },
-        { header: 'Cashier', accessor: (e: Expense) => <span style={{ color: 'var(--text-gray)' }}>{e.cashierName || 'Admin'}</span> },
+        { header: 'Cashier', accessor: (e: Expense) => <span style={{ color: 'var(--text-black)' }}>{e.cashierName || 'Admin'}</span> },
         { header: 'Amount', accessor: (e: Expense) => <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{formatPrice(e.amount)}</span> },
         // {
         //     header: 'Actions',
@@ -288,13 +288,13 @@ const ExpenseList: React.FC = () => {
                                                 layout="vertical"
                                                 iconType="circle"
                                                 formatter={(value) => (
-                                                    <span style={{ color: 'var(--text-gray)', fontSize: '0.75rem', fontWeight: 500 }}>{value}</span>
+                                                    <span style={{ color: 'var(--text-black)', fontSize: '0.75rem', fontWeight: 500 }}>{value}</span>
                                                 )}
                                             />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-gray)', fontSize: '0.875rem', background: 'var(--bg-body)', borderRadius: '0.75rem', border: '1px dashed var(--border)' }}>
+                                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-black)', fontSize: '0.875rem', background: 'var(--bg-body)', borderRadius: '0.75rem', border: '1px dashed var(--border)' }}>
                                         No data
                                     </div>
                                 )}
@@ -338,7 +338,7 @@ const ExpenseList: React.FC = () => {
                         <div className="input-group" style={{ flex: 1, minWidth: '250px' }}>
                             <label className="input-label">Quick Search</label>
                             <div style={{ position: 'relative' }}>
-                                <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', width: 16, height: 16 }} />
+                                <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', width: 16, height: 16 }} />
                                 <input
                                     type="text"
                                     placeholder="Search by title or description..."
@@ -390,7 +390,7 @@ const ExpenseList: React.FC = () => {
                         {/* Pagination Controls */}
                         {totalPages > 1 && (
                             <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                                <div style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
                                     Showing <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{startIndex + 1}</span> to <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{Math.min(startIndex + RECS_PER_PAGE, filteredExpenses.length)}</span> of <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{filteredExpenses.length}</span> results
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -407,7 +407,7 @@ const ExpenseList: React.FC = () => {
                                             const pageNum = i + 1;
                                             // Show limited page numbers if there are too many
                                             if (totalPages > 7 && (pageNum > 2 && pageNum < totalPages - 1 && Math.abs(pageNum - currentPage) > 1)) {
-                                                if (pageNum === 3 || pageNum === totalPages - 2) return <span key={pageNum} style={{ padding: '0 0.5rem', color: 'var(--text-gray)' }}>...</span>;
+                                                if (pageNum === 3 || pageNum === totalPages - 2) return <span key={pageNum} style={{ padding: '0 0.5rem', color: 'var(--text-black)' }}>...</span>;
                                                 return null;
                                             }
                                             return (
@@ -421,7 +421,7 @@ const ExpenseList: React.FC = () => {
                                                         border: '1px solid',
                                                         borderColor: currentPage === pageNum ? 'var(--primary)' : 'var(--border)',
                                                         background: currentPage === pageNum ? 'var(--primary-light)' : 'transparent',
-                                                        color: currentPage === pageNum ? 'var(--primary)' : 'var(--text-gray)',
+                                                        color: currentPage === pageNum ? 'var(--primary)' : 'var(--text-black)',
                                                         fontSize: '0.8125rem',
                                                         fontWeight: 600,
                                                         cursor: 'pointer',

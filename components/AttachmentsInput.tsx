@@ -78,7 +78,7 @@ export const AttachmentsInput: React.FC<AttachmentsInputProps> = ({ attachments,
 
             <div style={{ border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                 <table style={{ width: '100%', fontSize: '0.875rem', borderCollapse: 'collapse' }}>
-                    <thead style={{ background: 'var(--bg-hover)', color: 'var(--text-gray)' }}>
+                    <thead style={{ background: 'var(--bg-hover)', color: 'var(--text-black)' }}>
                         <tr>
                             <th style={{ padding: '0.75rem', textAlign: 'left', width: '30%', fontWeight: 600 }}>Title</th>
                             <th style={{ padding: '0.75rem', textAlign: 'left', width: '35%', fontWeight: 600 }}>Remarks</th>
@@ -89,7 +89,7 @@ export const AttachmentsInput: React.FC<AttachmentsInputProps> = ({ attachments,
                     <tbody>
                         {attachments.length === 0 ? (
                             <tr>
-                                <td colSpan={readOnly ? 3 : 4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                                <td colSpan={readOnly ? 3 : 4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-black)' }}>
                                     {readOnly ? 'No attachments available.' : 'No attachments added. Click "Add Attach" to start.'}
                                 </td>
                             </tr>
@@ -112,7 +112,7 @@ export const AttachmentsInput: React.FC<AttachmentsInputProps> = ({ attachments,
                                     </td>
                                     <td style={{ padding: '0.75rem' }}>
                                         {readOnly ? (
-                                            <span style={{ color: 'var(--text-gray)' }}>{item.remarks || '-'}</span>
+                                            <span style={{ color: 'var(--text-black)' }}>{item.remarks || '-'}</span>
                                         ) : (
                                             <input
                                                 type="text"

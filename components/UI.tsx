@@ -79,7 +79,7 @@ export const Input: React.FC<InputProps> = ({ label, error, className = '', type
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--text-gray)',
+              color: 'var(--text-black)',
               display: 'flex',
               alignItems: 'center'
             }}
@@ -355,7 +355,7 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, icon: Icon, tren
         <p style={{
           fontSize: '0.8125rem',
           fontWeight: 700,
-          color: isColored ? 'rgba(255,255,255,0.9)' : 'var(--text-gray)',
+          color: isColored ? 'rgba(255,255,255,0.9)' : 'var(--text-black)',
           marginBottom: '0.125rem',
           textTransform: 'uppercase',
           letterSpacing: '0.05em'
@@ -472,7 +472,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                     background: 'var(--bg-hover)',
                     border: 'none',
                     cursor: 'pointer',
-                    color: 'var(--text-gray)',
+                    color: 'var(--text-black)',
                     display: 'flex',
                     padding: '0.5rem',
                     borderRadius: 'var(--radius-md)',
@@ -485,7 +485,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'var(--bg-hover)';
-                    e.currentTarget.style.color = 'var(--text-gray)';
+                    e.currentTarget.style.color = 'var(--text-black)';
                     e.currentTarget.style.transform = 'rotate(0deg)';
                   }}
                 >
@@ -554,7 +554,7 @@ export const Table = <T extends { id: number | string }>({ columns, data, onRowC
               <span className="animate-spin" style={{ display: 'flex', color: 'var(--primary)' }}>
                 <MdLoop size={40} />
               </span>
-              <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">Refreshing...</span>
+              <span className="text-sm font-bold text-black uppercase tracking-widest">Refreshing...</span>
             </div>
           </motion.div>
         )}
@@ -608,7 +608,7 @@ export const Table = <T extends { id: number | string }>({ columns, data, onRowC
           </AnimatePresence>
           {!isLoading && data.length === 0 && (
             <tr>
-              <td colSpan={columns.length} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+              <td colSpan={columns.length} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-black)' }}>
                 No data available.
               </td>
             </tr>
@@ -725,7 +725,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
               <button
                 type="button"
                 onClick={() => handleRemoveItem(item)}
-                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--text-gray)' }}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--text-black)' }}
               >
                 <MdClose size={14} />
               </button>
@@ -765,7 +765,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         {/* Hidden input for form submission - holds the actual value (comma separated if multiple) */}
         <input type="hidden" name={name} value={currentVal} />
 
-        <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', pointerEvents: 'none', display: 'flex' }}>
+        <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', pointerEvents: 'none', display: 'flex' }}>
           <MdExpandMore size={16} />
         </div>
       </div>

@@ -83,7 +83,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onNavigate }) => {
                 <button
                     type="button"
                     onClick={() => onNavigate('login')}
-                    style={{ display: 'flex', alignItems: 'center', color: 'var(--text-gray)', marginBottom: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}
+                    style={{ display: 'flex', alignItems: 'center', color: 'var(--text-black)', marginBottom: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}
                 >
                     <ArrowLeft size={16} style={{ marginRight: '0.5rem' }} /> Back
                 </button>
@@ -96,7 +96,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onNavigate }) => {
                     >
                         Reset Password<span style={{ color: 'var(--primary)' }}>.</span>
                     </motion.h1>
-                    <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem', fontWeight: 500 }}>
+                    <p style={{ color: 'var(--text-black)', fontSize: '0.875rem', fontWeight: 500 }}>
                         Enter your new password below.
                     </p>
                 </div>

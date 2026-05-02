@@ -305,7 +305,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                 {/* Input Section */}
                 <Card title="Today's Reconciliation">
                     <div className="space-y-6">
-                        <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
+                        <p style={{ color: 'var(--text-black)', fontSize: '0.875rem' }}>
                             {fraudProtection 
                                 ? "Enter the closing amounts for all active payment terminals and cash drawers."
                                 : "Review the auto-filled system totals and adjust if there are discrepancies."}
@@ -381,7 +381,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                                         {/* System Expected Column */}
                                         <div style={{ background: 'var(--bg-body)', padding: '1rem', borderRadius: '1rem', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 800, margin: 0, letterSpacing: '0.05em' }}>System Expected</p>
+                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', textTransform: 'uppercase', fontWeight: 800, margin: 0, letterSpacing: '0.05em' }}>System Expected</p>
                                                 {fraudProtection && <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '4px', fontWeight: 700 }}>SECURE</span>}
                                             </div>
 
@@ -392,7 +392,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                                                         const expected = getExpectedAmount(m.id) || getExpectedAmount(m.name);
                                                         return (
                                                             <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem' }}>
-                                                                <span style={{ color: 'var(--text-gray)', fontWeight: 500 }}>System {m.name}</span>
+                                                                <span style={{ color: 'var(--text-black)', fontWeight: 500 }}>System {m.name}</span>
                                                                 <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(expected)}</span>
                                                             </div>
                                                         );
@@ -430,13 +430,13 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
 
                                         {/* Total Counted Column */}
                                         <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '1rem', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 800, margin: '0 0 0.75rem 0', letterSpacing: '0.05em' }}>Total Counted</p>
+                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', textTransform: 'uppercase', fontWeight: 800, margin: '0 0 0.75rem 0', letterSpacing: '0.05em' }}>Total Counted</p>
 
                                             {!fraudProtection ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                                     {paymentMethods.filter(m => m.active).map(m => (
                                                         <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem' }}>
-                                                            <span style={{ color: 'var(--text-gray)', fontWeight: 500 }}>Total {m.name}</span>
+                                                            <span style={{ color: 'var(--text-black)', fontWeight: 500 }}>Total {m.name}</span>
                                                             <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(parseFloat(counts[m.id]) || 0)}</span>
                                                         </div>
                                                     ))}
@@ -508,7 +508,7 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
                             exit={{ opacity: 0 }}
                         >
                             <Card>
-                                <div style={{ padding: '4rem 2rem', minHeight: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', color: 'var(--text-gray)' }}>
+                                <div style={{ padding: '4rem 2rem', minHeight: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', color: 'var(--text-black)' }}>
                                     <div style={{ background: 'var(--bg-body)', width: '4rem', height: '4rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
                                         <ClipboardCheck size={32} />
                                     </div>

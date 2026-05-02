@@ -444,9 +444,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             case 'FAILED': return 'bg-red-100 text-red-700';
             case 'REFUNDED': return 'bg-purple-100 text-purple-700';
             case 'PARTIAL': return 'bg-blue-100 text-blue-700';
-            case 'DRAFT': return 'bg-slate-200 text-slate-700';
+            case 'DRAFT': return 'bg-slate-200 text-black';
             case 'CANCELLED': return 'bg-red-50 text-red-600 font-black border-red-200';
-            default: return 'bg-slate-100 text-slate-700';
+            default: return 'bg-slate-100 text-black';
         }
     };
 
@@ -515,7 +515,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         {
             header: 'Date',
             accessor: (row: Payment) => (
-                <div className="font-bold text-slate-800 dark:text-slate-100">
+                <div className="font-bold text-black dark:text-black">
                     {new Date(row.createdAt).toLocaleDateString()}
                 </div>
             )
@@ -523,7 +523,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         {
             header: 'Invoice #',
             accessor: (row: Payment) => (
-                <div className="text-xs font-mono text-slate-600 font-medium">
+                <div className="text-xs font-mono text-black font-medium">
                     {/* Prioritize Invoice Number field, fallback to saleNumber only if needed (for legacy data) */}
                     {row.sale?.invoiceNumber || row.invoiceNumber || (row.sale?.saleNumber?.startsWith('INV') ? row.sale?.saleNumber : '-')}
                 </div>
@@ -536,7 +536,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 return (
                     <div>
                         <div className="flex items-center gap-2">
-                            <div className="font-medium text-slate-800 dark:text-slate-100">
+                            <div className="font-medium text-black dark:text-black">
                                 {row.appointment?.customer?.name || (row.sale as any)?.customer?.name || 'Walk-in'}
                             </div>
                             {hasCombo && (
@@ -549,7 +549,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 {row.sale.saleNumber}
                             </div>
                         )}
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-black">
                             {/* {(row.appointment?.service?.name && `Appt: ${row.appointment.service.name}`)} */}
                             {(row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile) && (
                                 <span className="ml-1 opacity-60">• {(isStaff && fraudProtection) ? maskPhone(row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile) : (row.appointment?.customer?.mobile || (row.sale as any)?.customer?.mobile)}</span>
@@ -575,7 +575,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 const displayAmount = (isRedemption && row.amount !== 0) ? 0 : row.amount;
 
                 return (
-                    <div className="font-bold text-slate-800 dark:text-slate-100">
+                    <div className="font-bold text-black dark:text-black">
                         {formatPrice(displayAmount)}
                     </div>
                 );
@@ -593,14 +593,14 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 
                 if (uniqueSpecialists.length > 0) {
                     return (
-                        <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                        <div className="text-sm text-black dark:text-black font-medium">
                             {uniqueSpecialists.join(', ')}
                         </div>
                     );
                 }
 
                 return (
-                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                    <div className="text-sm text-black dark:text-black">
                         {row.appointment?.stylist?.name || row.sale?.specialist?.name || '-'}
                     </div>
                 );
@@ -761,7 +761,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             borderRadius: '0.625rem',
                             transition: 'all 0.2s'
                         }}
-                        className="hover:bg-slate-200 hover:text-slate-900"
+                        className="hover:bg-slate-200 hover:text-black"
                         onClick={(e) => {
                             e.stopPropagation();
                             setSelectedPayment(row);
@@ -889,7 +889,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             <Card style={{ padding: '1.25rem' }}>
                 <div className="flex flex-wrap items-end" style={{ gap: '6px 6px' }}>
                     <div className="space-y-1 min-w-[140px]">
-                        <label className="text-xs font-semibold text-slate-500 block">Search</label>
+                        <label className="text-xs font-semibold text-black block">Search</label>
                         <Input
                             type="text"
                             placeholder="Search by name, mobile, invoice or sale #"
@@ -900,7 +900,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     {isAdmin && (
                         <>
                             <div className="space-y-1 min-w-[110px]">
-                                <label className="text-xs font-semibold text-slate-500 block">Start Date</label>
+                                <label className="text-xs font-semibold text-black block">Start Date</label>
                                 <Input
                                     type="date"
                                     value={dateRange.start}
@@ -909,7 +909,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 />
                             </div>
                             <div className="space-y-1 min-w-[110px]">
-                                <label className="text-xs font-semibold text-slate-500 block">End Date</label>
+                                <label className="text-xs font-semibold text-black block">End Date</label>
                                 <Input
                                     type="date"
                                     value={dateRange.end}
@@ -920,7 +920,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         </>
                     )}
                     <div className="space-y-1 min-w-[180px]">
-                        <label className="text-xs font-semibold text-slate-500 block">Amount</label>
+                        <label className="text-xs font-semibold text-black block">Amount</label>
                         <Select
                             // label prop removed
                             value={minAmount}
@@ -939,7 +939,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         />
                     </div>
                     <div className="space-y-1 min-w-[180px]">
-                        <label className="text-xs font-semibold text-slate-500 block">Method</label>
+                        <label className="text-xs font-semibold text-black block">Method</label>
                         <Select
                             // label prop removed
                             value={paymentMethod}
@@ -957,7 +957,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         />
                     </div>
                     <div className="space-y-1 min-w-[150px]">
-                        <label className="text-xs font-semibold text-slate-500 block">Status</label>
+                        <label className="text-xs font-semibold text-black block">Status</label>
                         <Select
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
@@ -974,7 +974,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         />
                     </div>
                     <div className="space-y-1 min-w-[110px]">
-                        <label className="text-xs font-semibold text-slate-500 block">Specialist</label>
+                        <label className="text-xs font-semibold text-black block">Specialist</label>
                         <Select
                             value={selectedSpecialist}
                             onChange={(e) => setSelectedSpecialist(e.target.value)}
@@ -989,7 +989,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                         />
                     </div>
                     <div className="space-y-1 flex-1 flex flex-col items-end">
-                        <label className="text-xs font-semibold text-slate-500 block" style={{ visibility: 'hidden' }}>Actions</label>
+                        <label className="text-xs font-semibold text-black block" style={{ visibility: 'hidden' }}>Actions</label>
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <Button
                                 onClick={() => {
@@ -1133,11 +1133,11 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
 
                 {/* Pagination Footer */}
                 <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div className="text-sm text-slate-500 font-medium">
-                        Showing <span className="text-slate-900 dark:text-white font-bold">{combinedPayments.length}</span> of <span className="text-slate-900 dark:text-white font-bold">{pagination.totalCount + (combinedPayments.length - payments.length)}</span> transactions
+                    <div className="text-sm text-black font-medium">
+                        Showing <span className="text-black dark:text-white font-bold">{combinedPayments.length}</span> of <span className="text-black dark:text-white font-bold">{pagination.totalCount + (combinedPayments.length - payments.length)}</span> transactions
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="text-xs text-slate-400 font-bold uppercase tracking-widest hidden md:block">
+                        <div className="text-xs text-black font-bold uppercase tracking-widest hidden md:block">
                             Page {pagination.currentPage} of {pagination.totalPages}
                         </div>
                         <div className="flex gap-2">
@@ -1205,13 +1205,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                 {/* Row 1: Transaction ID | Booking Time */}
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                                     <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Transaction ID</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Transaction ID</p>
                                                         <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', wordBreak: 'break-all', margin: 0 }}>
                                                             {(selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id}
                                                         </p>
                                                     </div>
                                                     <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Booking Time</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Booking Time</p>
                                                         <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
                                                             {appointment?.startTime ? new Date(appointment.startTime).toLocaleString(undefined, {
                                                                 timeStyle: 'short',
@@ -1224,13 +1224,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                 {/* Row 2: Invoice Number | Transaction Date & Time */}
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                                     <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Invoice Number</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Invoice Number</p>
                                                         <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)', fontSize: '0.75rem', margin: 0 }}>
                                                             {selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.invoiceNumber || 'N/A'}
                                                         </p>
                                                     </div>
                                                     <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Trans. Date & Time</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Trans. Date & Time</p>
                                                         <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
                                                             {new Date(selectedPayment.createdAt).toLocaleString(undefined, {
                                                                 dateStyle: 'medium',
@@ -1243,13 +1243,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                 {/* Row 3: Customer | Appointment ID */}
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                                     <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Customer</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Customer</p>
                                                         <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}>
                                                             {appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in'}
                                                         </p>
                                                     </div>
                                                     <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Appointment ID</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Appointment ID</p>
                                                         <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.65rem', wordBreak: 'break-all', margin: 0 }}>
                                                             {apptId || 'N/A'}
                                                         </p>
@@ -1275,11 +1275,11 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, uppercase: 'true', letterSpacing: '0.1em' }}>PAYMENT INFO</span>
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Method</p>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Method</p>
                                     <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentMethod}</p>
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginBottom: '0.15rem' }}>Collection Type</p>
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Collection Type</p>
                                     <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentType}</p>
                                 </div>
                             </div>
@@ -1297,7 +1297,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 <p style={{ fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>
                                     {selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in'}
                                 </p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.15rem', margin: 0 }}>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', marginTop: '0.15rem', margin: 0 }}>
                                     {(isStaff && fraudProtection) ? maskPhone(selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile) : (selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile || 'No contact info')}
                                 </p>
                             </div>
@@ -1346,7 +1346,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     alignItems: 'center',
                                     gap: '0.5rem'
                                 }}>
-                                    <Paperclip size={14} className="text-slate-500" />
+                                    <Paperclip size={14} className="text-black" />
                                     <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Attachments</p>
                                 </div>
                                 <div style={{
@@ -1467,7 +1467,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{item.name}</p>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>Qty: {item.quantity}</span>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>Qty: {item.quantity}</span>
                                                             {item.specialistName && (
                                                                 <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>• {item.specialistName}</span>
                                                             )}
@@ -1497,7 +1497,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                         <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{formatPrice(selectedPayment.amount)}</p>
                                     </div>
                                 ) : (
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-gray)', fontStyle: 'italic', margin: 0 }}>No items found</p>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-black)', fontStyle: 'italic', margin: 0 }}>No items found</p>
                                 )}
                             </div>
 
@@ -1512,7 +1512,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 {selectedPayment.sale && (
                                     <>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                            <span style={{ color: 'var(--text-gray)' }}>Subtotal</span>
+                                            <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
                                             <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
                                                 {formatPrice((selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0))}
                                             </span>
@@ -1527,13 +1527,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                             
                                             return (
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                    <span style={{ color: 'var(--text-gray)' }}>Discount</span>
+                                                    <span style={{ color: 'var(--text-black)' }}>Discount</span>
                                                     <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
                                                 </div>
                                             );
                                         })()}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
-                                            <span style={{ color: 'var(--text-gray)', fontWeight: 600 }}>Balance Due</span>
+                                            <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
                                             <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
                                                 {(() => {
                                                     const sub = (selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
@@ -1562,7 +1562,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                             {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 ? 'Transaction Amount' : 'Net Amount'}
                                         </span>
                                         {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 && (
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-gray)', fontWeight: 600 }}>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-black)', fontWeight: 600 }}>
                                                 Total Paid: {formatPrice((selectedPayment.sale as any).paidAmount || 0)}
                                             </span>
                                         )}
@@ -1745,7 +1745,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 >
                                     Cancel Bill
                                 </Button>
-                                <p style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textAlign: 'center', marginTop: '0.5rem' }}>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-black)', textAlign: 'center', marginTop: '0.5rem' }}>
                                     Cancelling will revert all stock, voucher balances, and package redemptions.
                                 </p>
                             </div>
@@ -1952,7 +1952,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     {breakdownLoading ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-4">
                             <RefreshCw className="animate-spin text-blue-500" size={40} />
-                            <p className="text-sm font-medium text-slate-500">Calculating breakdown...</p>
+                            <p className="text-sm font-medium text-black">Calculating breakdown...</p>
                         </div>
                     ) : (
                         <>
@@ -1963,11 +1963,11 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 border: '1px solid rgba(79, 70, 229, 0.1)',
                                 textAlign: 'center'
                             }}>
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                <p className="text-xs font-bold text-black uppercase tracking-widest mb-1">
                                     {breakdownTitle.split(' ')[0]} for {new Date(dateRange.start).toLocaleDateString()}
                                     {dateRange.start !== dateRange.end && ` - ${new Date(dateRange.end).toLocaleDateString()}`}
                                 </p>
-                                <h3 className="text-3xl font-black text-slate-800 tracking-tighter">
+                                <h3 className="text-3xl font-black text-black tracking-tighter">
                                     {formatPrice(Object.values(breakdownData || {}).reduce((a: any, b: any) => a + Number(b), 0))}
                                 </h3>
                                 {(status !== 'ALL' || paymentMethod !== 'ALL' || selectedSpecialist !== 'ALL') && (
@@ -1991,9 +1991,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                 <div className="flex justify-between items-center px-1">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                                                        <span className="text-sm font-bold text-slate-700">{method}</span>
+                                                        <span className="text-sm font-bold text-black">{method}</span>
                                                     </div>
-                                                    <span className="text-sm font-black text-slate-900">{formatPrice(amount)}</span>
+                                                    <span className="text-sm font-black text-black">{formatPrice(amount)}</span>
                                                 </div>
                                                 <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
                                                     <motion.div
@@ -2004,13 +2004,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                     />
                                                 </div>
                                                 <div className="flex justify-end pr-1">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{percentage}% OF {breakdownTitle.split(' ')[0]}</span>
+                                                    <span className="text-[10px] font-black text-black uppercase tracking-tighter">{percentage}% OF {breakdownTitle.split(' ')[0]}</span>
                                                 </div>
                                             </div>
                                         );
                                     })
                                 ) : (
-                                    <div className="text-center py-8 text-slate-400 font-medium">No payments found for this selection</div>
+                                    <div className="text-center py-8 text-black font-medium">No payments found for this selection</div>
                                 )}
                             </div>
 

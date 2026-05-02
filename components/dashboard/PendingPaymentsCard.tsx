@@ -84,9 +84,9 @@ export const PendingPaymentsCard: React.FC<PendingPaymentsCardProps> = ({ pendin
                             justifyContent: 'center',
                             margin: '0 auto 0.75rem auto'
                         }}>
-                            <Clock className="text-slate-300" size={24} />
+                            <Clock className="text-black" size={24} />
                         </div>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-gray)' }}>No pending payments</p>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-black)' }}>No pending payments</p>
                     </div>
                 ) : (
                     displayPayments.map((payment, index) => (
