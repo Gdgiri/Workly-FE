@@ -375,6 +375,9 @@ const Sales: React.FC<SalesProps> = ({
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
 
+  // Helper to normalize names for comparison (trim and collapse multiple spaces)
+  const normalizeName = (name: string) => name?.trim().replace(/\s+/g, ' ').toLowerCase();
+
   const fetchCustomerPackages = async (customerId: string) => {
     try {
       const response = await api.get(`/customers/${customerId}/packages/active`);
@@ -395,12 +398,12 @@ const Sales: React.FC<SalesProps> = ({
           (s.items || []).filter((item: any) => item.type === 'combo').forEach((item: any) => {
             // De-duplicate: If already in regularPackages, skip
             const isDup = regularPackages.some((rp: any) => 
-              (rp.package?.name === item.name || rp.packageName === item.name) &&
+              (normalizeName(rp.package?.name) === normalizeName(item.name) || normalizeName(rp.packageName) === normalizeName(item.name)) &&
               rp.purchaseDate?.split('T')[0] === s.createdAt?.split('T')[0]
             );
             if (isDup) return;
 
-            const comboDef = rawCombos.find(c => c.name === item.name);
+            const comboDef = rawCombos.find(c => normalizeName(c.name) === normalizeName(item.name));
             comboPool.push({
               id: `combo-${s.id}-${item.itemId || item.name}`,
               isCombo: true,
@@ -437,11 +440,11 @@ const Sales: React.FC<SalesProps> = ({
       redemptions.forEach(red => {
         const targetCombo = comboPool.find(c => 
           new Date(c.purchaseDate) <= new Date(red.saleDate) &&
-          c.usageDetails.some((i: any) => i.name === red.name && i.remainingQuantity > 0)
+          c.usageDetails.some((i: any) => normalizeName(i.name) === normalizeName(red.name) && i.remainingQuantity > 0)
         );
 
         if (targetCombo) {
-          const comboItem = targetCombo.usageDetails.find((i: any) => i.name === red.name);
+          const comboItem = targetCombo.usageDetails.find((i: any) => normalizeName(i.name) === normalizeName(red.name));
           if (comboItem) {
             const qtyToDeduct = red.quantity || 1;
             comboItem.remainingQuantity = Math.max(0, comboItem.remainingQuantity - qtyToDeduct);
@@ -486,7 +489,7 @@ const Sales: React.FC<SalesProps> = ({
         // Find matching package item
         const matchingUsageItems = customerPackages.flatMap(pkg => {
           const items = pkg.usageDetails?.filter((u: any) =>
-            (u.itemId === cartItem.itemId || u.name === cartItem.name) && u.remainingQuantity > 0
+            (u.itemId === cartItem.itemId || normalizeName(u.name) === normalizeName(cartItem.name)) && u.remainingQuantity > 0
           ) || [];
           return items.map((u: any) => ({ ...u, packageId: pkg.id }));
         });
