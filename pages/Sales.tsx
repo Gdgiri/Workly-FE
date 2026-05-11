@@ -3498,7 +3498,7 @@ const Sales: React.FC<SalesProps> = ({
                     const availableClaims = voucherClaims?.filter(c =>
                       c.customerId && selectedCustomerId &&
                       c.customerId.toString() === selectedCustomerId.toString() &&
-                      (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                      (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
                       c.balance > 0
                     ) || [];
 
@@ -3530,7 +3530,7 @@ const Sales: React.FC<SalesProps> = ({
                                 <button
                                   key={v.id}
                                   onClick={() => !isExpired && handleVoucherClick(v.voucherCode)}
-                                  title={isExpired ? "Voucher expired" : "Click to select"}
+                                  title={isExpired ? `Voucher expired` : `Code: ${v.voucherCode} — Click to select`}
                                   style={{
                                     fontSize: '0.72rem', fontWeight: 700,
                                     padding: '0.25rem 0.65rem',
@@ -3555,7 +3555,7 @@ const Sales: React.FC<SalesProps> = ({
                                   }}
                                 >
                                   <Ticket size={11} />
-                                  {v.voucherCode}
+                                  {v.voucher?.name || v.voucherCode}
                                   <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
                                   {isExpired && <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.9 }}>(Expired)</span>}
                                   {isSelected && (
@@ -3593,7 +3593,7 @@ const Sales: React.FC<SalesProps> = ({
                           const hasClaims = voucherClaims?.some(c =>
                             c.customerId && selectedCustomerId &&
                             c.customerId.toString() === selectedCustomerId.toString() &&
-                            (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                            (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
                             c.balance > 0
                           );
                           return hasClaims ? "Select voucher from above" : "Voucher Code";
@@ -3605,7 +3605,7 @@ const Sales: React.FC<SalesProps> = ({
                           const hasClaims = voucherClaims?.some(c =>
                             c.customerId && selectedCustomerId &&
                             c.customerId.toString() === selectedCustomerId.toString() &&
-                            (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                            (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
                             c.balance > 0
                           );
                           return !!hasClaims;
@@ -3622,7 +3622,7 @@ const Sales: React.FC<SalesProps> = ({
                             const hasClaims = voucherClaims?.some(c =>
                               c.customerId && selectedCustomerId &&
                               c.customerId.toString() === selectedCustomerId.toString() &&
-                              (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                              (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
                               c.balance > 0
                             );
                             return hasClaims ? 'rgba(0,0,0,0.03)' : 'rgba(16,185,129,0.06)';
@@ -3634,7 +3634,7 @@ const Sales: React.FC<SalesProps> = ({
                             const hasClaims = voucherClaims?.some(c =>
                               c.customerId && selectedCustomerId &&
                               c.customerId.toString() === selectedCustomerId.toString() &&
-                              (c.status === 'claimed' || c.status === 'partially_redeemed') &&
+                              (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
                               c.balance > 0
                             );
                             return hasClaims ? 'not-allowed' : 'text';
