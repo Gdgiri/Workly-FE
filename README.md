@@ -1,4 +1,5 @@
 
+11/05 - fixes for package deduction issue
 
 
 
