@@ -1480,7 +1480,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                         </div>
                                                     </div>
                                                     <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
-                                                        {isRedemption ? 'FREE' : formatPrice(item.price * item.quantity)}
+                                                        {isRedemption ? formatPrice(0) : formatPrice(item.price * item.quantity)}
                                                     </p>
                                                 </div>
                                             );
