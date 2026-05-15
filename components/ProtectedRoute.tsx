@@ -1,10 +1,10 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
-    allowedRoles?: ('ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER')[];
+    allowedRoles?: ('ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER' | 'SUPER_ADMIN')[];
 }
 
 /**
@@ -12,6 +12,7 @@ interface ProtectedRouteProps {
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
+    const location = useLocation();
 
     if (loading) {
         return (
@@ -31,9 +32,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
         return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-        // User doesn't have required role - redirect to unauthorized or dashboard
-        return <Navigate to="/dashboard" replace />;
+    // Normalize user role and allowed roles for comparison
+    const userRole = user.role?.toUpperCase();
+    const normalizedAllowedRoles = allowedRoles?.map(r => r.toUpperCase());
+
+    if (normalizedAllowedRoles && !normalizedAllowedRoles.includes(userRole)) {
+        // User doesn't have required role - redirect to a safe landing page (Sales)
+        // Extract appId and businessName from current URL if possible
+        const pathParts = location.pathname.split('/').filter(p => p);
+        if (pathParts.length >= 2) {
+            const appId = pathParts[0];
+            const businessName = pathParts[1];
+            return <Navigate to={`/${appId}/${businessName}/sales`} replace />;
+        }
+        
+        return <Navigate to="/login" replace />;
     }
 
     return <>{children}</>;

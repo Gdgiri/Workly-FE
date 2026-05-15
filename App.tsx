@@ -6,6 +6,7 @@ import { fetchSettings } from './redux/slices/settingSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, TopBar } from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import { PaymentMethod, Voucher, VoucherClaim, Customer } from './types';
 
 // Pages
@@ -145,17 +146,19 @@ const AppContent: React.FC = () => {
         const { appName, businessName } = user || {};
 
         if (appName && businessName) {
-          navigate(`/${appName}/${businessName}/dashboard`);
+          const isStaff = user?.role?.toUpperCase() === 'STAFF';
+          const targetPage = isStaff ? 'sales' : 'dashboard';
+          navigate(`/${appName}/${businessName}/${targetPage}`);
         } else {
           // Fallback to URL parsing
           const currentPath = location.pathname;
           const pathParts = currentPath.split('/').filter(p => p);
           if (pathParts.length >= 2) {
-            navigate(`/${pathParts[0]}/${pathParts[1]}/dashboard`);
+            // Check if user is staff even in fallback
+            const isStaff = user?.role?.toUpperCase() === 'STAFF';
+            const targetPage = isStaff ? 'sales' : 'dashboard';
+            navigate(`/${pathParts[0]}/${pathParts[1]}/${targetPage}`);
           } else {
-            // If we really can't find it, maybe we should error or go to a default?
-            // But existing behavior was /dashboard which breaks Sidebar.
-            // We'll try to stay on /dashboard but Sidebar will be broken unless we fix Sidebar too.
             navigate('/dashboard');
           }
         }
@@ -438,7 +441,11 @@ const AppContent: React.FC = () => {
         <main className="page-content">
           <AnimatePresence mode="wait">
             <Routes>
-              <Route path="/:appId/:businessName/dashboard" element={<Dashboard />} />
+              <Route path="/:appId/:businessName/dashboard" element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'SUPER_ADMIN']}>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/:appId/:businessName/payments" element={<Payments paymentMethods={paymentMethods.filter(m => m.active)} fraudProtection={fraudProtection} />} />
               <Route path="/:appId/:businessName/sales" element={
                 <Sales

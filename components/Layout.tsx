@@ -29,7 +29,7 @@ export const allMenuItems = [
     id: 'dashboard',
     label: 'Dashboard',
     icon: LayoutDashboard,
-    roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'STAFF'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER'],
     color: '#6366F1', // Indigo
     gradient: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
     shortcutKey: 'd',
