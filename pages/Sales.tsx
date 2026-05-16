@@ -1609,14 +1609,14 @@ const Sales: React.FC<SalesProps> = ({
         customerName: selectedCustomerId === 'WALK_IN' ? 'Walk-in Customer' : (selectedCustomer?.name || customerSearchTerm || 'Customer'), // Pass accurate customer name from DB
         subtotal: subtotal,
         tax: 0, // No tax
-        discount: totalDiscount,
+        discount: manualDiscountValue,
         totalAmount: actualTotal, // Correct total amount (not just what is being paid now)
         paymentMethod: finalPayments.length > 0
           ? (isSplitPaymentMode ? 'SPLIT' : finalPayments[0].paymentMethod)
           : (appliedVouchers.length > 0 ? 'VOUCHER' : 'CASH'),
         paymentStatus: status,
         voucherCode: null, // Legacy
-        voucherDiscount: actualVoucherDeduction,
+        voucherDiscount: 0,
         vouchers: (() => {
           let remainingForVouchers = subtotal - (totalDiscount || 0) + (voucherDeduction || 0);
           return appliedVouchers.map(v => {
@@ -1783,12 +1783,12 @@ const Sales: React.FC<SalesProps> = ({
         items: calculatedItems,
         subtotal: calculatedSubtotal,
         tax: 0, // No tax
-        discount: voucherDeduction + manualDiscountValue,
+        discount: manualDiscountValue,
         totalAmount: calculatedTotal,
         paymentMethod: 'RAZORPAY', // Correct backend enum
         paymentStatus: 'PENDING',
         voucherCode: null,
-        voucherDiscount: actualVoucherDeduction,
+        voucherDiscount: 0,
         vouchers: (() => {
           let remainingForVouchers = subtotal - (totalDiscount || 0) + (voucherDeduction || 0);
           return appliedVouchers.map(v => {
@@ -1951,7 +1951,7 @@ const Sales: React.FC<SalesProps> = ({
         items: calculatedItems,
         subtotal: calculatedSubtotal,
         tax: 0,
-        discount: voucherDeduction + manualDiscountValue,
+        discount: manualDiscountValue,
         totalAmount: calculatedTotal,
         paymentMethod: 'RAZORPAY',
         paymentStatus: 'PENDING',

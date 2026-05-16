@@ -569,8 +569,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     if (match && match[1]) method = match[1].trim().toUpperCase();
                 }
 
-                const isRedemption = !row.isPendingSale && (method === 'VOUCHER' || method === 'PACKAGE' || 
-                                    (row.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0)));
+                const isRedemption = !row.isPendingSale && (method === 'VOUCHER' || method === 'PACKAGE');
                 
                 const displayAmount = (isRedemption && row.amount !== 0) ? 0 : row.amount;
 
