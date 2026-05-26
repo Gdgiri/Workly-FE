@@ -5,7 +5,7 @@ import { AppDispatch, RootState } from '../redux/store';
 import { fetchCustomers, invalidateCustomerCache } from '../redux/slices/customerSlice';
 import { fetchPackages } from '../redux/slices/packageSlice';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, ChevronLeft, ChevronRight, Download, Users, Mail, Phone, MapPin, Calendar, DollarSign, TrendingUp, RefreshCw, Ticket } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, Download, Users, Mail, Phone, MapPin, Calendar, DollarSign, TrendingUp, RefreshCw, Ticket, Edit } from 'lucide-react';
 import { Table, Button, Modal, Input, Checkbox } from '../components/UI';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import api from '../utils/api';
@@ -34,7 +34,8 @@ interface CustomersProps {
 const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const { showToast } = useToast();
     const { symbol } = useCurrency();
-    const { isStaff, hasPermission } = useAuth();
+    const { isStaff, isAdmin, isManager, hasPermission } = useAuth();
+    const isUserAdmin = !isStaff || isAdmin || isManager;
     const canAdd = hasPermission('customers', 'add');
     const canEdit = hasPermission('customers', 'edit');
     const { user } = useSelector((state: RootState) => state.auth);
@@ -106,6 +107,133 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
+
+    // Package / Voucher Adjustment Modal States
+    const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+    const [adjustType, setAdjustType] = useState<'package' | 'voucher'>('package');
+    const [adjustItemId, setAdjustItemId] = useState<string>('');
+    const [adjustPackageId, setAdjustPackageId] = useState<string>('');
+    const [adjustTitle, setAdjustTitle] = useState<string>('');
+    const [adjustItemName, setAdjustItemName] = useState<string>('');
+    const [adjustCurrentQty, setAdjustCurrentQty] = useState<number>(0);
+    const [adjustNewQty, setAdjustNewQty] = useState<string>('');
+    const [adjustReason, setAdjustReason] = useState<string>('');
+    const [isAdjusting, setIsAdjusting] = useState(false);
+
+    // Bypass/Authentication States
+    const [isBypassModalOpen, setIsBypassModalOpen] = useState(false);
+    const [bypassUserEmail, setBypassUserEmail] = useState('');
+    const [bypassPassword, setBypassPassword] = useState('');
+    const [bypassError, setBypassError] = useState('');
+    const [isBypassing, setIsBypassing] = useState(false);
+
+    const handleStartAdjustment = (type: 'package' | 'voucher', packageId: string, itemId: string, itemName: string, currentVal: number) => {
+        // Enforce role permission check: requires Specialist (staff with adjust permission) or Admin/Manager
+        const hasAccess = !isStaff || (type === 'package' ? hasPermission('packages', 'adjust') : hasPermission('vouchers', 'adjust'));
+
+        setAdjustType(type);
+        setAdjustPackageId(packageId);
+        setAdjustItemId(itemId);
+        setAdjustItemName(itemName);
+        setAdjustCurrentQty(currentVal);
+        setAdjustNewQty(currentVal.toString());
+        setAdjustReason('');
+
+        if (hasAccess) {
+            setAdjustTitle(type === 'package' ? `Adjust Package Quantity: ${itemName}` : `Adjust Voucher Balance`);
+            setIsAdjustmentModalOpen(true);
+        } else {
+            // Junior staff - show supervisor bypass screen
+            setBypassUserEmail('');
+            setBypassPassword('');
+            setBypassError('');
+            setIsBypassModalOpen(true);
+        }
+    };
+
+    const handleBypassSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setBypassError('');
+        setIsBypassing(true);
+
+        try {
+            const AUTH_SERVICE_URL = (import.meta as any).env.VITE_AUTH_SERVICE_URL || 'https://authservice-salon-backend-1.onrender.com';
+            const targetAppId = appId || 'workly-salon';
+            const targetBusinessName = businessName || 'lumiere';
+
+            const response = await fetch(`${AUTH_SERVICE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: bypassUserEmail,
+                    password: bypassPassword,
+                    app_id: targetAppId,
+                    businessName: targetBusinessName
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || 'Invalid supervisor credentials');
+            }
+
+            const data = await response.json();
+            const supervisorRole = data.user?.role;
+            const supervisorName = data.user?.name || data.user?.email || 'Supervisor';
+
+            if (supervisorRole !== 'ADMIN' && supervisorRole !== 'MANAGER') {
+                throw new Error('Only an Administrator or Manager can authorize this adjustment');
+            }
+
+            setIsBypassModalOpen(false);
+            setAdjustTitle(adjustType === 'package' 
+                ? `Adjust Package Quantity: ${adjustItemName} (Authorized by ${supervisorName})` 
+                : `Adjust Voucher Balance (Authorized by ${supervisorName})`
+            );
+            setAdjustReason(`[Authorized by ${supervisorName}] `);
+            setIsAdjustmentModalOpen(true);
+        } catch (err: any) {
+            console.error('Bypass verification failed:', err);
+            setBypassError(err.message || 'Verification failed');
+        } finally {
+            setIsBypassing(false);
+        }
+    };
+
+    const handleSaveAdjustment = async () => {
+        if (!adjustReason || adjustReason.trim().length < 10) {
+            showToast('Please enter a clear reason with at least 10 characters', 'error');
+            return;
+        }
+
+        setIsAdjusting(true);
+        try {
+            if (adjustType === 'package') {
+                await api.patch(`/customer-packages/${adjustPackageId}/adjust`, {
+                    itemId: adjustItemId,
+                    newQuantity: parseInt(adjustNewQty),
+                    reason: adjustReason
+                });
+                showToast('Package balance adjusted successfully', 'success');
+            } else {
+                await api.patch(`/vouchers/claims/${adjustPackageId}/adjust`, {
+                    newBalance: parseFloat(adjustNewQty),
+                    reason: adjustReason
+                });
+                showToast('Voucher balance adjusted successfully', 'success');
+            }
+            setIsAdjustmentModalOpen(false);
+            if (selectedCustomerId) {
+                fetchCustomerActivePackages(selectedCustomerId);
+                fetchCustomerVoucherClaims(selectedCustomerId);
+            }
+        } catch (err: any) {
+            console.error('Adjustment failed:', err);
+            showToast(err.response?.data?.error || 'Failed to adjust balance', 'error');
+        } finally {
+            setIsAdjusting(false);
+        }
+    };
 
     // const fetchCustomers = async () => { ... } // Removed local fetch logic
 
@@ -1678,10 +1806,42 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                             border: '1px solid #e2e8f0', fontSize: '0.8rem'
                                                         }}>
                                                             <div style={{ fontWeight: 500, marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                                                                <span>Rem: <span style={{ fontWeight: 600, color: item.remainingQuantity > 0 ? 'var(--success)' : 'var(--danger)' }}>{item.remainingQuantity}</span></span>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', alignItems: 'center' }}>
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                    Rem: <span style={{ fontWeight: 600, color: item.remainingQuantity > 0 ? 'var(--success)' : 'var(--danger)' }}>{item.remainingQuantity}</span>
+                                                                    {!pkg.isCombo && (
+                                                                        <button
+                                                                            onClick={() => handleStartAdjustment('package', pkg.id, item.itemId || item.name, item.name, item.remainingQuantity)}
+                                                                            title="Adjust Quantity"
+                                                                            style={{
+                                                                                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)',
+                                                                                padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                                borderRadius: '4px', transition: 'all 0.2s'
+                                                                            }}
+                                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                        >
+                                                                            <Edit size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </span>
                                                                 <span>Total: {item.totalQuantity}</span>
                                                             </div>
+                                                            {isUserAdmin && item.adjustments && Array.isArray(item.adjustments) && item.adjustments.length > 0 && (
+                                                                <div style={{ marginTop: '0.35rem', borderTop: '1px dashed #e2e8f0', paddingTop: '0.25rem' }}>
+                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.15rem' }}>Adj History:</span>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '60px', overflowY: 'auto' }}>
+                                                                        {item.adjustments.map((adj: any, adjIdx: number) => (
+                                                                            <div key={adjIdx} style={{ fontSize: '0.65rem', color: '#64748b', backgroundColor: '#fef9c3', padding: '0.15rem 0.25rem', borderRadius: '2px', borderLeft: '2px solid #ca8a04' }}>
+                                                                                <strong>{adj.oldQuantity} → {adj.newQuantity}</strong> by {adj.adjustedBy || 'Staff'}
+                                                                                <div style={{ fontStyle: 'italic', fontSize: '0.6rem', color: '#475569', marginTop: '0.1rem', wordBreak: 'break-word' }}>
+                                                                                    "{adj.reason}"
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -2162,10 +2322,25 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                         color: claim.balance > 0 ? '#166534' : '#991b1b',
                                                         padding: '0.2rem 0.6rem',
                                                         borderRadius: '1rem',
-                                                        display: 'inline-block',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.25rem',
                                                         marginBottom: '0.25rem'
                                                     }}>
                                                         Balance: {symbol}{(claim.balance ?? 0).toFixed(2)}
+                                                        <button
+                                                            onClick={() => handleStartAdjustment('voucher', claim.id, claim.id, claim.voucherCode, claim.balance)}
+                                                            title="Adjust Voucher Balance"
+                                                            style={{
+                                                                background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
+                                                                padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                borderRadius: '4px', transition: 'all 0.2s', opacity: 0.8
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                        >
+                                                            <Edit size={12} />
+                                                        </button>
                                                     </span>
                                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>
                                                         Status: {claim.status.replace('_', ' ')}
@@ -2174,16 +2349,33 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             </div>
 
                                             {/* Usage History */}
-                                            {claim.usageHistory && (Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any)).length > 0 && (
+                                            {claim.usageHistory && (Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any))
+                                                .filter((usage: any) => isUserAdmin || usage.type !== 'ADJUSTMENT').length > 0 && (
                                                 <div style={{ background: 'var(--bg-body)', padding: '0.75rem', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
-                                                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)' }}>Usage Activity</p>
+                                                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-black)' }}>Usage & Adjustment Activity</p>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                        {(Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any)).map((usage: any, idx: number) => (
-                                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                                                                <span style={{ color: 'var(--text-dark)' }}>Sale #{usage.saleId ? usage.saleId.substring(0, 8) : 'N/A'}</span>
-                                                                <span style={{ color: '#ef4444', fontWeight: 500 }}>-{symbol}{(usage.amount ?? 0).toFixed(2)}</span>
-                                                            </div>
-                                                        ))}
+                                                        {(Array.isArray(claim.usageHistory) ? claim.usageHistory : JSON.parse(claim.usageHistory as any))
+                                                            .filter((usage: any) => isUserAdmin || usage.type !== 'ADJUSTMENT')
+                                                            .map((usage: any, idx: number) => {
+                                                                const isAdjustment = usage.type === 'ADJUSTMENT';
+                                                                return (
+                                                                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem', backgroundColor: isAdjustment ? '#fef9c3' : 'transparent', padding: isAdjustment ? '0.35rem' : '0', borderRadius: isAdjustment ? '4px' : '0', borderLeft: isAdjustment ? '2px solid #ca8a04' : 'none' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <span style={{ color: 'var(--text-dark)', fontWeight: isAdjustment ? 600 : 400 }}>
+                                                                                {isAdjustment ? `Adjusted by ${usage.adjustedBy || 'Staff'}` : `Sale #${usage.saleId ? usage.saleId.substring(0, 8) : 'N/A'}`}
+                                                                            </span>
+                                                                            <span style={{ color: isAdjustment ? '#854d0e' : '#ef4444', fontWeight: 600 }}>
+                                                                                {isAdjustment ? `New Bal: ${symbol}${usage.balanceAfter?.toFixed(2)}` : `-${symbol}${(usage.amount ?? 0).toFixed(2)}`}
+                                                                            </span>
+                                                                        </div>
+                                                                        {isAdjustment && usage.reason && (
+                                                                            <div style={{ fontSize: '0.7rem', color: '#475569', fontStyle: 'italic', marginTop: '0.15rem', wordBreak: 'break-word' }}>
+                                                                                Reason: "{usage.reason}"
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                     </div>
                                                 </div>
                                             )}
@@ -2390,6 +2582,109 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         </div>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Supervisor Bypass Modal */}
+            <Modal
+                isOpen={isBypassModalOpen}
+                onClose={() => setIsBypassModalOpen(false)}
+                title="Supervisor Authorization Required"
+            >
+                <form onSubmit={handleBypassSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <p style={{ fontSize: '0.875rem', color: '#4b5563', margin: 0 }}>
+                        Your role does not have permission to manually adjust voucher or package balances. A supervisor (Manager or Administrator) must authorize this change.
+                    </p>
+                    {bypassError && <div style={{ color: '#ef4444', fontSize: '0.875rem', fontWeight: 600 }}>{bypassError}</div>}
+                    <Input
+                        label="Supervisor Email Address"
+                        type="email"
+                        value={bypassUserEmail}
+                        onChange={(e) => setBypassUserEmail(e.target.value)}
+                        placeholder="supervisor@example.com"
+                        required
+                    />
+                    <Input
+                        label="Supervisor Password"
+                        type="password"
+                        value={bypassPassword}
+                        onChange={(e) => setBypassPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
+                        <Button type="button" variant="ghost" onClick={() => setIsBypassModalOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isBypassing}>
+                            {isBypassing ? 'Verifying...' : 'Authorize Adjustment'}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Balance/Quantity Adjustment Modal */}
+            <Modal
+                isOpen={isAdjustmentModalOpen}
+                onClose={() => setIsAdjustmentModalOpen(false)}
+                title={adjustTitle}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                        <div>
+                            <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block' }}>Current Balance / Quantity</span>
+                            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-dark)' }}>
+                                {adjustType === 'voucher' ? symbol : ''}{adjustCurrentQty}
+                            </span>
+                        </div>
+                    </div>
+
+                    <Input
+                        label={adjustType === 'package' ? "New Quantity" : "New Balance"}
+                        type="number"
+                        step={adjustType === 'package' ? "1" : "0.01"}
+                        min="0"
+                        value={adjustNewQty}
+                        onChange={(e) => setAdjustNewQty(e.target.value)}
+                        required
+                    />
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500 }}>
+                            Reason for Adjustment <span style={{ color: 'red' }}>*</span> (min. 10 chars)
+                        </label>
+                        <textarea
+                            value={adjustReason}
+                            onChange={(e) => setAdjustReason(e.target.value)}
+                            placeholder="Enter detailed reason for manual balance change..."
+                            rows={3}
+                            style={{
+                                width: '100%',
+                                padding: '0.6rem 1rem',
+                                border: '1.5px solid var(--border)',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                backgroundColor: 'white',
+                                color: 'var(--text-dark)',
+                                transition: 'all 0.2s',
+                                resize: 'none'
+                            }}
+                            required
+                        />
+                        <span style={{ fontSize: '0.75rem', color: adjustReason.trim().length >= 10 ? 'var(--success)' : 'var(--danger)', fontWeight: 500 }}>
+                            {adjustReason.trim().length} / 10 characters minimum
+                        </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                        <Button type="button" variant="ghost" onClick={() => setIsAdjustmentModalOpen(false)}>Cancel</Button>
+                        <Button
+                            type="button"
+                            disabled={isAdjusting || adjustReason.trim().length < 10}
+                            onClick={handleSaveAdjustment}
+                        >
+                            {isAdjusting ? 'Saving...' : 'Save Adjustment'}
+                        </Button>
+                    </div>
+                </div>
             </Modal>
         </div >
     );

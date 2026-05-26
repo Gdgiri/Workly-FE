@@ -19,6 +19,7 @@ import { CashierSummaryCard } from '../components/dashboard/CashierSummaryCard';
 import { NewCustomersCard } from '../components/dashboard/NewCustomersCard';
 import { SpecialistStatsCard } from '../components/dashboard/SpecialistStatsCard';
 import { useAuth } from '../hooks/useAuth';
+import { RecentAdjustmentsCard } from '../components/dashboard/RecentAdjustmentsCard';
 
 /* 
   GET /appointments/upcoming -> Array<Appointment>
@@ -121,7 +122,8 @@ const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isManager } = useAuth();
+  const isUserAdmin = isAdmin || isManager;
 
   // Filter State
   const [filterType, setFilterType] = useState<FilterType>('today');
@@ -150,7 +152,8 @@ const Dashboard: React.FC = () => {
             revenueToday: parsed.revenueToday ?? 0,
             pendingRequests: parsed.pendingRequests ?? parsed.pendingRequestsCount ?? 0,
             comparisons: parsed.comparisons,
-            newCustomersToday: parsed.newCustomersToday || []
+            newCustomersToday: parsed.newCustomersToday || [],
+            recentAdjustments: parsed.recentAdjustments || []
           };
         }
       }
@@ -164,7 +167,8 @@ const Dashboard: React.FC = () => {
       revenueToday: 0,
       pendingRequests: 0,
       comparisons: undefined,
-      newCustomersToday: []
+      newCustomersToday: [],
+      recentAdjustments: []
     };
   });
 
@@ -200,6 +204,7 @@ const Dashboard: React.FC = () => {
         topStylists: dashData.topStylists || [],
         lowStockAlerts: dashData.lowStockAlerts || [],
         newCustomersToday: dashData.newCustomersToday || [],
+        recentAdjustments: dashData.recentAdjustments || [],
         comparisons: undefined // Comparisons are calculated separately
       };
 
@@ -524,7 +529,8 @@ const Dashboard: React.FC = () => {
       activeSales: metrics.filteredSales,
       filteredSales: metrics.filteredSales,
       filteredPayments: metrics.filteredPayments,
-      comparisons: metrics.comparisons
+      comparisons: metrics.comparisons,
+      recentAdjustments: prev.recentAdjustments
     }));
 
     setRevenueData(metrics.chartData);
@@ -693,11 +699,14 @@ const Dashboard: React.FC = () => {
         </div>
       </motion.div>
 
-      <motion.div variants={itemVariants} className="grid lg-grid-cols-4" style={{ gap: '1.5rem' }}>
+      <motion.div variants={itemVariants} className={`grid ${isUserAdmin ? 'lg-grid-cols-5' : 'lg-grid-cols-4'}`} style={{ gap: '1.5rem' }}>
         <PendingPaymentsCard pendingPayments={dashboardData.pendingPayments || []} loading={statsLoading} />
         <CashierSummaryCard sales={dashboardData.filteredPayments || []} loading={paymentsLoading} />
         <InventoryAlertsCard lowStockAlerts={dashboardData.lowStockAlerts || []} loading={inventoryLoading} />
         <NewCustomersCard customers={dashboardData.newCustomersToday || []} loading={statsLoading} />
+        {isUserAdmin && (
+          <RecentAdjustmentsCard adjustments={dashboardData.recentAdjustments || []} loading={statsLoading} />
+        )}
       </motion.div>
 
       <motion.div variants={itemVariants} className="dashboard-grid-2" style={{ alignItems: 'start' }}>

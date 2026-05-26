@@ -11,7 +11,7 @@ interface UseAuthReturn {
     isStaff: boolean;
     isCustomer: boolean;
     isAuthenticated: boolean;
-    hasPermission: (module: string, action: 'view' | 'add' | 'edit') => boolean;
+    hasPermission: (module: string, action: 'view' | 'add' | 'edit' | 'adjust') => boolean;
 }
 
 /**
@@ -24,7 +24,7 @@ export const useAuth = (): UseAuthReturn => {
     const isManager = user?.role?.toUpperCase() === 'MANAGER';
     const isStaff = user?.role?.toUpperCase() === 'STAFF';
     
-    const hasPermission = (module: string, action: 'view' | 'add' | 'edit'): boolean => {
+    const hasPermission = (module: string, action: 'view' | 'add' | 'edit' | 'adjust'): boolean => {
         if (isAdmin || isManager) return true;
         if (!user) return false;
         const permissions: string[] = (user as any).permissions || [];

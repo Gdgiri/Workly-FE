@@ -53,7 +53,9 @@ const PermissionsSelector = ({ permissions, onChange }: { permissions: string[],
     .map(item => ({
       id: item.id,
       label: item.label,
-      actions: ['view', 'add', 'edit']
+      actions: (item.id === 'packages' || item.id === 'vouchers')
+        ? ['view', 'add', 'edit', 'adjust']
+        : ['view', 'add', 'edit']
     }));
 
   const handleToggle = (module: string, action: string) => {
@@ -109,7 +111,7 @@ const PermissionsSelector = ({ permissions, onChange }: { permissions: string[],
               {/* Header Row */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
+                gridTemplateColumns: '1.2fr 1fr 1fr 1fr 1fr',
                 gap: '0.5rem',
                 paddingBottom: '0.75rem',
                 marginBottom: '0.5rem',
@@ -123,19 +125,20 @@ const PermissionsSelector = ({ permissions, onChange }: { permissions: string[],
                 <div>View</div>
                 <div>Add</div>
                 <div>Edit</div>
+                <div>Adjust</div>
               </div>
 
               {modules.map(mod => (
                 <div key={mod.id} style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
+                  gridTemplateColumns: '1.2fr 1fr 1fr 1fr 1fr',
                   gap: '0.5rem',
                   padding: '0.75rem 0',
                   borderBottom: '1px solid #f1f5f9',
                   alignItems: 'center'
                 }}>
                   <div style={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-dark)', paddingLeft: '0.5rem' }}>{mod.label}</div>
-                  {['view', 'add', 'edit'].map(action => {
+                  {['view', 'add', 'edit', 'adjust'].map(action => {
                     const isAvailable = mod.actions.includes(action);
                     return (
                       <div key={action} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1751,12 +1754,14 @@ const Stylists: React.FC = () => {
               </div>
 
 
-              <div style={{ paddingTop: '1rem' }}>
-                <PermissionsSelector
-                  permissions={newStylistPermissions}
-                  onChange={setNewStylistPermissions}
-                />
-              </div>
+              {(!isStaff || isAdmin || isManager) && (
+                <div style={{ paddingTop: '1rem' }}>
+                  <PermissionsSelector
+                    permissions={newStylistPermissions}
+                    onChange={setNewStylistPermissions}
+                  />
+                </div>
+              )}
 
               <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <Button variant="ghost" type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -2070,12 +2075,28 @@ const Stylists: React.FC = () => {
                   />
                 </div>
 
-                <div style={{ paddingTop: '1.5rem' }}>
-                  <PermissionsSelector
-                    permissions={editingStylist.permissions || []}
-                    onChange={(newPerms) => setEditingStylist({ ...editingStylist, permissions: newPerms })}
-                  />
-                </div>
+                {(!isStaff || isAdmin || isManager) && editingStylist.email !== user?.email && editingStylist.authId !== user?.id ? (
+                  <div style={{ paddingTop: '1.5rem' }}>
+                    <PermissionsSelector
+                      permissions={editingStylist.permissions || []}
+                      onChange={(newPerms) => setEditingStylist({ ...editingStylist, permissions: newPerms })}
+                    />
+                  </div>
+                ) : (
+                  <div style={{
+                    paddingTop: '1.5rem',
+                    padding: '1rem',
+                    backgroundColor: 'var(--bg-body)',
+                    borderRadius: '0.75rem',
+                    border: '1px solid var(--border-light)',
+                    fontSize: '0.85rem',
+                    color: 'var(--text-light)',
+                    textAlign: 'center',
+                    marginTop: '1rem'
+                  }}>
+                    🛡️ Access permissions can only be modified by a Supervisor (Administrator or Manager) and self-updating permissions is blocked.
+                  </div>
+                )}
 
 
 

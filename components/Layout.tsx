@@ -166,7 +166,16 @@ export const allMenuItems = [
     shortcutKey: 'u',
     shortcutLabel: 'Alt+U'
   },
-  // { id: 'reports', label: 'Reports', icon: BarChart2, roles: ['ADMIN', 'MANAGER', 'STAFF'] },
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: BarChart2,
+    roles: ['ADMIN'],
+    color: '#0284C7', // Sky Blue
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+    shortcutKey: 'j',
+    shortcutLabel: 'Alt+J'
+  },
   {
     id: 'ask-ai',
     label: 'Ask AI',
