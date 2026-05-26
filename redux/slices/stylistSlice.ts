@@ -19,13 +19,13 @@ const initialState: StylistState = {
 // Async Thunks
 export const fetchStylists = createAsyncThunk(
     'stylists/fetchStylists',
-    async (_, { rejectWithValue, getState }) => {
+    async (force?: boolean, { rejectWithValue, getState }: any = {}) => {
         const state = getState() as any;
         const lastFetched = state.stylists.lastFetched;
         const now = Date.now();
 
-        // 5 minutes cache
-        if (lastFetched && (now - lastFetched < 5 * 60 * 1000) && state.stylists.stylists.length > 0) {
+        // 5 minutes cache (bypassed if force is true)
+        if (!force && lastFetched && (now - lastFetched < 5 * 60 * 1000) && state.stylists.stylists.length > 0) {
             return {
                 stylists: state.stylists.stylists,
                 fromCache: true

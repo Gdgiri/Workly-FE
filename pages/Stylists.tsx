@@ -430,7 +430,7 @@ const Stylists: React.FC = () => {
   // const fetchStylists = async () => { ... } // Removed local fetch logic
 
   useEffect(() => {
-    dispatch(fetchStylists());
+    dispatch(fetchStylists(false));
   }, [dispatch]);
 
   const fetchAppointments = async () => {
@@ -506,7 +506,7 @@ const Stylists: React.FC = () => {
       setNewStylistPermissions([]);
       setIsModalOpen(false);
       dispatch(invalidateStylistCache());
-      dispatch(fetchStylists()); // Refresh list
+      dispatch(fetchStylists(true)); // Refresh list
     } catch (error) {
       console.error('Error adding stylist:', error);
       showToast('Error adding stylist', 'error');
@@ -541,7 +541,7 @@ const Stylists: React.FC = () => {
       setIsEditModalOpen(false);
       setEditingStylist(null);
       dispatch(invalidateStylistCache());
-      dispatch(fetchStylists());
+      dispatch(fetchStylists(true));
     } catch (error) {
       console.error('Error updating stylist:', error);
       showToast('Error updating specialist', 'error');
@@ -562,7 +562,7 @@ const Stylists: React.FC = () => {
 
       showToast(`Specialist marked as ${newStatus}`, 'success');
       dispatch(invalidateStylistCache());
-      dispatch(fetchStylists());
+      dispatch(fetchStylists(true));
     } catch (error) {
       console.error('Error updating status:', error);
       showToast('Error updating status', 'error');
@@ -749,7 +749,7 @@ const Stylists: React.FC = () => {
         await fetchAppointments();
         // Refresh stylists to update the roster display
         dispatch(invalidateStylistCache());
-        dispatch(fetchStylists());
+        dispatch(fetchStylists(true));
       }
     } catch (error) {
       console.error('Error updating roster:', error);
