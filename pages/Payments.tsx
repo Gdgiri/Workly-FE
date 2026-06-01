@@ -1727,8 +1727,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             </Button>
                         </div>
 
-                        {/* Cancel Bill Button Section - Restricted to Admin/Manager */}
-                        {(isAdmin || isManager) && ((selectedPayment.isPendingSale && selectedPayment.appointment?.status?.toUpperCase() !== 'CANCELLED') || (selectedPayment.sale?.saleStatus !== 'CANCELLED')) && (
+                        {/* Cancel Bill Button Section - Restricted to Admin/Manager or anyone with payment edit permission */}
+                        {(isAdmin || isManager || canCancel) && ((selectedPayment.isPendingSale && selectedPayment.appointment?.status?.toUpperCase() !== 'CANCELLED') || (selectedPayment.sale?.saleStatus !== 'CANCELLED')) && (
                             <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
                                 <Button
                                     variant="outline"
