@@ -1152,7 +1152,7 @@ const Reports: React.FC = () => {
       },
       { 
         header: 'Customer', 
-        accessor: row => row.customerName || row.customer?.name || 'Walk-in',
+        accessor: row => <span style={{ textTransform: 'capitalize' }}>{row.customerName || row.customer?.name || 'Walk-in'}</span>,
         textAccessor: row => row.customerName || row.customer?.name || 'Walk-in',
         sortKey: 'customerName'
       },
@@ -1206,13 +1206,13 @@ const Reports: React.FC = () => {
       },
       { 
         header: 'Customer', 
-        accessor: row => row.customerName, 
+        accessor: row => <span style={{ textTransform: 'capitalize' }}>{row.customerName}</span>, 
         textAccessor: row => row.customerName, 
         sortKey: 'customerName' 
       },
       { 
         header: 'Item Name', 
-        accessor: row => <span style={{ fontWeight: 600 }}>{row.itemName}</span>, 
+        accessor: row => <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{row.itemName}</span>, 
         textAccessor: row => row.itemName, 
         sortKey: 'itemName' 
       },
@@ -1252,7 +1252,7 @@ const Reports: React.FC = () => {
       },
       { 
         header: 'Staff Name', 
-        accessor: row => row.staffName, 
+        accessor: row => <span style={{ textTransform: 'capitalize' }}>{row.staffName}</span>, 
         textAccessor: row => row.staffName, 
         sortKey: 'staffName' 
       },
@@ -1290,13 +1290,13 @@ const Reports: React.FC = () => {
       },
       { 
         header: 'Customer', 
-        accessor: row => row.customerName, 
+        accessor: row => <span style={{ textTransform: 'capitalize' }}>{row.customerName}</span>, 
         textAccessor: row => row.customerName, 
         sortKey: 'customerName' 
       },
       { 
         header: 'Service Name', 
-        accessor: row => <span style={{ fontWeight: 600 }}>{row.serviceName}</span>, 
+        accessor: row => <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{row.serviceName}</span>, 
         textAccessor: row => row.serviceName, 
         sortKey: 'serviceName' 
       },
@@ -1342,7 +1342,7 @@ const Reports: React.FC = () => {
       },
       { 
         header: 'Performed By (Staff)', 
-        accessor: row => row.staffName, 
+        accessor: row => <span style={{ textTransform: 'capitalize' }}>{row.staffName}</span>, 
         textAccessor: row => row.staffName, 
         sortKey: 'staffName' 
       },
@@ -2370,7 +2370,9 @@ const Reports: React.FC = () => {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                        {/* Item Type Select Filter */}
+                  </div>
+
+                  {/* Item Type Select Filter */}
                   {activeReport === 'all_sold_items' && (
                     <div 
                       ref={itemTypeDropdownRef}
@@ -2487,7 +2489,7 @@ const Reports: React.FC = () => {
                         )}
                       </AnimatePresence>
                     </div>
-                  )}              </div>
+                  )}
 
                   <input
                     type="date"
