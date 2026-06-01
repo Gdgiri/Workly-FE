@@ -146,6 +146,7 @@ const Reports: React.FC = () => {
       items: [
         { value: "sales", label: "All Sale Report", description: "Complete overview of all transactions and payments" },
         { value: "all_sold_items", label: "All Sold Items Details", description: "Granular breakdown of every service, product, package, and voucher sold" },
+        { value: "service_consumption_by_payment", label: "Services Consumption by Method", description: "Granular list of services consumed via package redemptions, vouchers, cash, card, or dynamic payments" },
         { value: "customers", label: "By Customer Summary", description: "Total spending and visits per customer" },
         { value: "visits", label: "By Visit (Appointments)", description: "Appointment schedules, stylists, and dates" },
         { value: "products", label: "By Product Stock", description: "Inventory counts, categories, and retail price" },
@@ -535,6 +536,76 @@ const Reports: React.FC = () => {
         return soldItems;
       }
 
+      case 'service_consumption_by_payment': {
+        const consumptionItems: any[] = [];
+        sales.forEach((sale: any) => {
+          if (sale.saleStatus !== 'COMPLETED') return;
+          if (!checkDateInRange(sale.createdAt, startDate, endDate)) return;
+
+          const items = Array.isArray(sale.items) ? sale.items : [];
+          
+          items.forEach((item: any) => {
+            const itemType = String(item.type || '').toUpperCase();
+            if (itemType !== 'SERVICE') return;
+
+            const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+            const staffName = item.specialistName || 
+                              (item.specialist && item.specialist.name) || 
+                              sale.specialist?.name || 
+                              sale.stylist?.name || 
+                              (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
+
+            if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+              return;
+            }
+
+            // Determine method of payment/consumption:
+            let method = 'Cash';
+            const directMethod = String(sale.paymentMethod || '').toUpperCase();
+
+            if (item.redeemedFromPackageId || item.redeemedQuantity > 0) {
+              method = 'Package Redemption';
+            } else if (sale.voucherCode || sale.voucherDiscount > 0 || directMethod.includes('VOUCHER')) {
+              method = 'Voucher';
+            } else if (directMethod === 'CASH') {
+              method = 'Cash';
+            } else if (directMethod && directMethod !== 'N/A') {
+              method = directMethod.charAt(0) + directMethod.slice(1).toLowerCase();
+            } else if (sale.payments && sale.payments.length > 0) {
+              const paymentMethodsList = sale.payments
+                .map((p: any) => String(p.paymentMethod || '').trim().toUpperCase())
+                .filter((m: string) => m && m !== 'N/A');
+              
+              if (paymentMethodsList.includes('CASH')) {
+                method = 'Cash';
+              } else if (paymentMethodsList.length > 0) {
+                const uniqMethods = Array.from(new Set(paymentMethodsList));
+                method = uniqMethods.map((m: string) => m.charAt(0) + m.slice(1).toLowerCase()).join(', ');
+              } else {
+                method = 'Dynamic/Other';
+              }
+            } else {
+              method = 'Dynamic/Other';
+            }
+
+            consumptionItems.push({
+              id: `${sale.id}-${item.itemId || item.name}-consumption`,
+              invoiceId: sale.saleNumber || sale.id.substring(0, 8),
+              date: sale.createdAt,
+              createdAt: sale.createdAt,
+              customerName: sale.customerName || sale.customer?.name || 'Walk-in',
+              serviceName: item.name,
+              qty: item.quantity,
+              price: item.price,
+              totalPrice: (item.price * item.quantity) - (item.discount || 0),
+              method,
+              staffName
+            });
+          });
+        });
+        return consumptionItems;
+      }
+
       case 'customers': // By Customer
         return customers.map(c => ({
           ...c,
@@ -871,6 +942,7 @@ const Reports: React.FC = () => {
     const skipDateFilter = [
       'one_month_sales',
       'all_sold_items',
+      'service_consumption_by_payment',
       'pkg_sales_history',
       'pkg_qty_history',
       'staff_sales_summary',
@@ -897,6 +969,15 @@ const Reports: React.FC = () => {
     const lowerSearch = searchTerm.toLowerCase();
 
     return data.filter((row: any) => {
+      if (activeReport === 'service_consumption_by_payment') {
+        return (
+          String(row.invoiceId || '').toLowerCase().includes(lowerSearch) ||
+          String(row.customerName || '').toLowerCase().includes(lowerSearch) ||
+          String(row.serviceName || '').toLowerCase().includes(lowerSearch) ||
+          String(row.method || '').toLowerCase().includes(lowerSearch) ||
+          String(row.staffName || '').toLowerCase().includes(lowerSearch)
+        );
+      }
       if (activeReport === 'all_sold_items') {
         return (
           String(row.invoiceId || '').toLowerCase().includes(lowerSearch) ||
@@ -1194,6 +1275,96 @@ const Reports: React.FC = () => {
         sortKey: 'totalPrice' 
       }
     ],
+    service_consumption_by_payment: [
+      { 
+        header: 'Invoice ID', 
+        accessor: row => <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{row.invoiceId}</span>,
+        textAccessor: row => row.invoiceId,
+        sortKey: 'invoiceId'
+      },
+      { 
+        header: 'Date', 
+        accessor: row => new Date(row.createdAt).toLocaleDateString(),
+        textAccessor: row => new Date(row.createdAt).toLocaleDateString(),
+        sortKey: 'date'
+      },
+      { 
+        header: 'Customer', 
+        accessor: row => row.customerName, 
+        textAccessor: row => row.customerName, 
+        sortKey: 'customerName' 
+      },
+      { 
+        header: 'Service Name', 
+        accessor: row => <span style={{ fontWeight: 600 }}>{row.serviceName}</span>, 
+        textAccessor: row => row.serviceName, 
+        sortKey: 'serviceName' 
+      },
+      { 
+        header: 'Consumption Method', 
+        accessor: row => {
+          const method = String(row.method || '').toUpperCase();
+          let bg = 'rgba(100, 116, 139, 0.1)';
+          let text = 'rgb(71, 85, 105)';
+          if (method === 'PACKAGE REDEMPTION') {
+            bg = 'rgba(234, 179, 8, 0.1)';
+            text = 'rgb(161, 98, 7)';
+          } else if (method === 'VOUCHER') {
+            bg = 'rgba(239, 68, 68, 0.1)';
+            text = 'rgb(185, 28, 28)';
+          } else if (method === 'CASH') {
+            bg = 'rgba(34, 197, 94, 0.1)';
+            text = 'rgb(21, 128, 61)';
+          } else if (method === 'CARD') {
+            bg = 'rgba(14, 165, 233, 0.1)';
+            text = 'rgb(3, 105, 161)';
+          } else if (method === 'UPI') {
+            bg = 'rgba(139, 92, 246, 0.1)';
+            text = 'rgb(109, 40, 217)';
+          }
+          return (
+            <span style={{ 
+              fontSize: '0.75rem', 
+              fontWeight: 700, 
+              padding: '0.2rem 0.5rem', 
+              borderRadius: 'var(--radius-md)', 
+              backgroundColor: bg, 
+              color: text,
+              textTransform: 'uppercase',
+              letterSpacing: '0.025em'
+            }}>
+              {row.method}
+            </span>
+          );
+        }, 
+        textAccessor: row => row.method, 
+        sortKey: 'method' 
+      },
+      { 
+        header: 'Performed By (Staff)', 
+        accessor: row => row.staffName, 
+        textAccessor: row => row.staffName, 
+        sortKey: 'staffName' 
+      },
+      { 
+        header: 'Price', 
+        accessor: row => formatPrice(row.price), 
+        textAccessor: row => String(row.price), 
+        sortKey: 'price' 
+      },
+      { 
+        header: 'Qty', 
+        accessor: row => row.qty, 
+        textAccessor: row => String(row.qty), 
+        sortKey: 'qty' 
+      },
+      { 
+        header: 'Total Value', 
+        accessor: row => <span style={{ fontWeight: 700 }}>{formatPrice(row.totalPrice)}</span>, 
+        textAccessor: row => String(row.totalPrice), 
+        sortKey: 'totalPrice' 
+      }
+    ],
     customers: [
       { header: 'Name', accessor: row => <span style={{ fontWeight: 600 }}>{row.name}</span>, textAccessor: row => row.name, sortKey: 'name' },
       { header: 'Phone', accessor: row => row.phone, textAccessor: row => row.phone, sortKey: 'phone' },
@@ -1425,6 +1596,30 @@ const Reports: React.FC = () => {
   };
 
   const kpis = useMemo(() => {
+    if (activeReport === 'service_consumption_by_payment') {
+      const totalVal = sortedData.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
+      const totalQty = sortedData.reduce((sum, r) => sum + (r.qty || 0), 0);
+      
+      const countsByMethod: Record<string, number> = {};
+      sortedData.forEach(r => {
+        const method = r.method || 'Cash';
+        countsByMethod[method] = (countsByMethod[method] || 0) + (r.qty || 0);
+      });
+
+      const pkgCount = countsByMethod['Package Redemption'] || 0;
+      const voucherCount = countsByMethod['Voucher'] || 0;
+      const cashCount = countsByMethod['Cash'] || 0;
+      const otherCount = Object.keys(countsByMethod)
+        .filter(m => m !== 'Package Redemption' && m !== 'Voucher' && m !== 'Cash')
+        .reduce((sum, m) => sum + countsByMethod[m], 0);
+
+      return [
+        { label: 'Total Services Consumed', value: `${totalQty} services`, color: 'var(--primary)' },
+        { label: 'Total Consumption Value', value: formatPrice(totalVal), color: 'var(--success)' },
+        { label: 'Redeemed by Package / Voucher', value: `${pkgCount} pkg / ${voucherCount} vchr`, color: 'var(--warning)' },
+        { label: 'Paid by Cash / Other', value: `${cashCount} cash / ${otherCount} other`, color: 'var(--danger)' }
+      ];
+    }
     if (activeReport === 'all_sold_items') {
       const total = sortedData.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
       const count = sortedData.reduce((sum, r) => sum + (r.quantity || 0), 0);
@@ -2175,124 +2370,124 @@ const Reports: React.FC = () => {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-
-                  {/* Item Type Select Filter */}
-                  <div 
-                    ref={itemTypeDropdownRef}
-                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', zIndex: 47 }}
-                  >
-                    <button
-                      onClick={() => setIsItemTypeDropdownOpen(prev => !prev)}
-                      type="button"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.625rem 1rem',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: 'var(--radius-xl)',
-                        background: 'var(--bg-card)',
-                        color: 'var(--text-black)',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        outline: 'none',
-                        cursor: 'pointer',
-                        boxShadow: 'var(--shadow-sm)',
-                        transition: 'all 0.2s',
-                        gap: '0.5rem',
-                        minWidth: '150px'
-                      }}
+                        {/* Item Type Select Filter */}
+                  {activeReport === 'all_sold_items' && (
+                    <div 
+                      ref={itemTypeDropdownRef}
+                      style={{ position: 'relative', display: 'flex', flexDirection: 'column', zIndex: 47 }}
                     >
-                      <span>
-                        {(() => {
-                          switch (selectedItemType) {
-                            case 'ALL': return 'All Item Types';
-                            case 'SERVICE': return 'Services';
-                            case 'PRODUCT': return 'Products';
-                            case 'PACKAGE': return 'Packages';
-                            case 'VOUCHER': return 'Vouchers';
-                            default: return 'All Item Types';
-                          }
-                        })()}
-                      </span>
-                      <ChevronDown 
-                        size={16} 
-                        style={{ 
-                          color: 'var(--text-light)', 
-                          transform: isItemTypeDropdownOpen ? 'rotate(180deg)' : 'none', 
-                          transition: 'transform 0.2s' 
-                        }} 
-                      />
-                    </button>
+                      <button
+                        onClick={() => setIsItemTypeDropdownOpen(prev => !prev)}
+                        type="button"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.625rem 1rem',
+                          border: '1.5px solid var(--border)',
+                          borderRadius: 'var(--radius-xl)',
+                          background: 'var(--bg-card)',
+                          color: 'var(--text-black)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          outline: 'none',
+                          cursor: 'pointer',
+                          boxShadow: 'var(--shadow-sm)',
+                          transition: 'all 0.2s',
+                          gap: '0.5rem',
+                          minWidth: '150px'
+                        }}
+                      >
+                        <span>
+                          {(() => {
+                            switch (selectedItemType) {
+                              case 'ALL': return 'All Item Types';
+                              case 'SERVICE': return 'Services';
+                              case 'PRODUCT': return 'Products';
+                              case 'PACKAGE': return 'Packages';
+                              case 'VOUCHER': return 'Vouchers';
+                              default: return 'All Item Types';
+                            }
+                          })()}
+                        </span>
+                        <ChevronDown 
+                          size={16} 
+                          style={{ 
+                            color: 'var(--text-light)', 
+                            transform: isItemTypeDropdownOpen ? 'rotate(180deg)' : 'none', 
+                            transition: 'transform 0.2s' 
+                          }} 
+                        />
+                      </button>
 
-                    <AnimatePresence>
-                      {isItemTypeDropdownOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          transition={{ duration: 0.15 }}
-                          style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 0.5rem)',
-                            left: 0,
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-xl)',
-                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                            padding: '0.5rem',
-                            minWidth: '180px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.25rem',
-                            zIndex: 100
-                          }}
-                        >
-                          {[
-                            { value: 'ALL', label: 'All Item Types' },
-                            { value: 'SERVICE', label: 'Services' },
-                            { value: 'PRODUCT', label: 'Products' },
-                            { value: 'PACKAGE', label: 'Packages' },
-                            { value: 'VOUCHER', label: 'Vouchers' }
-                          ].map((item, idx) => {
-                            const isActive = selectedItemType === item.value;
-                            return (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedItemType(item.value);
-                                  setIsItemTypeDropdownOpen(false);
-                                }}
-                                style={{
-                                  width: '100%',
-                                  padding: '0.5rem 0.75rem',
-                                  borderRadius: 'var(--radius-lg)',
-                                  background: isActive ? 'var(--primary-light)' : 'transparent',
-                                  border: 'none',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 600,
-                                  color: isActive ? 'var(--primary)' : 'var(--text-black)',
-                                  transition: 'all 0.15s'
-                                }}
-                                onMouseEnter={e => {
-                                  if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
-                                }}
-                                onMouseLeave={e => {
-                                  if (!isActive) e.currentTarget.style.background = 'transparent';
-                                }}
-                              >
-                                {item.label}
-                              </button>
-                            );
-                          })}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                      <AnimatePresence>
+                        {isItemTypeDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            transition={{ duration: 0.15 }}
+                            style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 0.5rem)',
+                              left: 0,
+                              background: 'var(--bg-card)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 'var(--radius-xl)',
+                              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                              padding: '0.5rem',
+                              minWidth: '180px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.25rem',
+                              zIndex: 100
+                            }}
+                          >
+                            {[
+                              { value: 'ALL', label: 'All Item Types' },
+                              { value: 'SERVICE', label: 'Services' },
+                              { value: 'PRODUCT', label: 'Products' },
+                              { value: 'PACKAGE', label: 'Packages' },
+                              { value: 'VOUCHER', label: 'Vouchers' }
+                            ].map((item, idx) => {
+                              const isActive = selectedItemType === item.value;
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedItemType(item.value);
+                                    setIsItemTypeDropdownOpen(false);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.5rem 0.75rem',
+                                    borderRadius: 'var(--radius-lg)',
+                                    background: isActive ? 'var(--primary-light)' : 'transparent',
+                                    border: 'none',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    color: isActive ? 'var(--primary)' : 'var(--text-black)',
+                                    transition: 'all 0.15s'
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                                  }}
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}              </div>
 
                   <input
                     type="date"
