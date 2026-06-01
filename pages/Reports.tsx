@@ -61,6 +61,24 @@ const getPaymentMethod = (row: any) => {
 
 const Reports: React.FC = () => {
   const { symbol, formatPrice } = useCurrency();
+
+  const toLocalYYYYMMDD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const checkDateInRange = (dateValue: any, startStr: string, endStr: string) => {
+    if (!dateValue) return true;
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return true;
+    const localDay = toLocalYYYYMMDD(d);
+    
+    if (startStr && localDay < startStr) return false;
+    if (endStr && localDay > endStr) return false;
+    return true;
+  };
   
   // State for data
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -287,33 +305,33 @@ const Reports: React.FC = () => {
       case 'today':
         start.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
-        setStartDate(start.toISOString().split('T')[0]);
-        setEndDate(end.toISOString().split('T')[0]);
+        setStartDate(toLocalYYYYMMDD(start));
+        setEndDate(toLocalYYYYMMDD(end));
         break;
       case 'yesterday':
         start.setDate(end.getDate() - 1);
         start.setHours(0, 0, 0, 0);
         end.setDate(end.getDate() - 1);
         end.setHours(23, 59, 59, 999);
-        setStartDate(start.toISOString().split('T')[0]);
-        setEndDate(end.toISOString().split('T')[0]);
+        setStartDate(toLocalYYYYMMDD(start));
+        setEndDate(toLocalYYYYMMDD(end));
         break;
       case 'this_month':
         const startOfMonth = new Date(end.getFullYear(), end.getMonth(), 1);
-        setStartDate(startOfMonth.toISOString().split('T')[0]);
-        setEndDate(end.toISOString().split('T')[0]);
+        setStartDate(toLocalYYYYMMDD(startOfMonth));
+        setEndDate(toLocalYYYYMMDD(end));
         break;
       case 'last_month':
         const startOfLast = new Date(end.getFullYear(), end.getMonth() - 1, 1);
         const endOfLast = new Date(end.getFullYear(), end.getMonth(), 0);
-        setStartDate(startOfLast.toISOString().split('T')[0]);
-        setEndDate(endOfLast.toISOString().split('T')[0]);
+        setStartDate(toLocalYYYYMMDD(startOfLast));
+        setEndDate(toLocalYYYYMMDD(endOfLast));
         break;
       case 'last_30_days':
       default:
         start.setDate(end.getDate() - 30);
-        setStartDate(start.toISOString().split('T')[0]);
-        setEndDate(end.toISOString().split('T')[0]);
+        setStartDate(toLocalYYYYMMDD(start));
+        setEndDate(toLocalYYYYMMDD(end));
         break;
     }
   };
@@ -356,18 +374,7 @@ const Reports: React.FC = () => {
   const reportData = useMemo(() => {
     const getFilteredSales = () => {
       return sales.filter((sale: any) => {
-        if (!sale.createdAt) return true;
-        const saleDate = new Date(sale.createdAt);
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setHours(0, 0, 0, 0);
-          if (saleDate < start) return false;
-        }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          if (saleDate > end) return false;
-        }
+        if (!checkDateInRange(sale.createdAt, startDate, endDate)) return false;
 
         // Staff (Specialist) filter
         if (selectedStaff !== 'ALL') {
@@ -426,18 +433,7 @@ const Reports: React.FC = () => {
 
     const getFilteredAppointments = () => {
       return appointments.filter((apt: any) => {
-        if (!apt.startTime) return true;
-        const aptDate = new Date(apt.startTime);
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setHours(0, 0, 0, 0);
-          if (aptDate < start) return false;
-        }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          if (aptDate > end) return false;
-        }
+        if (!checkDateInRange(apt.startTime, startDate, endDate)) return false;
 
         // Staff filter
         if (selectedStaff !== 'ALL') {
@@ -459,18 +455,7 @@ const Reports: React.FC = () => {
         const soldItems: any[] = [];
         sales.forEach((sale: any) => {
           if (sale.saleStatus !== 'COMPLETED') return;
-          
-          const saleDate = new Date(sale.createdAt);
-          if (startDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            if (saleDate < start) return;
-          }
-          if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            if (saleDate > end) return;
-          }
+          if (!checkDateInRange(sale.createdAt, startDate, endDate)) return;
 
           const items = Array.isArray(sale.items) ? sale.items : [];
           
@@ -900,25 +885,10 @@ const Reports: React.FC = () => {
     ].includes(activeReport);
 
     if (!skipDateFilter) {
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
+      if (startDate || endDate) {
         data = data.filter((row: any) => {
           const dateValue = row.createdAt || row.startTime || row.dateOfBirth;
-          if (!dateValue) return false;
-          const rowDate = new Date(dateValue);
-          return !isNaN(rowDate.getTime()) && rowDate >= start;
-        });
-      }
-
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        data = data.filter((row: any) => {
-          const dateValue = row.createdAt || row.startTime || row.dateOfBirth;
-          if (!dateValue) return false;
-          const rowDate = new Date(dateValue);
-          return !isNaN(rowDate.getTime()) && rowDate <= end;
+          return checkDateInRange(dateValue, startDate, endDate);
         });
       }
     }
