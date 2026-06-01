@@ -127,6 +127,7 @@ const Reports: React.FC = () => {
       category: "📊 Standard Business Catalogs",
       items: [
         { value: "sales", label: "All Sale Report", description: "Complete overview of all transactions and payments" },
+        { value: "all_sold_items", label: "All Sold Items Details", description: "Granular breakdown of every service, product, package, and voucher sold" },
         { value: "customers", label: "By Customer Summary", description: "Total spending and visits per customer" },
         { value: "visits", label: "By Visit (Appointments)", description: "Appointment schedules, stylists, and dates" },
         { value: "products", label: "By Product Stock", description: "Inventory counts, categories, and retail price" },
@@ -386,17 +387,35 @@ const Reports: React.FC = () => {
         // Item Type filter (SERVICE, PRODUCT, PACKAGE, VOUCHER)
         if (selectedItemType !== 'ALL') {
           const items = Array.isArray(sale.items) ? sale.items : [];
+          const paymentMethod = getPaymentMethod(sale).toUpperCase();
+          
           if (selectedItemType === 'SERVICE') {
-            const hasService = items.some((item: any) => item && (item.type === 'service' || item.type === 'SERVICE'));
+            const hasService = items.some((item: any) => {
+              if (!item) return false;
+              const t = String(item.type || '').toUpperCase();
+              return t === 'SERVICE';
+            });
             if (!hasService) return false;
           } else if (selectedItemType === 'PRODUCT') {
-            const hasProduct = items.some((item: any) => item && (item.type === 'product' || item.type === 'PRODUCT'));
+            const hasProduct = items.some((item: any) => {
+              if (!item) return false;
+              const t = String(item.type || '').toUpperCase();
+              return t === 'PRODUCT';
+            });
             if (!hasProduct) return false;
           } else if (selectedItemType === 'PACKAGE') {
-            const hasPackage = items.some((item: any) => item && (item.type === 'combo' || item.type === 'PACKAGE' || item.redeemedFromPackageId || item.packageName));
+            const hasPackage = items.some((item: any) => {
+              if (!item) return false;
+              const t = String(item.type || '').toUpperCase();
+              return t === 'COMBO' || t === 'PACKAGE' || item.redeemedFromPackageId || item.packageName;
+            }) || paymentMethod.includes('PACKAGE');
             if (!hasPackage) return false;
           } else if (selectedItemType === 'VOUCHER') {
-            const hasVoucher = sale.voucherDiscount > 0 || sale.voucherCode || items.some((item: any) => item && (item.type === 'voucher' || item.type === 'VOUCHER'));
+            const hasVoucher = sale.voucherDiscount > 0 || sale.voucherCode || items.some((item: any) => {
+              if (!item) return false;
+              const t = String(item.type || '').toUpperCase();
+              return t === 'VOUCHER';
+            }) || paymentMethod.includes('VOUCHER');
             if (!hasVoucher) return false;
           }
         }
@@ -435,6 +454,101 @@ const Reports: React.FC = () => {
     switch (activeReport) {
       case 'sales': // All Sale Report
         return fSales;
+
+      case 'all_sold_items': {
+        const soldItems: any[] = [];
+        sales.forEach((sale: any) => {
+          if (sale.saleStatus !== 'COMPLETED') return;
+          
+          const saleDate = new Date(sale.createdAt);
+          if (startDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            if (saleDate < start) return;
+          }
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            if (saleDate > end) return;
+          }
+
+          const items = Array.isArray(sale.items) ? sale.items : [];
+          
+          items.forEach((item: any) => {
+            const itemType = String(item.type || '').toUpperCase();
+            
+            let typeLabel = 'Service';
+            let filterType = 'SERVICE';
+            if (itemType === 'SERVICE') {
+              typeLabel = 'Service';
+              filterType = 'SERVICE';
+            } else if (itemType === 'PRODUCT') {
+              typeLabel = 'Product';
+              filterType = 'PRODUCT';
+            } else if (itemType === 'COMBO' || itemType === 'PACKAGE' || item.redeemedFromPackageId || item.packageName) {
+              typeLabel = 'Package';
+              filterType = 'PACKAGE';
+            } else if (itemType === 'VOUCHER') {
+              typeLabel = 'Voucher';
+              filterType = 'VOUCHER';
+            }
+
+            const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+            const staffName = item.specialistName || 
+                              (item.specialist && item.specialist.name) || 
+                              sale.specialist?.name || 
+                              sale.stylist?.name || 
+                              (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
+
+            if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+              return;
+            }
+
+            if (selectedItemType !== 'ALL' && filterType !== selectedItemType) {
+              return;
+            }
+
+            soldItems.push({
+              id: `${sale.id}-${item.itemId || item.name}-${itemType}`,
+              invoiceId: sale.saleNumber || sale.id.substring(0, 8),
+              date: sale.createdAt,
+              createdAt: sale.createdAt,
+              customerName: sale.customerName || sale.customer?.name || 'Walk-in',
+              itemName: item.name,
+              type: typeLabel,
+              staffName,
+              price: item.price,
+              quantity: item.quantity,
+              totalPrice: (item.price * item.quantity) - (item.discount || 0)
+            });
+          });
+
+          if (sale.voucherCode || sale.voucherDiscount > 0) {
+            const staffId = sale.specialistId || sale.stylistId || '';
+            const staffName = sale.specialist?.name || sale.stylist?.name || (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
+
+            const matchesStaff = selectedStaff === 'ALL' || String(staffId) === String(selectedStaff);
+            const matchesType = selectedItemType === 'ALL' || selectedItemType === 'VOUCHER';
+
+            if (matchesStaff && matchesType) {
+              soldItems.push({
+                id: `${sale.id}-voucher-discount`,
+                invoiceId: sale.saleNumber || sale.id.substring(0, 8),
+                date: sale.createdAt,
+                createdAt: sale.createdAt,
+                customerName: sale.customerName || sale.customer?.name || 'Walk-in',
+                itemName: sale.voucherCode ? `Voucher: ${sale.voucherCode}` : 'Voucher Redemption',
+                type: 'Voucher',
+                staffName,
+                price: sale.voucherDiscount || sale.discount || 0,
+                quantity: 1,
+                totalPrice: sale.voucherDiscount || sale.discount || 0
+              });
+            }
+          }
+        });
+        return soldItems;
+      }
 
       case 'customers': // By Customer
         return customers.map(c => ({
@@ -771,6 +885,7 @@ const Reports: React.FC = () => {
 
     const skipDateFilter = [
       'one_month_sales',
+      'all_sold_items',
       'pkg_sales_history',
       'pkg_qty_history',
       'staff_sales_summary',
@@ -812,6 +927,15 @@ const Reports: React.FC = () => {
     const lowerSearch = searchTerm.toLowerCase();
 
     return data.filter((row: any) => {
+      if (activeReport === 'all_sold_items') {
+        return (
+          String(row.invoiceId || '').toLowerCase().includes(lowerSearch) ||
+          String(row.customerName || '').toLowerCase().includes(lowerSearch) ||
+          String(row.itemName || '').toLowerCase().includes(lowerSearch) ||
+          String(row.type || '').toLowerCase().includes(lowerSearch) ||
+          String(row.staffName || '').toLowerCase().includes(lowerSearch)
+        );
+      }
       if (activeReport === 'sales' || activeReport === 'one_month_sales' || activeReport === 'pkg_sales_history') {
         return (
           String(row.invoiceId || row.saleNumber || '').toLowerCase().includes(lowerSearch) ||
@@ -1014,6 +1138,90 @@ const Reports: React.FC = () => {
         ),
         textAccessor: row => row.saleStatus,
         sortKey: 'saleStatus'
+      }
+    ],
+    all_sold_items: [
+      { 
+        header: 'Invoice ID', 
+        accessor: row => <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{row.invoiceId}</span>,
+        textAccessor: row => row.invoiceId,
+        sortKey: 'invoiceId'
+      },
+      { 
+        header: 'Date', 
+        accessor: row => new Date(row.createdAt).toLocaleDateString(),
+        textAccessor: row => new Date(row.createdAt).toLocaleDateString(),
+        sortKey: 'date'
+      },
+      { 
+        header: 'Customer', 
+        accessor: row => row.customerName, 
+        textAccessor: row => row.customerName, 
+        sortKey: 'customerName' 
+      },
+      { 
+        header: 'Item Name', 
+        accessor: row => <span style={{ fontWeight: 600 }}>{row.itemName}</span>, 
+        textAccessor: row => row.itemName, 
+        sortKey: 'itemName' 
+      },
+      { 
+        header: 'Item Type', 
+        accessor: row => {
+          const type = String(row.type || '').toUpperCase();
+          let bg = 'rgba(14, 165, 233, 0.1)';
+          let text = 'rgb(3, 105, 161)';
+          if (type === 'PRODUCT') {
+            bg = 'rgba(34, 197, 94, 0.1)';
+            text = 'rgb(21, 128, 61)';
+          } else if (type === 'PACKAGE') {
+            bg = 'rgba(234, 179, 8, 0.1)';
+            text = 'rgb(161, 98, 7)';
+          } else if (type === 'VOUCHER') {
+            bg = 'rgba(239, 68, 68, 0.1)';
+            text = 'rgb(185, 28, 28)';
+          }
+          return (
+            <span style={{ 
+              fontSize: '0.75rem', 
+              fontWeight: 700, 
+              padding: '0.2rem 0.5rem', 
+              borderRadius: 'var(--radius-md)', 
+              backgroundColor: bg, 
+              color: text,
+              textTransform: 'uppercase',
+              letterSpacing: '0.025em'
+            }}>
+              {row.type}
+            </span>
+          );
+        }, 
+        textAccessor: row => row.type, 
+        sortKey: 'type' 
+      },
+      { 
+        header: 'Staff Name', 
+        accessor: row => row.staffName, 
+        textAccessor: row => row.staffName, 
+        sortKey: 'staffName' 
+      },
+      { 
+        header: 'Unit Price', 
+        accessor: row => formatPrice(row.price), 
+        textAccessor: row => String(row.price), 
+        sortKey: 'price' 
+      },
+      { 
+        header: 'Qty', 
+        accessor: row => row.quantity, 
+        textAccessor: row => String(row.quantity), 
+        sortKey: 'quantity' 
+      },
+      { 
+        header: 'Total Price', 
+        accessor: row => <span style={{ fontWeight: 700 }}>{formatPrice(row.totalPrice)}</span>, 
+        textAccessor: row => String(row.totalPrice), 
+        sortKey: 'totalPrice' 
       }
     ],
     customers: [
@@ -1247,6 +1455,14 @@ const Reports: React.FC = () => {
   };
 
   const kpis = useMemo(() => {
+    if (activeReport === 'all_sold_items') {
+      const total = sortedData.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
+      const count = sortedData.reduce((sum, r) => sum + (r.quantity || 0), 0);
+      return [
+        { label: 'Total Sold Revenue', value: formatPrice(total), color: 'var(--success)' },
+        { label: 'Total Items Sold', value: `${count} units`, color: 'var(--primary)' }
+      ];
+    }
     if (activeReport === 'one_month_sales') {
       const total = sortedData.reduce((sum, r) => sum + (r.paidAmount || r.totalAmount || 0), 0);
       const count = sortedData.length;
@@ -2528,26 +2744,57 @@ const Reports: React.FC = () => {
                       Items & Services Breakdown
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {selectedDetailRow.items.map((item: any, i: number) => (
-                        <div key={i} style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          fontSize: '0.8125rem',
-                          background: '#ffffff',
-                          padding: '0.5rem 0.75rem',
-                          borderRadius: 'var(--radius-md)',
-                          boxShadow: 'var(--shadow-sm)'
-                        }}>
-                          <div>
-                            <span style={{ fontWeight: 600, color: 'var(--text-black)' }}>{item.name}</span>
-                            <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem' }}>x{item.quantity}</span>
+                      {selectedDetailRow.items.map((item: any, i: number) => {
+                        const typeBadge = (() => {
+                          const type = String(item.type || '').toUpperCase();
+                          if (type === 'SERVICE') {
+                            return { label: 'Service', bg: 'rgba(14, 165, 233, 0.1)', text: 'rgb(3, 105, 161)' };
+                          }
+                          if (type === 'PRODUCT') {
+                            return { label: 'Product', bg: 'rgba(34, 197, 94, 0.1)', text: 'rgb(21, 128, 61)' };
+                          }
+                          if (type === 'COMBO' || type === 'PACKAGE' || item.redeemedFromPackageId || item.packageName) {
+                            return { label: 'Package', bg: 'rgba(234, 179, 8, 0.1)', text: 'rgb(161, 98, 7)' };
+                          }
+                          if (type === 'VOUCHER') {
+                            return { label: 'Voucher', bg: 'rgba(239, 68, 68, 0.1)', text: 'rgb(185, 28, 28)' };
+                          }
+                          return { label: 'Service', bg: 'rgba(14, 165, 233, 0.1)', text: 'rgb(3, 105, 161)' };
+                        })();
+
+                        return (
+                          <div key={i} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '0.8125rem',
+                            background: '#ffffff',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: 'var(--radius-md)',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--text-black)' }}>{item.name}</span>
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                fontWeight: 700, 
+                                padding: '0.125rem 0.375rem', 
+                                borderRadius: 'var(--radius-md)', 
+                                background: typeBadge.bg, 
+                                color: typeBadge.text,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.025em'
+                              }}>
+                                {typeBadge.label}
+                              </span>
+                              <span style={{ color: 'var(--text-light)' }}>x{item.quantity}</span>
+                            </div>
+                            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                              {formatPrice(item.price * item.quantity)}
+                            </span>
                           </div>
-                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
-                            {formatPrice(item.price * item.quantity)}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

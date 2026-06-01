@@ -734,6 +734,101 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         document.body.removeChild(link);
     };
 
+    const handleExportCustomerModalData = () => {
+        if (!selectedCustomer) return;
+
+        const csvRows: string[] = [];
+
+        // 1. Header Information
+        csvRows.push(`"CUSTOMER PROFILE REPORT: ${selectedCustomer.name.replace(/"/g, '""')}"`);
+        csvRows.push(`"Email:","${(selectedCustomer.email || '').replace(/"/g, '""')}"`);
+        csvRows.push(`"Phone:","${(selectedCustomer.phone || 'N/A').replace(/"/g, '""')}"`);
+        csvRows.push(`"City:","${(selectedCustomer.city || 'N/A').replace(/"/g, '""')}"`);
+        csvRows.push(`"Birthday:","${(selectedCustomer.dateOfBirth || 'N/A').replace(/"/g, '""')}"`);
+        csvRows.push(`"Age Group:","${(selectedCustomer.ageGroup || 'N/A').replace(/"/g, '""')}"`);
+        csvRows.push(`"Total Spend:","${symbol}${(selectedCustomer.totalSpend || 0).toFixed(2)}"`);
+        csvRows.push(`"Visit Count:","${selectedCustomer.visitCount || 0}"`);
+        csvRows.push(`"Voucher Balance:","${symbol}${totalVoucherBalance.toFixed(2)}"`);
+        csvRows.push(''); // Blank spacer
+
+        // 2. Active Memberships & Packages Section
+        csvRows.push('"=== ACTIVE MEMBERSHIPS & PACKAGES ==="');
+        if (activePackages.length === 0) {
+            csvRows.push('"No active packages found"');
+        } else {
+            csvRows.push('"Package Name","Purchase Date","Expiry Date","Item/Service Name","Total Quantity","Remaining Quantity"');
+            activePackages.forEach(pkg => {
+                const pkgName = pkg.package?.name || 'N/A';
+                const pDate = pkg.purchaseDate ? new Date(pkg.purchaseDate).toLocaleDateString() : 'N/A';
+                const eDate = pkg.expiryDate ? new Date(pkg.expiryDate).toLocaleDateString() : 'Never';
+                
+                if (pkg.usageDetails && pkg.usageDetails.length > 0) {
+                    pkg.usageDetails.forEach((item: any) => {
+                        csvRows.push(`"${pkgName.replace(/"/g, '""')}","${pDate}","${eDate}","${(item.name || '').replace(/"/g, '""')}","${Math.max(item.totalQuantity, item.remainingQuantity)}","${item.remainingQuantity}"`);
+                    });
+                } else {
+                    csvRows.push(`"${pkgName.replace(/"/g, '""')}","${pDate}","${eDate}","N/A","N/A","N/A"`);
+                }
+            });
+        }
+        csvRows.push(''); // Blank spacer
+
+        // 3. Appointment History Section
+        csvRows.push('"=== APPOINTMENT HISTORY ==="');
+        if (customerAppointments.length === 0) {
+            csvRows.push('"No appointments found"');
+        } else {
+            csvRows.push('"Service Name","Stylist Name","Date","Time","Price","Status","Notes"');
+            customerAppointments.forEach(apt => {
+                const sName = apt.service?.name || 'N/A';
+                const stName = apt.stylist?.name || 'Unassigned';
+                const dateStr = new Date(apt.startTime).toLocaleDateString();
+                const timeStr = new Date(apt.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const priceVal = `${symbol}${apt.service?.price?.toFixed(2) || '0.00'}`;
+                const status = apt.status || 'N/A';
+                const notes = apt.notes || '';
+                csvRows.push(`"${sName.replace(/"/g, '""')}","${stName.replace(/"/g, '""')}","${dateStr}","${timeStr}","${priceVal}","${status}","${notes.replace(/"/g, '""')}"`);
+            });
+        }
+        csvRows.push(''); // Blank spacer
+
+        // 4. Sales History Section
+        csvRows.push('"=== SALES HISTORY ==="');
+        if (customerSales.length === 0) {
+            csvRows.push('"No sales found"');
+        } else {
+            csvRows.push('"Sale Number","Date","Items Purchased","Total Amount","Status","Payment Status"');
+            customerSales.forEach(sale => {
+                const saleNum = sale.saleNumber || 'N/A';
+                const dateStr = sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'N/A';
+                const totalAmt = `${symbol}${(sale.totalAmount || 0).toFixed(2)}`;
+                const status = sale.saleStatus || 'N/A';
+                const payStatus = sale.paymentStatus || 'N/A';
+                
+                // Format items purchased list
+                const itemsList = (sale.items || []).map((item: any) => {
+                    let typeLabel = item.type || '';
+                    if (item.type === 'combo') typeLabel = 'Combo';
+                    else if (item.price === 0 || item.redeemedQuantity > 0) typeLabel = 'Redeemed';
+                    return `${item.quantity}x ${item.name} (${typeLabel})`;
+                }).join('; ');
+
+                csvRows.push(`"${saleNum}","${dateStr}","${itemsList.replace(/"/g, '""')}","${totalAmt}","${status}","${payStatus}"`);
+            });
+        }
+
+        // Generate download
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${selectedCustomer.name.toLowerCase().replace(/\s+/g, '_')}_profile_report_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Profile data exported successfully', 'success');
+    };
+
     const handleDownloadTemplate = () => {
         const headers = ['Name', 'Email', 'Phone', 'City', 'Status', 'DOB'];
         const sampleRow = ['John Doe', 'john@example.com', '12345678', 'New York', 'Active', '1990-01-01'];
@@ -1395,6 +1490,40 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
             >
                 {selectedCustomer && (
                     <div className="space-y-6">
+                        {/* Premium Export / Download Action Row for Admin */}
+                        {isUserAdmin && (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '0.75rem',
+                                borderBottom: '1px solid var(--border-light)',
+                                paddingBottom: '0.75rem'
+                            }}>
+                                <motion.button
+                                    whileHover={{ scale: 1.02, y: -1 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={handleExportCustomerModalData}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: 'var(--radius-md)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.8125rem',
+                                        fontWeight: 600,
+                                        boxShadow: 'var(--shadow-sm)',
+                                        transition: 'all var(--transition-base)'
+                                    }}
+                                >
+                                    <Download size={16} />
+                                    <span>Download Profile Excel</span>
+                                </motion.button>
+                            </div>
+                        )}
                         {/* Enhanced Customer Info Section */}
                         <div style={{
                             display: 'grid',
@@ -1825,7 +1954,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                                         </button>
                                                                     )}
                                                                 </span>
-                                                                <span>Total: {item.totalQuantity}</span>
+                                                                <span>Total: {Math.max(item.totalQuantity, item.remainingQuantity)}</span>
                                                             </div>
                                                             {isUserAdmin && item.adjustments && Array.isArray(item.adjustments) && item.adjustments.length > 0 && (
                                                                 <div style={{ marginTop: '0.35rem', borderTop: '1px dashed #e2e8f0', paddingTop: '0.25rem' }}>
@@ -1862,7 +1991,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                             height: '100%', backgroundColor: 'var(--success)'
                                                         }} />
                                                     </div>
-                                                    <span style={{ fontWeight: 600 }}>{pkg.remainingQuantity}/{pkg.totalQuantity} left</span>
+                                                    <span style={{ fontWeight: 600 }}>{pkg.remainingQuantity}/{Math.max(pkg.totalQuantity, pkg.remainingQuantity)} left</span>
                                                 </div>
                                             )}
                                         </div>
