@@ -1545,9 +1545,16 @@ const Sales: React.FC<SalesProps> = ({
         // FIX: Ensure we create a payment record for VOUCHER transactions so they appear correctly
         // with the cashier name and method.
         if (paymentValue > 0 || finalTotal === 0) {
+          const isVoucherRedemption = finalTotal === 0 && appliedVouchers.length > 0;
+          const isPackageRedemption = finalTotal === 0 && cart.some(item => item.redeemedFromPackageId || item.redeemedQuantity > 0);
+
           finalPayments.push({
             amount: paymentValue,
-            paymentMethod: (finalTotal === 0 && appliedVouchers.length > 0) ? 'VOUCHER' : paymentModal.method,
+            paymentMethod: isVoucherRedemption 
+              ? 'VOUCHER' 
+              : isPackageRedemption 
+                ? 'PACKAGE' 
+                : paymentModal.method,
             paymentStatus: 'COMPLETED', // Will be updated below if partial
             transactionId: `POS-${Date.now()}`
           });
@@ -1613,7 +1620,9 @@ const Sales: React.FC<SalesProps> = ({
         totalAmount: actualTotal, // Correct total amount (not just what is being paid now)
         paymentMethod: finalPayments.length > 0
           ? (isSplitPaymentMode ? 'SPLIT' : finalPayments[0].paymentMethod)
-          : (appliedVouchers.length > 0 ? 'VOUCHER' : 'CASH'),
+          : (appliedVouchers.length > 0 
+              ? 'VOUCHER' 
+              : (cart.some(item => item.redeemedFromPackageId || item.redeemedQuantity > 0) ? 'PACKAGE' : 'CASH')),
         paymentStatus: status,
         voucherCode: null, // Legacy
         voucherDiscount: actualVoucherDeduction,
