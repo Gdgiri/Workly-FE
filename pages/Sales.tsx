@@ -99,7 +99,11 @@ const Sales: React.FC<SalesProps> = ({
     if (appId) localStorage.setItem('appId', appId);
   }, [businessName, appId]);
 
-  const isIndianBeautyArt = user?.businessName?.toLowerCase() === 'indianbeautyart';
+  const isIndianBeautyArt = user?.businessName?.toLowerCase() === 'indianbeautyart' ||
+                            user?.businessName?.toLowerCase() === 'ibawoodlands' ||
+                            user?.id === '184a171d-504c-4bd1-b425-58ce8838ee8d' ||
+                            user?.adminId === '184a171d-504c-4bd1-b425-58ce8838ee8d' ||
+                            user?.authId === 'c8d368c3-7cf4-4c1d-abeb-e8cc3185c20f';
   const shouldHideFeatures = isIndianBeautyArt && (isAdmin || isStaff);
   const [isQuotationMode, setIsQuotationMode] = useState(false);
   const location = useLocation();
