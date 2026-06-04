@@ -37,6 +37,7 @@ interface Quotation {
   createdAt: string;
   items: QuotationItem[];
   negotiations?: QuotationNegotiation[];
+  notes?: string;
 }
 
 interface Service {

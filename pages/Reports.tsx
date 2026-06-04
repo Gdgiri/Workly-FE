@@ -228,7 +228,7 @@ const Reports: React.FC = () => {
       ] = await Promise.all([
         api.get('/appointments').catch(() => ({ data: [] })),
         api.get('/services').catch(() => ({ data: [] })),
-        api.get('/sales').catch(() => ({ data: [] })),
+        api.get('/sales?limit=1000000').catch(() => ({ data: [] })),
         api.get('/customers').catch(() => ({ data: [] })),
         api.get('/vouchers').catch(() => ({ data: [] })),
         api.get('/vouchers/claims').catch(() => ({ data: [] })),
@@ -239,7 +239,23 @@ const Reports: React.FC = () => {
 
       setAppointments(Array.isArray(appointmentsRes.data) ? appointmentsRes.data : []);
       setServices(Array.isArray(servicesRes.data) ? servicesRes.data : []);
-      setSales(Array.isArray(salesRes.data) ? salesRes.data : (salesRes.data?.sales || []));
+      
+      const rawSales = Array.isArray(salesRes.data) ? salesRes.data : (salesRes.data?.sales || []);
+      const parsedSales = rawSales.map((sale: any) => {
+        let items = sale.items;
+        if (typeof items === 'string') {
+          try {
+            items = JSON.parse(items);
+          } catch (e) {
+            items = [];
+          }
+        }
+        return {
+          ...sale,
+          items: Array.isArray(items) ? items : []
+        };
+      });
+      setSales(parsedSales);
       setCustomers(Array.isArray(customersRes.data) ? customersRes.data : []);
       setVouchers(Array.isArray(vouchersRes.data) ? vouchersRes.data : []);
       setClaims(Array.isArray(claimsRes.data) ? claimsRes.data : []);
@@ -282,7 +298,24 @@ const Reports: React.FC = () => {
         try {
           setFetchingCustomerDetail(true);
           const res = await api.get(`/customers/${selectedCustomerId}`);
-          setSelectedCustomerDetail(res.data);
+          const customerData = res.data;
+          if (customerData && Array.isArray(customerData.sales)) {
+            customerData.sales = customerData.sales.map((sale: any) => {
+              let items = sale.items;
+              if (typeof items === 'string') {
+                try {
+                  items = JSON.parse(items);
+                } catch (e) {
+                  items = [];
+                }
+              }
+              return {
+                ...sale,
+                items: Array.isArray(items) ? items : []
+              };
+            });
+          }
+          setSelectedCustomerDetail(customerData);
           setFetchingCustomerDetail(false);
         } catch (error) {
           console.error('Error fetching customer details:', error);
@@ -692,6 +725,10 @@ const Reports: React.FC = () => {
           const items = Array.isArray(sale.items) ? sale.items : [];
           items.forEach((item: any) => {
             if (item.type === 'combo') {
+              const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+              if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+                return;
+              }
               pkgSales.push({
                 id: `${sale.id}-${item.itemId}`,
                 saleNumber: sale.saleNumber,
@@ -716,6 +753,10 @@ const Reports: React.FC = () => {
           const items = Array.isArray(sale.items) ? sale.items : [];
           items.forEach((item: any) => {
             if (item.type === 'combo') {
+              const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+              if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+                return;
+              }
               const key = item.name;
               if (!pkgSummaryMap[key]) {
                 pkgSummaryMap[key] = {
@@ -740,7 +781,15 @@ const Reports: React.FC = () => {
           const items = Array.isArray(sale.items) ? sale.items : [];
           
           items.forEach((item: any) => {
-            const staffName = item.specialistName || sale.specialist?.name || (sale.specialistId ? 'Staff ID: ' + sale.specialistId : 'Unassigned');
+            const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+            if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+              return;
+            }
+            const staffName = item.specialistName || 
+                              (item.specialist && item.specialist.name) ||
+                              sale.specialist?.name || 
+                              sale.stylist?.name || 
+                              (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
             if (!staffMap[staffName]) {
               staffMap[staffName] = {
                 name: staffName,
@@ -753,17 +802,19 @@ const Reports: React.FC = () => {
             }
             
             const itemRevenue = (item.price * item.quantity) - (item.discount || 0);
-            if (item.type === 'service') {
+            const itemType = String(item.type || '').toLowerCase();
+            if (itemType === 'service') {
               staffMap[staffName].servicesRevenue += itemRevenue;
-            } else if (item.type === 'product') {
+            } else if (itemType === 'product') {
               staffMap[staffName].productsRevenue += itemRevenue;
-            } else if (item.type === 'combo') {
+            } else if (itemType === 'combo' || itemType === 'package') {
               staffMap[staffName].packagesRevenue += itemRevenue;
             }
             staffMap[staffName].totalRevenue += itemRevenue;
           });
 
-          const mainStaff = sale.specialist?.name || (sale.specialistId ? 'Staff ID: ' + sale.specialistId : 'Unassigned');
+          const mainStaffId = sale.specialistId || sale.stylistId || '';
+          const mainStaff = sale.specialist?.name || sale.stylist?.name || (mainStaffId ? 'Staff ID: ' + mainStaffId : 'Unassigned');
           if (staffMap[mainStaff]) {
             staffMap[mainStaff].salesCount += 1;
           }
@@ -777,8 +828,17 @@ const Reports: React.FC = () => {
           if (sale.saleStatus !== 'COMPLETED') return;
           const items = Array.isArray(sale.items) ? sale.items : [];
           items.forEach((item: any) => {
-            if (item.type === 'combo') {
-              const staffName = item.specialistName || sale.specialist?.name || (sale.specialistId ? 'Staff ID: ' + sale.specialistId : 'Unassigned');
+            const itemType = String(item.type || '').toUpperCase();
+            if (itemType === 'COMBO' || itemType === 'PACKAGE') {
+              const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+              if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+                return;
+              }
+              const staffName = item.specialistName || 
+                                (item.specialist && item.specialist.name) || 
+                                sale.specialist?.name || 
+                                sale.stylist?.name || 
+                                (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
               staffPkgSales.push({
                 id: `${sale.id}-${item.itemId}`,
                 date: sale.createdAt,
@@ -801,9 +861,17 @@ const Reports: React.FC = () => {
           if (sale.saleStatus !== 'COMPLETED') return;
           const items = Array.isArray(sale.items) ? sale.items : [];
           items.forEach((item: any) => {
-            const isRedeemed = item.redeemedFromPackageId || item.redeemedQuantity > 0 || (item.price === 0 && item.type === 'service' && sale.totalAmount < sale.subtotal);
+            const isRedeemed = item.redeemedFromPackageId || item.redeemedQuantity > 0 || (item.price === 0 && String(item.type || '').toLowerCase() === 'service' && sale.totalAmount < sale.subtotal);
             if (isRedeemed) {
-              const staffName = item.specialistName || sale.specialist?.name || (sale.specialistId ? 'Staff ID: ' + sale.specialistId : 'Unassigned');
+              const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+              if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+                return;
+              }
+              const staffName = item.specialistName || 
+                                (item.specialist && item.specialist.name) || 
+                                sale.specialist?.name || 
+                                sale.stylist?.name || 
+                                (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
               staffPkgRedemptions.push({
                 id: `${sale.id}-${item.itemId}`,
                 date: sale.createdAt,
@@ -826,7 +894,16 @@ const Reports: React.FC = () => {
           if (sale.saleStatus !== 'COMPLETED') return;
           const items = Array.isArray(sale.items) ? sale.items : [];
           items.forEach((item: any) => {
-            const staffName = item.specialistName || sale.specialist?.name || (sale.specialistId ? 'Staff ID: ' + sale.specialistId : 'Unassigned');
+            const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+            if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+              return;
+            }
+            const staffName = item.specialistName || 
+                              (item.specialist && item.specialist.name) || 
+                              sale.specialist?.name || 
+                              sale.stylist?.name || 
+                              (staffId ? 'Staff ID: ' + staffId : 'Unassigned');
+            const itemType = String(item.type || '').toLowerCase();
             staffDetails.push({
               id: `${sale.id}-${item.itemId}-${item.name}`,
               date: sale.createdAt,
@@ -834,7 +911,7 @@ const Reports: React.FC = () => {
               staffName,
               customerName: sale.customerName || sale.customer?.name || 'Walk-in',
               itemName: item.name,
-              type: item.type === 'service' ? 'Service' : item.type === 'product' ? 'Product' : item.type === 'combo' ? 'Package' : 'Other',
+              type: itemType === 'service' ? 'Service' : itemType === 'product' ? 'Product' : (itemType === 'combo' || itemType === 'package') ? 'Package' : 'Other',
               price: item.price,
               quantity: item.quantity,
               totalPrice: (item.price * item.quantity) - (item.discount || 0)
@@ -850,12 +927,17 @@ const Reports: React.FC = () => {
           if (sale.saleStatus !== 'COMPLETED') return;
           const items = Array.isArray(sale.items) ? sale.items : [];
           items.forEach((item: any) => {
-            if (item.type === 'service' || item.type === 'product') {
-              const key = `${item.type}-${item.name}`;
+            const itemType = String(item.type || '').toLowerCase();
+            if (itemType === 'service' || itemType === 'product') {
+              const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
+              if (selectedStaff !== 'ALL' && String(staffId) !== String(selectedStaff) && (!item.specialist || String(item.specialist.id) !== String(selectedStaff))) {
+                return;
+              }
+              const key = `${itemType}-${item.name}`;
               if (!popularityMap[key]) {
                 popularityMap[key] = {
                   name: item.name,
-                  type: item.type === 'service' ? 'Service' : 'Product',
+                  type: itemType === 'service' ? 'Service' : 'Product',
                   quantity: 0,
                   revenue: 0
                 };

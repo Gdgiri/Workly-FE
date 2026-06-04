@@ -127,7 +127,7 @@ FORMATTING RULES
 • Use numbered lists for workflows
 • Keep paragraphs short (1-2 lines max)
 • Avoid emojis unless they add clarity
-• Use currency symbol with space: **₹{amount}** or **${amount}**
+• Use currency symbol with space: **₹{amount}** or **\${amount}**
 
 ══════════════════════════════════════
 DATA PRESENTATION EXAMPLES
