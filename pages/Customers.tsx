@@ -2618,17 +2618,17 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                     }, {});
 
                                                     return Object.entries(orphanGroups).map(([pkgId, items]: [string, any]) => (
-                                                        <div key={pkgId} style={{ background: '#fff1f2', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #ffe4e6' }}>
+                                                        <div key={pkgId} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                                                                 <div>
-                                                                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#9f1239' }}>
-                                                                        Expired / Past Package
+                                                                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)' }}>
+                                                                        Past / Redeemed Package
                                                                     </h4>
-                                                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#9f1239', opacity: 0.8 }}>
+                                                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', opacity: 0.8 }}>
                                                                         ID: {pkgId.substring(0, 8)}...
                                                                     </p>
                                                                 </div>
-                                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.6rem', borderRadius: '1rem' }}>Inactive</span>
+                                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#f1f5f9', color: '#475569', padding: '0.2rem 0.6rem', borderRadius: '1rem' }}>Completed</span>
                                                             </div>
                                                             {renderItems(items as any[])}
                                                         </div>

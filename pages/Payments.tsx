@@ -143,6 +143,26 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const [cancelReason, setCancelReason] = useState('');
     const [isCancelling, setIsCancelling] = useState(false);
 
+    // Fetch catalog data for actual price lookups on package redemptions
+    const [services, setServices] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchCatalogData = async () => {
+            try {
+                const [servicesRes, productsRes] = await Promise.all([
+                    api.get('/services').catch(() => ({ data: [] })),
+                    api.get('/inventory').catch(() => ({ data: [] }))
+                ]);
+                setServices(Array.isArray(servicesRes.data) ? servicesRes.data : []);
+                setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+            } catch (err) {
+                console.error('Failed to fetch catalog data for pricing lookups:', err);
+            }
+        };
+        fetchCatalogData();
+    }, []);
+
     // Intelligence Matcher (Same logic as Reconciliation for consistency)
     const isMatching = (backendKey: string, settingsName: string): boolean => {
         if (!backendKey || !settingsName) return false;
@@ -1461,27 +1481,61 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 {selectedPayment.sale ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         {(selectedPayment.sale.items || []).map((item: any, idx: number) => {
-                                            const isRedemption = item.price === 0 || item.redeemedQuantity > 0;
+                                            const isRedemption = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
+                                            
+                                            // Find catalog/original price for redeemed item
+                                            let originalPrice = item.price || 0;
+                                            if (isRedemption && originalPrice === 0) {
+                                                const foundService = services.find((s: any) => 
+                                                    (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                                                    (item.itemId && String(s.id) === String(item.itemId)) ||
+                                                    (item.id && String(s.id) === String(item.id)) ||
+                                                    (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+                                                );
+                                                
+                                                if (foundService) {
+                                                    originalPrice = foundService.price || 0;
+                                                } else {
+                                                    const foundProduct = products.find((p: any) => 
+                                                        (item.productId && String(p.id) === String(item.productId)) ||
+                                                        (item.itemId && String(p.id) === String(item.itemId)) ||
+                                                        (item.id && String(p.id) === String(item.id)) ||
+                                                        (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                                                    );
+                                                    if (foundProduct) {
+                                                        originalPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                                                    }
+                                                }
+                                            }
+
                                             return (
-                                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{item.name}</p>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>Qty: {item.quantity}</span>
-                                                            {item.specialistName && (
-                                                                <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>• {item.specialistName}</span>
-                                                            )}
-                                                            {item.type === 'combo' && (
-                                                                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ffedd5', color: '#ea580c', textTransform: 'uppercase' }}>Combo</span>
-                                                            )}
-                                                            {isRedemption && (
-                                                                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ecfdf5', color: '#059669', textTransform: 'uppercase' }}>Redeemed</span>
-                                                            )}
+                                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderBottom: idx === (selectedPayment.sale.items || []).length - 1 ? 'none' : '1px dashed var(--border-light)', paddingBottom: idx === (selectedPayment.sale.items || []).length - 1 ? '0' : '0.5rem', marginBottom: idx === (selectedPayment.sale.items || []).length - 1 ? '0' : '0.5rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{item.name}</p>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>Qty: {item.quantity}</span>
+                                                                {item.specialistName && (
+                                                                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>• {item.specialistName}</span>
+                                                                )}
+                                                                {item.type === 'combo' && (
+                                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ffedd5', color: '#ea580c', textTransform: 'uppercase' }}>Combo</span>
+                                                                )}
+                                                                {isRedemption && (
+                                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ecfdf5', color: '#059669', textTransform: 'uppercase' }}>Redeemed</span>
+                                                                )}
+                                                            </div>
                                                         </div>
+                                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
+                                                            {formatPrice(originalPrice * item.quantity)}
+                                                        </p>
                                                     </div>
-                                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
-                                                        {isRedemption ? formatPrice(0) : formatPrice(item.price * item.quantity)}
-                                                    </p>
+                                                    {isRedemption && originalPrice > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#059669', paddingLeft: '0.5rem', marginTop: '0.1rem' }}>
+                                                            <span style={{ fontStyle: 'italic', fontWeight: 500 }}>Package Redemption</span>
+                                                            <span style={{ fontWeight: 700 }}>-{formatPrice(originalPrice * item.quantity)}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -1511,42 +1565,74 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             }}>
                                 {selectedPayment.sale && (
                                     <>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                            <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
-                                            <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
-                                                {formatPrice((selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0))}
-                                            </span>
-                                        </div>
                                         {(() => {
-                                            const sub = (selectedPayment.sale as any).subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-                                            const total = selectedPayment.amount || (selectedPayment.sale as any).totalAmount || 0;
+                                            const { originalSubtotal, totalRedemptionValue } = (selectedPayment.sale.items || []).reduce((sums: { originalSubtotal: number, totalRedemptionValue: number }, item: any) => {
+                                                const isRed = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
+                                                let origPrice = item.price || 0;
+                                                if (isRed && origPrice === 0) {
+                                                    const foundService = services.find((s: any) => 
+                                                        (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                                                        (item.itemId && String(s.id) === String(item.itemId)) ||
+                                                        (item.id && String(s.id) === String(item.id)) ||
+                                                        (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+                                                    );
+                                                    if (foundService) {
+                                                        origPrice = foundService.price || 0;
+                                                    } else {
+                                                        const foundProduct = products.find((p: any) => 
+                                                            (item.productId && String(p.id) === String(item.productId)) ||
+                                                            (item.itemId && String(p.id) === String(item.itemId)) ||
+                                                            (item.id && String(p.id) === String(item.id)) ||
+                                                            (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                                                        );
+                                                        if (foundProduct) {
+                                                            origPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                                                        }
+                                                    }
+                                                }
+                                                sums.originalSubtotal += (origPrice * item.quantity);
+                                                if (isRed) {
+                                                    sums.totalRedemptionValue += (origPrice * item.quantity);
+                                                }
+                                                return sums;
+                                            }, { originalSubtotal: 0, totalRedemptionValue: 0 });
+
+                                            const nonRedeemedSubtotal = originalSubtotal - totalRedemptionValue;
+                                            const total = (selectedPayment.sale as any).totalAmount || selectedPayment.amount || 0;
                                             const explicitDisc = (selectedPayment.sale as any).discount || 0;
-                                            const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, sub - total);
-                                            
-                                            if (effectiveDisc <= 0) return null;
-                                            
+                                            const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, nonRedeemedSubtotal - total);
+                                            const paid = (selectedPayment.sale as any).paidAmount || 0;
+                                            const balance = Math.max(0, total - paid);
+
                                             return (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                    <span style={{ color: 'var(--text-black)' }}>Discount</span>
-                                                    <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
-                                                </div>
+                                                <>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                        <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
+                                                        <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
+                                                            {formatPrice(originalSubtotal)}
+                                                        </span>
+                                                    </div>
+                                                    {totalRedemptionValue > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#059669' }}>
+                                                            <span style={{ fontWeight: 500 }}>Package Redemption</span>
+                                                            <span style={{ fontWeight: 700 }}>-{formatPrice(totalRedemptionValue)}</span>
+                                                        </div>
+                                                    )}
+                                                    {effectiveDisc > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                            <span style={{ color: 'var(--text-black)' }}>Discount</span>
+                                                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
+                                                        <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
+                                                        <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
+                                                            {formatPrice(balance)}
+                                                        </span>
+                                                    </div>
+                                                </>
                                             );
                                         })()}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
-                                            <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
-                                            <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
-                                                {(() => {
-                                                    const sub = (selectedPayment.sale as any).subtotal || (selectedPayment.sale.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-                                                    const total = selectedPayment.amount || (selectedPayment.sale as any).totalAmount || 0;
-                                                    const explicitDisc = (selectedPayment.sale as any).discount || 0;
-                                                    const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, sub - total);
-                                                    
-                                                    const paid = (selectedPayment.sale as any).paidAmount || 0;
-                                                    const balance = (sub - effectiveDisc) - paid;
-                                                    return formatPrice(Math.max(0, balance));
-                                                })()}
-                                            </span>
-                                        </div>
                                     </>
                                 )}
                                 <div style={{

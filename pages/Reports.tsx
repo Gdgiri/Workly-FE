@@ -89,6 +89,7 @@ const Reports: React.FC = () => {
   const [claims, setClaims] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
+  const [customerPackages, setCustomerPackages] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,6 +117,9 @@ const Reports: React.FC = () => {
   const [specialists, setSpecialists] = useState<any[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<string>('ALL');
   const [selectedItemType, setSelectedItemType] = useState<string>('ALL');
+  const [selectedRedemptionMethod, setSelectedRedemptionMethod] = useState<string>('ALL');
+  const [isRedemptionDropdownOpen, setIsRedemptionDropdownOpen] = useState(false);
+  const redemptionDropdownRef = useRef<HTMLDivElement>(null);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -153,6 +157,7 @@ const Reports: React.FC = () => {
         { value: "services", label: "By Service Catalog", description: "Offered services, durations, and pricing" },
         { value: "packages", label: "By Package Plans", description: "Active bundled package plans and details" },
         { value: "vouchers", label: "By Vouchers List", description: "Campaign codes, discounts, and validation status" },
+        { value: "daily_usage_payments_by_date", label: "Daily Consumption & Payments Summary", description: "Daily summary of package consumption, voucher usage, and other payments by date" },
       ]
     },
     {
@@ -203,6 +208,9 @@ const Reports: React.FC = () => {
       if (itemTypeDropdownRef.current && !itemTypeDropdownRef.current.contains(event.target as Node)) {
         setIsItemTypeDropdownOpen(false);
       }
+      if (redemptionDropdownRef.current && !redemptionDropdownRef.current.contains(event.target as Node)) {
+        setIsRedemptionDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -224,7 +232,8 @@ const Reports: React.FC = () => {
         claimsRes, 
         inventoryRes,
         packagesRes,
-        specialistsRes
+        specialistsRes,
+        customerPackagesRes
       ] = await Promise.all([
         api.get('/appointments').catch(() => ({ data: [] })),
         api.get('/services').catch(() => ({ data: [] })),
@@ -234,7 +243,8 @@ const Reports: React.FC = () => {
         api.get('/vouchers/claims').catch(() => ({ data: [] })),
         api.get('/inventory').catch(() => ({ data: [] })),
         api.get('/packages').catch(() => ({ data: [] })),
-        api.get('/stylists').catch(() => ({ data: [] }))
+        api.get('/stylists').catch(() => ({ data: [] })),
+        api.get('/customer-packages').catch(() => ({ data: [] }))
       ]);
 
       setAppointments(Array.isArray(appointmentsRes.data) ? appointmentsRes.data : []);
@@ -262,6 +272,7 @@ const Reports: React.FC = () => {
       setProducts(Array.isArray(inventoryRes.data) ? inventoryRes.data : []);
       setPackages(Array.isArray(packagesRes.data) ? packagesRes.data : (packagesRes.data?.packages || []));
       setSpecialists(Array.isArray(specialistsRes.data) ? specialistsRes.data : []);
+      setCustomerPackages(Array.isArray(customerPackagesRes.data) ? customerPackagesRes.data : []);
       
       setLoading(false);
     } catch (error) {
@@ -579,7 +590,7 @@ const Reports: React.FC = () => {
           
           items.forEach((item: any) => {
             const itemType = String(item.type || '').toUpperCase();
-            if (itemType !== 'SERVICE') return;
+            if (itemType !== 'SERVICE' && itemType !== 'PRODUCT') return;
 
             const staffId = item.specialistId || item.stylistId || sale.specialistId || sale.stylistId || '';
             const staffName = item.specialistName || 
@@ -621,6 +632,39 @@ const Reports: React.FC = () => {
               method = 'Dynamic/Other';
             }
 
+            if (selectedRedemptionMethod !== 'ALL') {
+              if (!method.toLowerCase().includes(selectedRedemptionMethod.toLowerCase())) {
+                return;
+              }
+            }
+
+            // Find price based on product id / service id or name
+            let originalPrice = item.price || 0;
+            if (method === 'Package Redemption' || method === 'Voucher' || originalPrice === 0) {
+              // Try to find in services first by ID or name
+              const foundService = services.find((s: any) => 
+                (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                (item.itemId && String(s.id) === String(item.itemId)) ||
+                (item.id && String(s.id) === String(item.id)) ||
+                (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+              );
+              
+              if (foundService) {
+                originalPrice = foundService.price || 0;
+              } else {
+                // Try to find in products
+                const foundProduct = products.find((p: any) => 
+                  (item.productId && String(p.id) === String(item.productId)) ||
+                  (item.itemId && String(p.id) === String(item.itemId)) ||
+                  (item.id && String(p.id) === String(item.id)) ||
+                  (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                );
+                if (foundProduct) {
+                  originalPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                }
+              }
+            }
+
             consumptionItems.push({
               id: `${sale.id}-${item.itemId || item.name}-consumption`,
               invoiceId: sale.saleNumber || sale.id.substring(0, 8),
@@ -629,8 +673,8 @@ const Reports: React.FC = () => {
               customerName: sale.customerName || sale.customer?.name || 'Walk-in',
               serviceName: item.name,
               qty: item.quantity,
-              price: item.price,
-              totalPrice: (item.price * item.quantity) - (item.discount || 0),
+              price: originalPrice,
+              totalPrice: (originalPrice * item.quantity),
               method,
               staffName
             });
@@ -654,6 +698,119 @@ const Reports: React.FC = () => {
 
       case 'services': // By Service
         return services;
+
+      case 'daily_usage_payments_by_date': {
+        const dateGroups: Record<string, {
+          date: string,
+          rawDate: Date,
+          packageUsage: number,
+          voucherUsage: number,
+          otherPayments: number,
+          total: number
+        }> = {};
+
+        fSales.forEach((sale: any) => {
+          if (sale.saleStatus !== 'COMPLETED') return;
+
+          const d = new Date(sale.createdAt);
+          const dateStr = d.toLocaleDateString();
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const dateKey = `${year}-${month}-${day}`;
+
+          if (!dateGroups[dateKey]) {
+            dateGroups[dateKey] = {
+              date: dateStr,
+              rawDate: d,
+              packageUsage: 0,
+              voucherUsage: 0,
+              otherPayments: 0,
+              total: 0
+            };
+          }
+
+          const group = dateGroups[dateKey];
+
+          const items = Array.isArray(sale.items) ? sale.items : [];
+          items.forEach((item: any) => {
+            const isRedeemed = item.redeemedFromPackageId || item.redeemedQuantity > 0;
+            if (isRedeemed) {
+              let originalPrice = item.price || 0;
+              const foundService = services.find((s: any) => 
+                (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                (item.itemId && String(s.id) === String(item.itemId)) ||
+                (item.id && String(s.id) === String(item.id)) ||
+                (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+              );
+              if (foundService) {
+                originalPrice = foundService.price || 0;
+              } else {
+                const foundProduct = products.find((p: any) => 
+                  (item.productId && String(p.id) === String(item.productId)) ||
+                  (item.itemId && String(p.id) === String(item.itemId)) ||
+                  (item.id && String(p.id) === String(item.id)) ||
+                  (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                );
+                if (foundProduct) {
+                  originalPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                }
+              }
+              group.packageUsage += originalPrice * item.quantity;
+            }
+          });
+
+          // 2. Calculate Voucher Usage
+          let voucherVal = 0;
+          if (sale.voucherDiscount > 0) {
+            voucherVal = sale.voucherDiscount;
+          } else if (sale.discount > 0) {
+            const hasPackageRedemption = items.some((item: any) => item && (item.redeemedFromPackageId || item.redeemedQuantity > 0));
+            if (!hasPackageRedemption) {
+              voucherVal = sale.discount;
+            }
+          }
+
+          let paymentVoucherVal = 0;
+          if (sale.payments && sale.payments.length > 0) {
+            sale.payments.forEach((p: any) => {
+              const m = String(p.paymentMethod || '').trim().toUpperCase();
+              if (m === 'VOUCHER') {
+                paymentVoucherVal += p.amount || 0;
+              }
+            });
+          }
+
+          group.voucherUsage += Math.max(voucherVal, paymentVoucherVal);
+
+          let otherPayments = 0;
+          if (sale.payments && sale.payments.length > 0) {
+            sale.payments.forEach((p: any) => {
+              const method = String(p.paymentMethod || '').trim().toUpperCase();
+              if (method !== 'PACKAGE' && method !== 'VOUCHER') {
+                otherPayments += p.amount || 0;
+              }
+            });
+          } else {
+            const directMethod = String(sale.paymentMethod || '').trim().toUpperCase();
+            if (directMethod !== 'PACKAGE' && directMethod !== 'VOUCHER') {
+              otherPayments += sale.paidAmount || sale.totalAmount || 0;
+            }
+          }
+          group.otherPayments += otherPayments;
+        });
+
+        const result = Object.keys(dateGroups).map(k => {
+          const g = dateGroups[k];
+          return {
+            ...g,
+            total: g.packageUsage + g.voucherUsage + g.otherPayments
+          };
+        });
+
+        result.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+        return result;
+      }
 
       case 'packages': // By Package Combos
         return packages;
@@ -1015,7 +1172,7 @@ const Reports: React.FC = () => {
       default:
         return [];
     }
-  }, [activeReport, sales, customers, appointments, products, services, packages, vouchers, claims, customerStats, selectedCustomerDetail, startDate, endDate, selectedStaff, selectedItemType]);
+  }, [activeReport, sales, customers, appointments, products, services, packages, vouchers, claims, customerStats, selectedCustomerDetail, startDate, endDate, selectedStaff, selectedItemType, selectedRedemptionMethod]);
 
   // Filter & Search Logic
   const filteredData = useMemo(() => {
@@ -1035,7 +1192,9 @@ const Reports: React.FC = () => {
       'cust_pkg_details',
       'cust_topup_history',
       'cust_pkg_usage_summary',
-      'cust_pkg_usage_details'
+      'cust_pkg_usage_details',
+      'vouchers',
+      'packages'
     ].includes(activeReport);
 
     if (!skipDateFilter) {
@@ -1123,9 +1282,12 @@ const Reports: React.FC = () => {
           String(row.discountType || '').toLowerCase().includes(lowerSearch)
         );
       }
+      if (activeReport === 'daily_usage_payments_by_date') {
+        return String(row.date || '').toLowerCase().includes(lowerSearch);
+      }
       return false;
     });
-  }, [reportData, searchTerm, activeReport, startDate, endDate]);
+  }, [reportData, searchTerm, activeReport, startDate, endDate, selectedRedemptionMethod]);
 
   // Sorting Logic
   const sortedData = useMemo(() => {
@@ -1165,7 +1327,7 @@ const Reports: React.FC = () => {
   // Reset pagination on report type, search, or date changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeReport, searchTerm, startDate, endDate, selectedStaff, selectedItemType]);
+  }, [activeReport, searchTerm, startDate, endDate, selectedStaff, selectedItemType, selectedRedemptionMethod]);
 
   // Change sorting details
   const handleSort = (field: string) => {
@@ -1522,22 +1684,198 @@ const Reports: React.FC = () => {
       { header: 'Status', accessor: row => row.isActive ? 'Active' : 'Inactive', textAccessor: row => row.isActive ? 'Active' : 'Inactive', sortKey: 'isActive' }
     ],
     packages: [
-      { header: 'Package Name', accessor: row => <span style={{ fontWeight: 600 }}>{row.name}</span>, textAccessor: row => row.name, sortKey: 'name' },
-      { header: 'Price', accessor: row => formatPrice(row.price), textAccessor: row => String(row.price), sortKey: 'price' },
-      { header: 'Items Count', accessor: row => row.items?.length || 0, textAccessor: row => String(row.items?.length || 0), sortKey: 'items' },
-      { header: 'Description', accessor: row => row.description || 'N/A', textAccessor: row => row.description || 'N/A', sortKey: 'description' }
+      { 
+        header: 'Package Name', 
+        accessor: row => <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{row.name}</span>, 
+        textAccessor: row => row.name, 
+        sortKey: 'name' 
+      },
+      { 
+        header: 'Price', 
+        accessor: row => formatPrice(row.price), 
+        textAccessor: row => String(row.price), 
+        sortKey: 'price' 
+      },
+      { 
+        header: 'Services Count', 
+        accessor: row => {
+          let count = 0;
+          if (Array.isArray(row.items)) {
+            count = row.items.length;
+          } else if (row.items && typeof row.items === 'object') {
+            count = Object.keys(row.items).length;
+          }
+          return <span>{count} services</span>;
+        },
+        textAccessor: row => {
+          let count = 0;
+          if (Array.isArray(row.items)) {
+            count = row.items.length;
+          } else if (row.items && typeof row.items === 'object') {
+            count = Object.keys(row.items).length;
+          }
+          return String(count);
+        },
+        sortKey: 'itemsCount'
+      },
+      { 
+        header: 'Total Sold', 
+        accessor: row => {
+          const matching = customerPackages.filter((cp: any) => 
+            cp.packageId === row.id
+          );
+          return <span className="badge badge-neutral">{matching.length} sold</span>;
+        },
+        textAccessor: row => {
+          const matching = customerPackages.filter((cp: any) => 
+            cp.packageId === row.id
+          );
+          return String(matching.length);
+        },
+        sortKey: 'totalSold'
+      },
+      { 
+        header: 'Remaining Qty', 
+        accessor: row => {
+          const matching = customerPackages.filter((cp: any) => 
+            cp.packageId === row.id
+          );
+          const totalLeft = matching.reduce((sum: number, cp: any) => sum + (cp.remainingQuantity || 0), 0);
+          const totalQty = matching.reduce((sum: number, cp: any) => sum + (cp.totalQuantity || 0), 0);
+          return <span className={`badge ${totalLeft > 0 ? 'badge-success' : 'badge-danger'}`}>{totalLeft} / {totalQty} left</span>;
+        },
+        textAccessor: row => {
+          const matching = customerPackages.filter((cp: any) => 
+            cp.packageId === row.id
+          );
+          const totalLeft = matching.reduce((sum: number, cp: any) => sum + (cp.remainingQuantity || 0), 0);
+          const totalQty = matching.reduce((sum: number, cp: any) => sum + (cp.totalQuantity || 0), 0);
+          return `${totalLeft}/${totalQty}`;
+        },
+        sortKey: 'remainingQty'
+      },
+      { 
+        header: 'Unclaimed Value', 
+        accessor: row => {
+          const matching = customerPackages.filter((cp: any) => 
+            cp.packageId === row.id
+          );
+          const unclaimedVal = matching.reduce((sum: number, cp: any) => {
+            const packagePrice = cp.purchasePrice > 0 ? cp.purchasePrice : (row.price || 0);
+            const remainingVal = (cp.remainingQuantity || 0) * (packagePrice / (cp.totalQuantity || 1));
+            return sum + remainingVal;
+          }, 0);
+          return <span style={{ fontWeight: 700, color: 'var(--danger)' }}>{formatPrice(unclaimedVal)}</span>;
+        },
+        textAccessor: row => {
+          const matching = customerPackages.filter((cp: any) => 
+            cp.packageId === row.id
+          );
+          const unclaimedVal = matching.reduce((sum: number, cp: any) => {
+            const packagePrice = cp.purchasePrice > 0 ? cp.purchasePrice : (row.price || 0);
+            const remainingVal = (cp.remainingQuantity || 0) * (packagePrice / (cp.totalQuantity || 1));
+            return sum + remainingVal;
+          }, 0);
+          return String(unclaimedVal);
+        },
+        sortKey: 'unclaimedValue'
+      },
+      { 
+        header: 'Description', 
+        accessor: row => row.description || 'N/A', 
+        textAccessor: row => row.description || 'N/A', 
+        sortKey: 'description' 
+      }
     ],
     vouchers: [
-      { header: 'Voucher Code', accessor: row => <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{row.voucherCode || row.code}</span>, textAccessor: row => row.voucherCode || row.code, sortKey: 'voucherCode' },
       { 
-        header: 'Discount', 
-        accessor: row => row.discountType === 'PERCENT' ? `${row.discountValue}%` : formatPrice(row.discountValue),
-        textAccessor: row => `${row.discountValue} ${row.discountType}`,
-        sortKey: 'discountValue'
+        header: 'Voucher Name', 
+        accessor: row => <span style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{row.name || 'N/A'}</span>, 
+        textAccessor: row => row.name || 'N/A', 
+        sortKey: 'name' 
       },
-      { header: 'Type', accessor: row => row.discountType, textAccessor: row => row.discountType, sortKey: 'discountType' },
-      { header: 'Claim Limit', accessor: row => row.claimLimit || 'Unlimited', textAccessor: row => String(row.claimLimit || 'Unlimited'), sortKey: 'claimLimit' },
-      { header: 'Active', accessor: row => row.isActive ? 'Yes' : 'No', textAccessor: row => row.isActive ? 'Yes' : 'No', sortKey: 'isActive' }
+      { 
+        header: 'Voucher Code', 
+        accessor: row => <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{row.code || row.voucherCode}</span>, 
+        textAccessor: row => row.code || row.voucherCode, 
+        sortKey: 'code' 
+      },
+      { 
+        header: 'Discount Value', 
+        accessor: row => {
+          const val = row.value || 0;
+          return row.type === 'percent' ? `${val}%` : formatPrice(val);
+        },
+        textAccessor: row => {
+          const val = row.value || 0;
+          return row.type === 'percent' ? `${val}%` : String(val);
+        },
+        sortKey: 'value'
+      },
+      { 
+        header: 'Type', 
+        accessor: row => row.type === 'percent' ? 'Percentage' : 'Fixed Amount', 
+        textAccessor: row => row.type === 'percent' ? 'Percentage' : 'Fixed Amount', 
+        sortKey: 'type' 
+      },
+      { 
+        header: 'Total Claimed', 
+        accessor: row => {
+          const matchingClaims = claims.filter((c: any) => 
+            (c.voucherId === row.id || c.voucherCode === row.code) &&
+            checkDateInRange(c.createdAt, startDate, endDate)
+          );
+          return <span className="badge badge-neutral">{matchingClaims.length} claimed</span>;
+        },
+        textAccessor: row => {
+          const matchingClaims = claims.filter((c: any) => 
+            (c.voucherId === row.id || c.voucherCode === row.code) &&
+            checkDateInRange(c.createdAt, startDate, endDate)
+          );
+          return String(matchingClaims.length);
+        },
+        sortKey: 'claimsCount'
+      },
+      { 
+        header: 'Remaining Value', 
+        accessor: row => {
+          const matchingClaims = claims.filter((c: any) => 
+            (c.voucherId === row.id || c.voucherCode === row.code) &&
+            checkDateInRange(c.createdAt, startDate, endDate)
+          );
+          const totalRemaining = matchingClaims.reduce((sum: number, c: any) => sum + (c.balance || 0), 0);
+          return <span style={{ fontWeight: 700, color: 'var(--success)' }}>{formatPrice(totalRemaining)}</span>;
+        },
+        textAccessor: row => {
+          const matchingClaims = claims.filter((c: any) => 
+            (c.voucherId === row.id || c.voucherCode === row.code) &&
+            checkDateInRange(c.createdAt, startDate, endDate)
+          );
+          const totalRemaining = matchingClaims.reduce((sum: number, c: any) => sum + (c.balance || 0), 0);
+          return String(totalRemaining);
+        },
+        sortKey: 'remainingValue'
+      },
+      { 
+        header: 'Status', 
+        accessor: row => {
+          const isActive = row.status === 'active';
+          return (
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              padding: '0.125rem 0.375rem',
+              borderRadius: 'var(--radius-md)',
+              background: isActive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              color: isActive ? 'rgb(21, 128, 61)' : 'rgb(185, 28, 28)'
+            }}>
+              {isActive ? 'Active' : 'Inactive'}
+            </span>
+          );
+        },
+        textAccessor: row => row.status === 'active' ? 'Active' : 'Inactive',
+        sortKey: 'status'
+      }
     ],
     cust_pkg_voucher: [
       { header: 'Customer Name', accessor: row => <span style={{ fontWeight: 600 }}>{row.name}</span>, textAccessor: row => row.name, sortKey: 'name' },
@@ -1674,10 +2012,37 @@ const Reports: React.FC = () => {
       { header: 'Package Source', accessor: row => row.packageName, textAccessor: row => row.packageName, sortKey: 'packageName' },
       { header: 'Quantity Redeemed', accessor: row => <span className="badge badge-success">{row.quantity} redemption</span>, textAccessor: row => String(row.quantity), sortKey: 'quantity' },
       { header: 'Processed By', accessor: row => row.cashier, textAccessor: row => row.cashier, sortKey: 'cashier' }
+    ],
+    daily_usage_payments_by_date: [
+      { header: 'Date', accessor: row => row.date, textAccessor: row => row.date, sortKey: 'date' },
+      { header: 'Package Usage Value', accessor: row => <span style={{ fontWeight: 600, color: '#f39c12' }}>{formatPrice(row.packageUsage)}</span>, textAccessor: row => String(row.packageUsage), sortKey: 'packageUsage' },
+      { header: 'Voucher Usage Value', accessor: row => <span style={{ fontWeight: 600, color: '#3498db' }}>{formatPrice(row.voucherUsage)}</span>, textAccessor: row => String(row.voucherUsage), sortKey: 'voucherUsage' },
+      { header: 'Other Payments Value', accessor: row => <span style={{ fontWeight: 600, color: '#2ecc71' }}>{formatPrice(row.otherPayments)}</span>, textAccessor: row => String(row.otherPayments), sortKey: 'otherPayments' },
+      { header: 'Total Value', accessor: row => <span style={{ fontWeight: 700 }}>{formatPrice(row.total)}</span>, textAccessor: row => String(row.total), sortKey: 'total' }
     ]
   };
 
   const kpis = useMemo(() => {
+    // 1. Calculate overall unclaimed values
+    const totalUnclaimedPackageVal = customerPackages
+      .filter(cp => checkDateInRange(cp.purchaseDate || cp.createdAt, startDate, endDate))
+      .reduce((sum, cp) => {
+        const packagePrice = cp.purchasePrice > 0 ? cp.purchasePrice : (cp.package?.price || 0);
+        const remainingVal = (cp.remainingQuantity || 0) * (packagePrice / (cp.totalQuantity || 1));
+        return sum + remainingVal;
+      }, 0);
+
+    const allTimeUnclaimedPackageVal = customerPackages
+      .reduce((sum, cp) => {
+        const packagePrice = cp.purchasePrice > 0 ? cp.purchasePrice : (cp.package?.price || 0);
+        const remainingVal = (cp.remainingQuantity || 0) * (packagePrice / (cp.totalQuantity || 1));
+        return sum + remainingVal;
+      }, 0);
+
+    const totalUnclaimedVoucherVal = claims
+      .filter(c => checkDateInRange(c.createdAt, startDate, endDate))
+      .reduce((sum, c) => sum + (c.balance || 0), 0);
+
     if (activeReport === 'service_consumption_by_payment') {
       const totalVal = sortedData.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
       const totalQty = sortedData.reduce((sum, r) => sum + (r.qty || 0), 0);
@@ -1699,7 +2064,7 @@ const Reports: React.FC = () => {
         { label: 'Total Services Consumed', value: `${totalQty} services`, color: 'var(--primary)' },
         { label: 'Total Consumption Value', value: formatPrice(totalVal), color: 'var(--success)' },
         { label: 'Redeemed by Package / Voucher', value: `${pkgCount} pkg / ${voucherCount} vchr`, color: 'var(--warning)' },
-        { label: 'Paid by Cash / Other', value: `${cashCount} cash / ${otherCount} other`, color: 'var(--danger)' }
+        { label: 'Overall Unclaimed Package Value', value: formatPrice(totalUnclaimedPackageVal), color: 'var(--danger)' }
       ];
     }
     if (activeReport === 'all_sold_items') {
@@ -1725,7 +2090,42 @@ const Reports: React.FC = () => {
       const count = sortedData.reduce((sum, r) => sum + (r.quantity || 0), 0);
       return [
         { label: 'Total Package Revenue', value: formatPrice(revenue), color: 'var(--success)' },
-        { label: 'Total Packages Sold', value: `${count} units`, color: 'var(--primary)' }
+        { label: 'Total Packages Sold', value: `${count} units`, color: 'var(--primary)' },
+        { label: 'Overall Unclaimed Package Value', value: formatPrice(totalUnclaimedPackageVal), color: 'var(--danger)' }
+      ];
+    }
+    if (activeReport === 'packages') {
+      return [
+        { label: 'Total Package Templates', value: String(sortedData.length), color: 'var(--primary)' },
+        { label: 'Overall Unclaimed Package Value', value: formatPrice(allTimeUnclaimedPackageVal), color: 'var(--danger)' }
+      ];
+    }
+    if (activeReport === 'daily_usage_payments_by_date') {
+      const totalPkg = sortedData.reduce((sum, r) => sum + (r.packageUsage || 0), 0);
+      const totalVchr = sortedData.reduce((sum, r) => sum + (r.voucherUsage || 0), 0);
+      const totalOther = sortedData.reduce((sum, r) => sum + (r.otherPayments || 0), 0);
+      const grandTotal = sortedData.reduce((sum, r) => sum + (r.total || 0), 0);
+
+      return [
+        { label: 'Total Package Usage Value', value: formatPrice(totalPkg), color: 'var(--warning)' },
+        { label: 'Total Voucher Usage Value', value: formatPrice(totalVchr), color: 'var(--primary)' },
+        { label: 'Total Other Payments', value: formatPrice(totalOther), color: 'var(--success)' },
+        { label: 'Combined Total Value', value: formatPrice(grandTotal), color: 'var(--danger)' }
+      ];
+    }
+    if (activeReport === 'vouchers') {
+      const activeVchrs = sortedData.filter((v: any) => v.status === 'active').length;
+      return [
+        { label: 'Total Voucher Templates', value: String(sortedData.length), color: 'var(--primary)' },
+        { label: 'Active Vouchers Count', value: String(activeVchrs), color: 'var(--success)' },
+        { label: 'Overall Unclaimed Voucher Value', value: formatPrice(totalUnclaimedVoucherVal), color: 'var(--danger)' }
+      ];
+    }
+    if (activeReport === 'cust_pkg_voucher') {
+      return [
+        { label: 'Customers Count', value: String(sortedData.length), color: 'var(--primary)' },
+        { label: 'Overall Unclaimed Package Value', value: formatPrice(totalUnclaimedPackageVal), color: 'var(--warning)' },
+        { label: 'Overall Unclaimed Voucher Value', value: formatPrice(totalUnclaimedVoucherVal), color: 'var(--danger)' }
       ];
     }
     if (activeReport === 'staff_sales_summary') {
@@ -1775,7 +2175,7 @@ const Reports: React.FC = () => {
       ];
     }
     return [];
-  }, [activeReport, sortedData, selectedCustomerDetail, formatPrice]);
+  }, [activeReport, sortedData, selectedCustomerDetail, formatPrice, customerPackages, claims, startDate, endDate]);
 
   return (
     <div className="space-y-6">
@@ -2271,7 +2671,7 @@ const Reports: React.FC = () => {
             {/* Search and Download Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               {/* Date Filters */}
-              {!activeReport.startsWith('cust_') && (
+              {!activeReport.startsWith('cust_') && activeReport !== 'packages' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {/* Date Preset Dropdown */}
                   <select
@@ -2542,6 +2942,125 @@ const Reports: React.FC = () => {
                                   onClick={() => {
                                     setSelectedItemType(item.value);
                                     setIsItemTypeDropdownOpen(false);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.5rem 0.75rem',
+                                    borderRadius: 'var(--radius-lg)',
+                                    background: isActive ? 'var(--primary-light)' : 'transparent',
+                                    border: 'none',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    color: isActive ? 'var(--primary)' : 'var(--text-black)',
+                                    transition: 'all 0.15s'
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                                  }}
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Redemption Method Select Filter */}
+                  {activeReport === 'service_consumption_by_payment' && (
+                    <div 
+                      ref={redemptionDropdownRef}
+                      style={{ position: 'relative', display: 'flex', flexDirection: 'column', zIndex: 47 }}
+                    >
+                      <button
+                        onClick={() => setIsRedemptionDropdownOpen(prev => !prev)}
+                        type="button"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.625rem 1rem',
+                          border: '1.5px solid var(--border)',
+                          borderRadius: 'var(--radius-xl)',
+                          background: 'var(--bg-card)',
+                          color: 'var(--text-black)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          outline: 'none',
+                          cursor: 'pointer',
+                          boxShadow: 'var(--shadow-sm)',
+                          transition: 'all 0.2s',
+                          gap: '0.5rem',
+                          minWidth: '170px'
+                        }}
+                      >
+                        <span>
+                          {(() => {
+                            switch (selectedRedemptionMethod) {
+                              case 'ALL': return 'All Methods';
+                              case 'Package Redemption': return 'Package Redemption';
+                              case 'Voucher': return 'Vouchers';
+                              case 'Cash': return 'Cash';
+                              case 'Card': return 'Card';
+                              default: return selectedRedemptionMethod;
+                            }
+                          })()}
+                        </span>
+                        <ChevronDown 
+                          size={16} 
+                          style={{ 
+                            color: 'var(--text-light)', 
+                            transform: isRedemptionDropdownOpen ? 'rotate(180deg)' : 'none', 
+                            transition: 'transform 0.2s' 
+                          }} 
+                        />
+                      </button>
+
+                      <AnimatePresence>
+                        {isRedemptionDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            transition={{ duration: 0.15 }}
+                            style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 0.5rem)',
+                              left: 0,
+                              background: 'var(--bg-card)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 'var(--radius-xl)',
+                              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                              padding: '0.5rem',
+                              minWidth: '190px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.25rem',
+                              zIndex: 100
+                            }}
+                          >
+                            {[
+                              { value: 'ALL', label: 'All Methods' },
+                              { value: 'Package Redemption', label: 'Package Redemption' },
+                              { value: 'Voucher', label: 'Voucher' },
+                              { value: 'Cash', label: 'Cash' },
+                              { value: 'Card', label: 'Card' }
+                            ].map((item, idx) => {
+                              const isActive = selectedRedemptionMethod === item.value;
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRedemptionMethod(item.value);
+                                    setIsRedemptionDropdownOpen(false);
                                   }}
                                   style={{
                                     width: '100%',

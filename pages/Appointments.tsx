@@ -26,18 +26,94 @@ const dropdownStyles = `
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-`;
+`;const getTimezoneForCountry = (country: string | null): string => {
+  if (!country) return 'Asia/Kolkata';
+  const c = country.trim().toLowerCase();
+  if (c === 'singapore') return 'Asia/Singapore';
+  if (c === 'india') return 'Asia/Kolkata';
+  if (c === 'malaysia') return 'Asia/Kuala_Lumpur';
+  if (c === 'united arab emirates' || c === 'uae' || c === 'dubai') return 'Asia/Dubai';
+  if (c === 'indonesia') return 'Asia/Jakarta';
+  if (c === 'thailand') return 'Asia/Bangkok';
+  if (c === 'vietnam') return 'Asia/Ho_Chi_Minh';
+  if (c === 'united kingdom' || c === 'uk' || c === 'london') return 'Europe/London';
+  return 'Asia/Kolkata';
+};
 
+const createDateTimeInTz = (dateStr: string, timeStr: string, timeZone: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  
+  // Create Date object assuming it is UTC
+  const localUtc = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
+  
+  // Format to find the offset in the target timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    timeZoneName: 'longOffset'
+  });
+  
+  const parts = formatter.formatToParts(localUtc);
+  const tzPart = parts.find(p => p.type === 'timeZoneName');
+  if (!tzPart) return localUtc;
+  
+  const val = tzPart.value; // e.g. "GMT+8" or "GMT+5:30"
+  const match = val.match(/GMT([+-]\d+)(?::(\d+))?/);
+  if (!match) return localUtc;
+  
+  const hOffset = parseInt(match[1], 10);
+  const mOffset = match[2] ? parseInt(match[2], 10) : 0;
+  const totalOffsetMinutes = hOffset * 60 + (hOffset < 0 ? -mOffset : mOffset);
+  
+  // UTC = local time - offset
+  return new Date(localUtc.getTime() - totalOffsetMinutes * 60000);
+};
 
+const getTodayStrInTz = (timeZone: string): string => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+};
 
-/* 
-  API NOTES:
-  GET /appointments?date=YYYY-MM-DD
-  POST /appointments (body: { customer, serviceId, stylistId, date, time })
-  PUT /appointments/:id (edit)
-  DELETE /appointments/:id (cancel)
-*/
+const getDayNameInTz = (dateStr: string, timeZone: string): string => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const dateObj = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short'
+  });
+  return formatter.format(dateObj);
+};
 
+const formatTimeInTz = (dateStr: string | Date | null, timeZone: string): string => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+const formatDateInTz = (dateStr: string | Date | null, timeZone: string): string => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
 
 const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) => {
   const navigate = useNavigate();
@@ -143,6 +219,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
   // Booking Configuration State
   const [openingTime, setOpeningTime] = useState('09:00');
   const [closingTime, setClosingTime] = useState('20:00');
+  const [adminTimezone, setAdminTimezone] = useState('Asia/Kolkata');
 
   const handleChecklistDataChange = React.useCallback((serviceId: string, responses: any, remarks: any) => {
     setChecklistResponses(prev => {
@@ -237,6 +314,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
       const data = response.data;
       if (data.openingTime) setOpeningTime(data.openingTime);
       if (data.closingTime) setClosingTime(data.closingTime);
+      if (data.country) {
+        setAdminTimezone(getTimezoneForCountry(data.country));
+      }
     } catch (err) {
       console.error('Failed to fetch settings', err);
     }
@@ -580,9 +660,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     }
 
     // 1. Construct Message
-    const startTime = appointment.startTime ? new Date(appointment.startTime) : null;
-    const dateStr = startTime ? startTime.toLocaleDateString() : (appointment.date || '');
-    const timeStr = startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (appointment.time || '');
+    const dateStr = appointment.startTime ? formatDateInTz(appointment.startTime, adminTimezone) : (appointment.date || '');
+    const timeStr = appointment.startTime ? formatTimeInTz(appointment.startTime, adminTimezone) : (appointment.time || '');
 
     const message = `Hi ${customerName}, this is a confirmation for your appointment on ${dateStr} at ${timeStr}. We look forward to seeing you!`;
     const encodedMessage = encodeURIComponent(message);
@@ -760,9 +839,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
     {
       header: 'Date & Time',
       accessor: (row: Appointment) => {
-        const startTime = row.startTime ? new Date(row.startTime) : null;
-        const date = startTime ? startTime.toLocaleDateString() : (row.date || 'N/A');
-        const time = startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row.time || 'N/A');
+        const date = row.startTime ? formatDateInTz(row.startTime, adminTimezone) : (row.date || 'N/A');
+        const time = row.startTime ? formatTimeInTz(row.startTime, adminTimezone) : (row.time || 'N/A');
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
@@ -1833,10 +1911,10 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     const endMin = eH * 60 + eM;
 
                     // Skip past time slots when the selected date is today
-                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayStr = getTodayStrInTz(adminTimezone);
                     const isToday = formData.date === todayStr;
-                    const now = new Date();
-                    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                    const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: adminTimezone }));
+                    const nowMinutes = nowInTz.getHours() * 60 + nowInTz.getMinutes();
 
                     while (curH * 60 + curM < endMin) {
                       if (isToday && (curH * 60 + curM) <= nowMinutes) {
@@ -1850,7 +1928,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         hour: 'numeric', minute: '2-digit', hour12: true
                       });
 
-                      const selectedDateTime = new Date(`${formData.date}T${timeString}`);
+                      const selectedDateTime = createDateTimeInTz(formData.date, timeString, adminTimezone);
                       const totalDuration = formData.serviceIds.reduce((acc, id) => {
                         const s = services.find(srv => srv.id?.toString() === id.toString());
                         return acc + (s?.duration || 0);
@@ -1880,10 +1958,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     if (selectedSpecialist.dateSpecificHours && selectedSpecialist.dateSpecificHours[formData.date]) {
                       wh = selectedSpecialist.dateSpecificHours[formData.date];
                     } else if (selectedSpecialist.workingHours) {
-                      // Fix: ensure we parse YYYY-MM-DD correctly in local time context
-                      const [y, m, d] = formData.date.split('-').map(Number);
-                      const localDate = new Date(y, m - 1, d); // Month is 0-indexed
-                      const dayName = localDate.toLocaleDateString('en-US', { weekday: 'short' });
+                      const dayName = getDayNameInTz(formData.date, adminTimezone);
                       if (selectedSpecialist.workingHours[dayName]) {
                         wh = selectedSpecialist.workingHours[dayName];
                       }
@@ -2406,10 +2481,10 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     const endMin = eH * 60 + eM;
 
                     // Determine if selected date is today to filter past slots
-                    const todayStr2 = new Date().toISOString().split('T')[0];
+                    const todayStr2 = getTodayStrInTz(adminTimezone);
                     const isToday2 = formData.date === todayStr2;
-                    const now2 = new Date();
-                    const nowMinutes2 = now2.getHours() * 60 + now2.getMinutes();
+                    const nowInTz2 = new Date(new Date().toLocaleString('en-US', { timeZone: adminTimezone }));
+                    const nowMinutes2 = nowInTz2.getHours() * 60 + nowInTz2.getMinutes();
 
                     while (curH * 60 + curM < endMin) {
                       // Skip past time slots when date is today
@@ -2424,7 +2499,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         hour: 'numeric', minute: '2-digit', hour12: true
                       });
 
-                      const selectedDateTime = new Date(`${formData.date}T${timeString}`);
+                      const selectedDateTime = createDateTimeInTz(formData.date, timeString, adminTimezone);
                       const totalDuration = formData.serviceIds.reduce((acc, id) => {
                         const s = services.find(srv => srv.id?.toString() === id.toString());
                         return acc + (s?.duration || 0);
@@ -2454,7 +2529,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                     if (selectedSpecialist.dateSpecificHours && selectedSpecialist.dateSpecificHours[formData.date]) {
                       wh = selectedSpecialist.dateSpecificHours[formData.date];
                     } else if (selectedSpecialist.workingHours) {
-                      const dayName = new Date(formData.date).toLocaleDateString('en-US', { weekday: 'short' });
+                      const dayName = getDayNameInTz(formData.date, adminTimezone);
                       if (selectedSpecialist.workingHours[dayName]) {
                         wh = selectedSpecialist.workingHours[dayName];
                       }
@@ -2667,6 +2742,17 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                       {(() => {
                         const dateSource = viewAppointment.startTime || viewAppointment.date;
                         if (!dateSource) return 'Date not set';
+                        if (viewAppointment.startTime) {
+                          const dateObj = new Date(viewAppointment.startTime);
+                          if (isNaN(dateObj.getTime())) return 'Invalid Date';
+                          return dateObj.toLocaleDateString('en-US', {
+                            timeZone: adminTimezone,
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          });
+                        }
                         const dateObj = new Date(dateSource);
                         return isNaN(dateObj.getTime()) ? 'Invalid Date' : dateObj.toLocaleDateString('en-US', {
                           weekday: 'short',
@@ -2682,6 +2768,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                         if (viewAppointment.startTime) {
                           const dateObj = new Date(viewAppointment.startTime);
                           return isNaN(dateObj.getTime()) ? 'Time not set' : dateObj.toLocaleTimeString('en-US', {
+                            timeZone: adminTimezone,
                             hour: 'numeric',
                             minute: '2-digit',
                             hour12: true
@@ -2916,19 +3003,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
                   })()}
                 </div>
 
-                {/* Right Actions (Print, Close) */}
+                {/* Right Actions (Close) */}
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button
-                    onClick={() => window.print()}
-                    style={{
-                      padding: '0.5rem 1rem', background: 'white', border: '1px solid #cbd5e1', color: '#334155', borderRadius: '0.5rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                  >
-                    <Printer size={16} />
-                    Print Receipt
-                  </button>
                   <button
                     onClick={() => setIsViewModalOpen(false)}
                     style={{

@@ -3190,7 +3190,7 @@ const Sales: React.FC<SalesProps> = ({
                           }}
                         >
                           <option value="">+ Staff</option>
-                          {stylists.map(s => (
+                          {stylists.filter(s => s.isAvailable !== false).map(s => (
                             <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>
                           ))}
                         </select>
@@ -3375,7 +3375,7 @@ const Sales: React.FC<SalesProps> = ({
                           Any Specialist
                         </div>
                         <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.375rem 0.5rem' }} />
-                        {stylists.map(s => (
+                        {stylists.filter(s => s.isAvailable !== false).map(s => (
                           <div
                             key={s.id}
                             onClick={() => {
@@ -3799,22 +3799,22 @@ const Sales: React.FC<SalesProps> = ({
                     alignItems: 'center',
                     gap: '0.75rem'
                   }}
-                  disabled={cart.length === 0 || !selectedCustomerId || isVerifyingOTP || !canAddSale}
+                  disabled={cart.length === 0 || !selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || isVerifyingOTP || !canAddSale}
                   title={!canAddSale ? "Ask Admin for permission" : ""}
                   onClick={() => {
                       if (!canAddSale) { showToast("Ask Admin for permission", "error"); return; }
                       handleCheckoutClick();
                   }}
                   icon={finalTotal === 0 ? <CheckCircle size={20} strokeWidth={2.5} /> : <CreditCard size={20} strokeWidth={2.5} />}
-                  whileHover={(!selectedCustomerId || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : {
+                  whileHover={(!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : {
                     scale: 1.02,
                     boxShadow: finalTotal === 0
                       ? '0 10px 25px rgba(16, 185, 129, 0.35)'
                       : '0 10px 25px rgba(79, 70, 229, 0.35)'
                   }}
-                  whileTap={(!selectedCustomerId || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : { scale: 0.98 }}
+                  whileTap={(!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : { scale: 0.98 }}
                 >
-                  {isVerifyingOTP ? 'Sending OTP...' : (!selectedCustomerId && cart.length > 0 ? 'Select Customer' : (finalTotal === 0 ? 'Complete Order' : (!canAddSale ? 'Locked' : 'Checkout')))}
+                  {isVerifyingOTP ? 'Sending OTP...' : (((!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN')) && cart.length > 0) ? 'Select Customer' : (finalTotal === 0 ? 'Complete Order' : (!canAddSale ? 'Locked' : 'Checkout')))}
                 </Button>
               </div>
             </div>
@@ -4198,7 +4198,7 @@ const Sales: React.FC<SalesProps> = ({
 
           {/* Stylists */}
           {stylists
-            .filter(s => s.name.toLowerCase().includes(specialistSearch.toLowerCase()))
+            .filter(s => s.isAvailable !== false && s.name.toLowerCase().includes(specialistSearch.toLowerCase()))
             .map(s => (
               <motion.div
                 key={s.id}
