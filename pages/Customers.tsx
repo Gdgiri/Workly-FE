@@ -1984,14 +1984,31 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                                 </div>
                                             ) : (
                                                 /* Legacy View */
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', width: '100%' }}>
                                                     <div style={{ flex: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                                                         <div style={{
                                                             width: `${(pkg.remainingQuantity / pkg.totalQuantity) * 100}%`,
                                                             height: '100%', backgroundColor: 'var(--success)'
                                                         }} />
                                                     </div>
-                                                    <span style={{ fontWeight: 600 }}>{pkg.remainingQuantity}/{Math.max(pkg.totalQuantity, pkg.remainingQuantity)} left</span>
+                                                    <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}>
+                                                        {pkg.remainingQuantity}/{Math.max(pkg.totalQuantity, pkg.remainingQuantity)} left
+                                                        {!pkg.isCombo && (
+                                                            <button
+                                                                onClick={() => handleStartAdjustment('package', pkg.id, 'LEGACY', pkg.package?.name || 'Package', pkg.remainingQuantity)}
+                                                                title="Adjust Quantity"
+                                                                style={{
+                                                                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)',
+                                                                    padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                    borderRadius: '4px', transition: 'all 0.2s'
+                                                                }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                            >
+                                                                <Edit size={12} />
+                                                            </button>
+                                                        )}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
