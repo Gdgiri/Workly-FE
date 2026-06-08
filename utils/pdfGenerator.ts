@@ -16,6 +16,7 @@ interface PDFData {
     paymentMethod: string;
     cashierName: string;
     currencySymbol: string;
+    payments?: { paymentMethod: string; amount: number }[];
 }
 
 const createInvoicePDFDoc = (data: PDFData) => {
@@ -69,7 +70,8 @@ const createInvoicePDFDoc = (data: PDFData) => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Method: ${data.paymentMethod || 'N/A'}`, pageWidth - 14, 62, { align: 'right' });
+    const methodDisplay = data.payments && data.payments.length > 1 ? 'Split Payment' : (data.paymentMethod || 'N/A');
+    doc.text(`Method: ${methodDisplay}`, pageWidth - 14, 62, { align: 'right' });
     doc.text(`Cashier: ${data.cashierName || 'Admin'}`, pageWidth - 14, 67, { align: 'right' });
 
     // Table
@@ -141,6 +143,20 @@ const createInvoicePDFDoc = (data: PDFData) => {
     doc.setTextColor(0, 0, 0);
     doc.text('Total Amount:', labelX, currentY, { align: 'right' });
     doc.text(`${data.currencySymbol} ${data.total.toFixed(2)}`, summaryX, currentY, { align: 'right' });
+
+    if (data.payments && data.payments.length > 1) {
+        currentY += 10;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Payment Breakdown:', labelX, currentY, { align: 'right' });
+        
+        doc.setFont('helvetica', 'normal');
+        data.payments.forEach(p => {
+            currentY += 6;
+            doc.text(`${p.paymentMethod}:`, labelX, currentY, { align: 'right' });
+            doc.text(`${data.currencySymbol} ${p.amount.toFixed(2)}`, summaryX, currentY, { align: 'right' });
+        });
+    }
 
     // Footer
     const footerY = doc.internal.pageSize.height - 20;

@@ -15,6 +15,7 @@ interface ReceiptData {
   paymentMethod: string;
   cashierName: string;
   currencySymbol: string;
+  payments?: { paymentMethod: string; amount: number }[];
 }
 
 export const generateReceiptHtml = (data: ReceiptData) => {
@@ -95,10 +96,26 @@ export const generateReceiptHtml = (data: ReceiptData) => {
     <div class="label">Billed To:</div>
     <div class="val">${data.customerName}</div>
   </div>
-  <div class="row bold">
-    <div class="label">Pay Mode:</div>
-    <div class="val">${data.paymentMethod}</div>
-  </div>
+  ${data.payments && data.payments.length > 1
+    ? `
+      <div class="row bold">
+        <div class="label">Pay Mode:</div>
+        <div class="val">Split Payment</div>
+      </div>
+      ${data.payments.map(p => `
+        <div class="row bold">
+          <div class="label" style="padding-left: 10px;">- ${p.paymentMethod}:</div>
+          <div class="val">${formatCurrency(p.amount)}</div>
+        </div>
+      `).join('')}
+    `
+    : `
+      <div class="row bold">
+        <div class="label">Pay Mode:</div>
+        <div class="val">${data.paymentMethod}</div>
+      </div>
+    `
+  }
   <div class="row bold">
     <div class="label">Cashier:</div>
     <div class="val">${data.cashierName}</div>

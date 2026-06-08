@@ -128,6 +128,151 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         return phone.slice(0, phone.length - 4) + '****';
     };
 
+    const getLabel = (m: string) => {
+        if (!m) return 'N/A';
+        const clean = m.toUpperCase().trim();
+        
+        let matched = paymentMethods.find(pm => 
+            pm.id.toUpperCase() === clean || 
+            pm.name.toUpperCase().trim() === clean
+        );
+        
+        if (!matched && settings) {
+            const activeMethods = settings.paymentMethods || [];
+            matched = activeMethods.find((pm: any) => 
+                pm.id?.toUpperCase() === clean || 
+                pm.name?.toUpperCase().trim() === clean
+            );
+        }
+        
+        if (matched) return matched.name;
+        
+        if (clean === 'GOOGLEPAY' || clean === 'GPAY') return 'GPay';
+        if (clean === 'PHONEPE' || clean === 'PHONEPA') return 'PhonePe';
+        if (clean === 'PAYTM') return 'Paytm';
+        if (clean === 'CASH') return 'Cash';
+        if (clean === 'CARD') return 'Card';
+        if (clean === 'UPI') return 'UPI';
+        if (clean === 'RAZORPAY') return 'Razorpay';
+        if (clean === 'VOUCHER') return 'Voucher';
+        if (clean === 'PACKAGE') return 'Package';
+        
+        return m;
+    };
+
+    const getSaleSettlementDetails = (row: Payment) => {
+        if (!row.sale) {
+            return {
+                actualPayments: [{ id: row.id, method: row.paymentMethod, amount: row.amount }],
+                totalRedemptionValue: 0,
+                effectiveDisc: 0,
+                originalSubtotal: row.amount,
+                totalPayable: row.amount,
+                isSplit: false,
+                allMethods: [row.paymentMethod]
+            };
+        }
+
+        const { originalSubtotal, totalRedemptionValue } = (row.sale.items || []).reduce(
+            (sums: { originalSubtotal: number; totalRedemptionValue: number }, item: any) => {
+                const isRed = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
+                let origPrice = item.price || 0;
+                if (isRed && origPrice === 0) {
+                    const foundService = services.find((s: any) => 
+                        (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                        (item.itemId && String(s.id) === String(item.itemId)) ||
+                        (item.id && String(s.id) === String(item.id)) ||
+                        (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+                    );
+                    if (foundService) {
+                        origPrice = foundService.price || 0;
+                    } else {
+                        const foundProduct = products.find((p: any) => 
+                            (item.productId && String(p.id) === String(item.productId)) ||
+                            (item.itemId && String(p.id) === String(item.itemId)) ||
+                            (item.id && String(p.id) === String(item.id)) ||
+                            (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                        );
+                        if (foundProduct) {
+                            origPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                        }
+                    }
+                }
+                sums.originalSubtotal += (origPrice * item.quantity);
+                if (isRed) {
+                    sums.totalRedemptionValue += (origPrice * item.quantity);
+                }
+                return sums;
+            },
+            { originalSubtotal: 0, totalRedemptionValue: 0 }
+        );
+
+        const nonRedeemedSubtotal = originalSubtotal - totalRedemptionValue;
+        const totalPayable = (row.sale as any)?.totalAmount || row.amount || 0;
+        const explicitDisc = (row.sale as any)?.discount || 0;
+        const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, nonRedeemedSubtotal - totalPayable);
+
+        const actualPayments = row.sale.payments && row.sale.payments.length > 0
+            ? row.sale.payments.map((p: any) => ({ id: p.id, method: p.paymentMethod, amount: p.amount }))
+            : [{ id: row.id, method: row.paymentMethod, amount: row.amount }];
+
+        const allMethods: string[] = [];
+        actualPayments.forEach(p => {
+            if (p.amount > 0 || actualPayments.length === 1) {
+                allMethods.push(p.method);
+            }
+        });
+
+        if (totalRedemptionValue > 0) {
+            allMethods.push('PACKAGE');
+        }
+        if (effectiveDisc > 0) {
+            allMethods.push('VOUCHER');
+        }
+
+        const uniqueMethods = [...new Set(allMethods)];
+        const isSplit = uniqueMethods.length > 1;
+
+        return {
+            actualPayments,
+            totalRedemptionValue,
+            effectiveDisc,
+            originalSubtotal,
+            totalPayable,
+            isSplit,
+            allMethods: uniqueMethods
+        };
+    };
+
+    const getRowDisplayAmount = (row: Payment) => {
+        if ((row as any).isPendingSale) {
+            return row.amount;
+        }
+        if (!row.sale) {
+            let method = row.paymentMethod?.toUpperCase() || 'UNKNOWN';
+            if (row.notes && typeof row.notes === 'string' && row.notes.includes('Method:')) {
+                const match = row.notes.match(/Method:\s*([^|]+)/);
+                if (match && match[1]) method = match[1].trim().toUpperCase();
+            }
+            const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || method === 'REDEEM';
+            return isRedemption ? 0 : row.amount;
+        }
+
+        const actualPayments = row.sale.payments && row.sale.payments.length > 0
+            ? row.sale.payments
+            : [row];
+
+        return actualPayments.reduce((sum: number, p: any) => {
+            let method = p.paymentMethod?.toUpperCase() || 'UNKNOWN';
+            if (p.notes && typeof p.notes === 'string' && p.notes.includes('Method:')) {
+                const match = p.notes.match(/Method:\s*([^|]+)/);
+                if (match && match[1]) method = match[1].trim().toUpperCase();
+            }
+            const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || method === 'REDEEM';
+            return sum + (isRedemption ? 0 : p.amount);
+        }, 0);
+    };
+
     // Removed local payments, stats, cashiers, settings state
     // const [payments, setPayments] = useState<Payment[]>();
     // const [stats, setStats] = useState({...});
@@ -229,19 +374,23 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     // Debounce min amount changes
 
     const handleExport = () => {
-        if (payments.length === 0) return showToast('No data to export', 'error');
+        if (filteredPayments.length === 0) return showToast('No data to export', 'error');
 
         const headers = ['Date', 'ID', 'Customer', 'Specialist', 'Amount', 'Method', 'Status', 'Type', 'Phone'];
-        const rows = payments.map(p => {
+        const rows = filteredPayments.map(p => {
             const phone = p.appointment?.customer?.mobile || (p.sale as any)?.customer?.mobile || '';
+            const details = getSaleSettlementDetails(p);
+            const methodLabel = details.isSplit 
+                ? `Split (${details.allMethods.map(m => getLabel(m)).join(' + ')})` 
+                : getLabel(p.paymentMethod);
             return [
                 new Date(p.createdAt).toLocaleDateString(),
                 p.transactionId || p.id,
                 p.appointment?.customer?.name || (p.sale as any)?.customer?.name || 'Walk-in',
                 p.appointment?.stylist?.name || p.sale?.specialist?.name || '-',
-                p.amount,
-                p.paymentMethod,
-                p.paymentStatus,
+                getRowDisplayAmount(p),
+                methodLabel,
+                p.isPendingSale ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') : (p.sale?.saleStatus || p.paymentStatus),
                 p.paymentType,
                 (isStaff && fraudProtection) ? maskPhone(phone) : phone
             ];
@@ -260,28 +409,24 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     };
 
     const handlePrintReceipt = () => {
-        if (!selectedPayment) return;
+        const data = getInvoiceData();
+        if (!data) return;
 
         const receiptHtml = generateReceiptHtml({
-            storeName: settings?.salonName || 'Lumière Salon',
-            storeAddress: settings?.salonAddress || '',
-            storePhone: settings?.salonPhone || '',
-            invoiceNumber: selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id,
-            date: new Date(selectedPayment.createdAt).toLocaleString(),
-            customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in',
-            items: selectedPayment.sale?.items || [
-                {
-                    name: selectedPayment.appointment?.service?.name || 'General Service',
-                    quantity: 1,
-                    price: selectedPayment.amount
-                }
-            ],
-            subtotal: (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) || selectedPayment.amount,
-            discount: (selectedPayment.sale as any)?.discount || 0,
-            total: selectedPayment.amount,
-            paymentMethod: selectedPayment.paymentMethod,
-            cashierName: selectedPayment.cashierName || 'Admin',
-            currencySymbol: settings?.currency === 'INR' || currency === 'INR' ? '₹' : (settings?.currency ? getSymbol(settings.currency) : symbol)
+            storeName: data.salonName,
+            storeAddress: data.salonAddress,
+            storePhone: data.salonPhone,
+            invoiceNumber: data.invoiceNumber,
+            date: new Date(selectedPayment!.createdAt).toLocaleString(),
+            customerName: data.customerName,
+            items: data.items,
+            subtotal: data.subtotal,
+            discount: data.discount,
+            total: data.total,
+            paymentMethod: data.paymentMethod,
+            cashierName: data.cashierName,
+            currencySymbol: data.currencySymbol === 'Rs.' ? '₹' : data.currencySymbol,
+            payments: data.payments.length > 1 ? data.payments : undefined
         });
 
         const printWindow = window.open('', '_blank', 'width=400,height=600');
@@ -325,6 +470,77 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
 
         const invoiceNum = selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id;
 
+        const details = getSaleSettlementDetails(selectedPayment);
+        const originalSubtotal = details.originalSubtotal;
+        const totalRedemptionValue = details.totalRedemptionValue;
+        const totalPayable = details.totalPayable;
+        const effectiveDisc = details.effectiveDisc;
+        const isSplit = details.isSplit;
+
+        const paymentsList: Array<{ paymentMethod: string; amount: number }> = [];
+        
+        details.actualPayments.forEach((p: any) => {
+            if (p.amount > 0 || details.actualPayments.length === 1) {
+                paymentsList.push({
+                    paymentMethod: getLabel(p.method),
+                    amount: p.amount
+                });
+            }
+        });
+        
+        if (totalRedemptionValue > 0) {
+            paymentsList.push({
+                paymentMethod: 'Package Redemption',
+                amount: totalRedemptionValue
+            });
+        }
+        
+        if (effectiveDisc > 0) {
+            paymentsList.push({
+                paymentMethod: 'Voucher / Discount',
+                amount: effectiveDisc
+            });
+        }
+
+        const formattedItems = selectedPayment.sale?.items 
+            ? selectedPayment.sale.items.map((item: any) => {
+                const isRed = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
+                let origPrice = item.price || 0;
+                if (isRed && origPrice === 0) {
+                    const foundService = services.find((s: any) => 
+                        (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                        (item.itemId && String(s.id) === String(item.itemId)) ||
+                        (item.id && String(s.id) === String(item.id)) ||
+                        (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+                    );
+                    if (foundService) {
+                        origPrice = foundService.price || 0;
+                    } else {
+                        const foundProduct = products.find((p: any) => 
+                            (item.productId && String(p.id) === String(item.productId)) ||
+                            (item.itemId && String(p.id) === String(item.itemId)) ||
+                            (item.id && String(p.id) === String(item.id)) ||
+                            (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                        );
+                        if (foundProduct) {
+                            origPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                        }
+                    }
+                }
+                return {
+                    name: item.name + (isRed ? ' (Redeemed)' : ''),
+                    quantity: item.quantity,
+                    price: origPrice
+                };
+            })
+            : [
+                {
+                    name: selectedPayment.appointment?.service?.name || 'General Service',
+                    quantity: 1,
+                    price: selectedPayment.amount
+                }
+            ];
+
         return {
             salonName: settings?.salonName || 'Lumière Salon',
             salonAddress: settings?.salonAddress || '',
@@ -333,19 +549,14 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             date: formatDate(selectedPayment.createdAt),
             customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in Customer',
             customerPhone: selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile || '',
-            items: selectedPayment.sale?.items || [
-                {
-                    name: selectedPayment.appointment?.service?.name || 'General Service',
-                    quantity: 1,
-                    price: selectedPayment.amount
-                }
-            ],
-            subtotal: (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) || selectedPayment.amount,
-            discount: (selectedPayment.sale as any)?.discount || 0,
-            total: selectedPayment.amount,
-            paymentMethod: selectedPayment.paymentMethod,
+            items: formattedItems,
+            subtotal: originalSubtotal || selectedPayment.amount,
+            discount: effectiveDisc + totalRedemptionValue,
+            total: totalPayable,
+            paymentMethod: isSplit ? 'Split Payment' : getLabel(selectedPayment.paymentMethod),
             cashierName: selectedPayment.cashierName || 'Admin',
-            currencySymbol: settings?.currency === 'INR' || currency === 'INR' ? 'Rs.' : (settings?.currency ? getSymbol(settings.currency) : symbol)
+            currencySymbol: settings?.currency === 'INR' || currency === 'INR' ? 'Rs.' : (settings?.currency ? getSymbol(settings.currency) : symbol),
+            payments: paymentsList
         };
     };
 
@@ -482,8 +693,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             }
 
             // Broad check for redemptions
-            const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || method === 'REDEEM' || 
-                                (p.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0));
+            const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || method === 'REDEEM';
             
             // If it's a redemption payment, it shouldn't show a cash impact in this list (consistent with Sales History)
             if (isRedemption && p.amount !== 0) {
@@ -528,8 +738,105 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             list = [...uniqueSynthesized, ...list];
         }
 
-        return list;
+        // 3. De-duplicate list by saleId (if present) to group split payment rows client-side
+        const seenSaleIds = new Set<string>();
+        const deDuplicatedList: Payment[] = [];
+        
+        for (const p of list) {
+            const saleId = p.sale?.id || p.saleId;
+            if (saleId) {
+                if (seenSaleIds.has(saleId)) {
+                    continue; // Skip subsequent duplicate rows for the same sale
+                }
+                seenSaleIds.add(saleId);
+            }
+            deDuplicatedList.push(p);
+        }
+
+        return deDuplicatedList;
     }, [payments, appointments]);
+
+    // Memoize the filtered list of payments based on active filters and search
+    const filteredPayments = React.useMemo(() => {
+        let filtered = [...combinedPayments];
+
+        // Client-side Date Filter (crucial for synthesized appointments from Redux)
+        if (dateRange.start) {
+            const startObj = new Date(dateRange.start);
+            startObj.setHours(0, 0, 0, 0);
+            filtered = filtered.filter(p => {
+                const d = new Date(p.createdAt);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() >= startObj.getTime();
+            });
+        }
+        if (dateRange.end) {
+            const endObj = new Date(dateRange.end);
+            endObj.setHours(0, 0, 0, 0);
+            filtered = filtered.filter(p => {
+                const d = new Date(p.createdAt);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime() <= endObj.getTime();
+            });
+        }
+        
+        // Client-side Method Filter
+        if (paymentMethod !== 'ALL') {
+            filtered = filtered.filter(p => {
+                let displayMethod = p.paymentMethod?.toUpperCase() || 'UNKNOWN';
+                if (p.notes && typeof p.notes === 'string' && p.notes.includes('Method:')) {
+                    const match = p.notes.match(/Method:\s*([^|]+)/);
+                    if (match && match[1]) displayMethod = match[1].trim().toUpperCase();
+                }
+
+                // Sync filter detection with table display logic
+                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN' || displayMethod === 'CASH') &&
+                    p.amount === 0 &&
+                    !p.isPendingSale &&
+                    (p.sale?.saleStatus === 'COMPLETED' || p.paymentStatus === 'COMPLETED')) {
+
+                    const isPackageRedemption = p.sale?.items?.some((item: any) => item.redeemedFromPackageId);
+                    displayMethod = isPackageRedemption ? 'PACKAGE' : 'VOUCHER';
+                }
+                return displayMethod === paymentMethod;
+            });
+        }
+
+        // Client-side Status Filter
+        if (status !== 'ALL') {
+            filtered = filtered.filter(p => {
+                const pStatus = p.isPendingSale ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') : (p.sale?.saleStatus || p.paymentStatus);
+                return pStatus === status;
+            });
+        }
+
+        // Client-side Specialist Filter
+        if (selectedSpecialist !== 'ALL') {
+            filtered = filtered.filter(p => {
+                const spec = p.appointment?.stylist?.name || p.sale?.specialist?.name || '-';
+                return spec === selectedSpecialist;
+            });
+        }
+
+        // Client-side fallback filter to ensure "correct" filtering for current page
+        if (customerSearch.trim()) {
+            const term = customerSearch.toLowerCase();
+            filtered = filtered.filter(p => {
+                const name = (p.appointment?.customer?.name || (p.sale as any)?.customer?.name || '').toLowerCase();
+                const phone = (p.appointment?.customer?.mobile || (p.sale as any)?.customer?.mobile || '');
+                const invoice = (p.sale?.invoiceNumber || p.invoiceNumber || '').toLowerCase();
+                const saleNum = (p.sale?.saleNumber || '').toLowerCase();
+                return name.includes(term) || phone.includes(term) || invoice.includes(term) || saleNum.includes(term);
+            });
+        }
+
+        // [LAST-RESORT VISUAL SAFEGUARD]
+        const min = minAmount ? Number(minAmount) : 0;
+        if (min > 0) {
+            filtered = filtered.filter(p => (getRowDisplayAmount(p) >= min));
+        }
+        return filtered;
+    }, [combinedPayments, dateRange, paymentMethod, status, selectedSpecialist, customerSearch, minAmount]);
 
     const columns = [
         {
@@ -582,21 +889,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         {
             header: 'Amount',
             accessor: (row: Payment) => {
-                // Ensure redemptions show $0 to match Sales History (cash impact view)
-                let method = row.paymentMethod?.toUpperCase() || 'UNKNOWN';
-                if (row.notes && (row.notes as string).includes('Method:')) {
-                    const match = (row.notes as string).match(/Method:\s*([^|]+)/);
-                    if (match && match[1]) method = match[1].trim().toUpperCase();
-                }
-
-                const isRedemption = !row.isPendingSale && (method === 'VOUCHER' || method === 'PACKAGE' || 
-                                    (row.sale?.items?.some((item: any) => item.redeemedFromPackageId || item.price === 0)));
-                
-                const displayAmount = (isRedemption && row.amount !== 0) ? 0 : row.amount;
-
                 return (
                     <div className="font-bold text-black dark:text-black">
-                        {formatPrice(displayAmount)}
+                        {formatPrice(getRowDisplayAmount(row))}
                     </div>
                 );
             }
@@ -629,6 +924,40 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         {
             header: 'Method',
             accessor: (row: Payment) => {
+                const details = getSaleSettlementDetails(row);
+                if (details.isSplit) {
+                    const uniqueMethods = [...new Set(details.allMethods.map(m => getLabel(m)))];
+                    const tooltipParts: string[] = [];
+                    details.actualPayments.forEach(p => {
+                        if (p.amount > 0) {
+                            tooltipParts.push(`${getLabel(p.method)}: ${formatPrice(p.amount)}`);
+                        }
+                    });
+                    if (details.totalRedemptionValue > 0) {
+                        tooltipParts.push(`Package: ${formatPrice(details.totalRedemptionValue)}`);
+                    }
+                    if (details.effectiveDisc > 0) {
+                        tooltipParts.push(`Voucher/Discount: ${formatPrice(details.effectiveDisc)}`);
+                    }
+
+                    return (
+                        <div className="flex items-center">
+                            <span
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border"
+                                style={{
+                                    backgroundColor: '#fffbeb', // amber-50
+                                    color: '#b45309', // amber-700
+                                    borderColor: '#fde68a', // amber-200
+                                }}
+                                title={tooltipParts.join(', ')}
+                            >
+                                <RefreshCw size={10} />
+                                Split ({uniqueMethods.join(' + ')})
+                            </span>
+                        </div>
+                    );
+                }
+
                 // Extract custom method from notes if available
                 let displayMethod = row.paymentMethod?.toUpperCase() || 'UNKNOWN';
 
@@ -684,14 +1013,6 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 };
 
                 const styles = getMethodStyles(method);
-
-                // Friendly Label Mapping
-                const getLabel = (m: string) => {
-                    if (m === 'GOOGLEPAY' || m === 'GPAY') return 'GPay';
-                    if (m === 'PHONEPE' || m === 'PHONEPA') return 'PhonePe';
-                    if (m === 'PAYTM') return 'Paytm';
-                    return m;
-                };
 
                 return (
                     <div className="flex items-center">
@@ -1065,85 +1386,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 )} */}
                 <Table
                     columns={columns}
-                    data={(() => {
-                        let filtered = [...combinedPayments];
-
-                        // Client-side Date Filter (crucial for synthesized appointments from Redux)
-                        if (dateRange.start) {
-                            const startObj = new Date(dateRange.start);
-                            startObj.setHours(0, 0, 0, 0);
-                            filtered = filtered.filter(p => {
-                                const d = new Date(p.createdAt);
-                                d.setHours(0, 0, 0, 0);
-                                return d.getTime() >= startObj.getTime();
-                            });
-                        }
-                        if (dateRange.end) {
-                            const endObj = new Date(dateRange.end);
-                            endObj.setHours(0, 0, 0, 0);
-                            filtered = filtered.filter(p => {
-                                const d = new Date(p.createdAt);
-                                d.setHours(0, 0, 0, 0);
-                                return d.getTime() <= endObj.getTime();
-                            });
-                        }
-                        
-                        // Client-side Method Filter
-                        if (paymentMethod !== 'ALL') {
-                            filtered = filtered.filter(p => {
-                                let displayMethod = p.paymentMethod?.toUpperCase() || 'UNKNOWN';
-                                if (p.notes && typeof p.notes === 'string' && p.notes.includes('Method:')) {
-                                    const match = p.notes.match(/Method:\s*([^|]+)/);
-                                    if (match && match[1]) displayMethod = match[1].trim().toUpperCase();
-                                }
-
-                                // Sync filter detection with table display logic
-                                if ((displayMethod === 'PENDING' || displayMethod === 'UNKNOWN' || displayMethod === 'CASH') &&
-                                    p.amount === 0 &&
-                                    (p.sale?.saleStatus === 'COMPLETED' || p.paymentStatus === 'COMPLETED')) {
-
-                                    const isPackageRedemption = p.sale?.items?.some((item: any) => item.redeemedFromPackageId);
-                                    displayMethod = isPackageRedemption ? 'PACKAGE' : 'VOUCHER';
-                                }
-                                return displayMethod === paymentMethod;
-                            });
-                        }
-
-                        // Client-side Status Filter
-                        if (status !== 'ALL') {
-                            filtered = filtered.filter(p => {
-                                const pStatus = p.isPendingSale ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') : (p.sale?.saleStatus || p.paymentStatus);
-                                return pStatus === status;
-                            });
-                        }
-
-                        // Client-side Specialist Filter
-                        if (selectedSpecialist !== 'ALL') {
-                            filtered = filtered.filter(p => {
-                                const spec = p.appointment?.stylist?.name || p.sale?.specialist?.name || '-';
-                                return spec === selectedSpecialist;
-                            });
-                        }
-
-                        // Client-side fallback filter to ensure "correct" filtering for current page
-                        if (customerSearch.trim()) {
-                            const term = customerSearch.toLowerCase();
-                            filtered = filtered.filter(p => {
-                                const name = (p.appointment?.customer?.name || (p.sale as any)?.customer?.name || '').toLowerCase();
-                                const phone = (p.appointment?.customer?.mobile || (p.sale as any)?.customer?.mobile || '');
-                                const invoice = (p.sale?.invoiceNumber || p.invoiceNumber || '').toLowerCase();
-                                const saleNum = (p.sale?.saleNumber || '').toLowerCase();
-                                return name.includes(term) || phone.includes(term) || invoice.includes(term) || saleNum.includes(term);
-                            });
-                        }
-
-                        // [LAST-RESORT VISUAL SAFEGUARD]
-                        const min = minAmount ? Number(minAmount) : 0;
-                        if (min > 0) {
-                            filtered = filtered.filter(p => (p.amount >= min));
-                        }
-                        return filtered;
-                    })()}
+                    data={filteredPayments}
                     isLoading={paymentsLoading}
                     onRowClick={(row) => {
                         setSelectedPayment(row);
@@ -1194,8 +1437,17 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 onClose={() => setIsModalOpen(false)}
                 title="Transaction Details"
             >
-                {selectedPayment && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {selectedPayment && (() => {
+                    const details = getSaleSettlementDetails(selectedPayment);
+                    const originalSubtotal = details.originalSubtotal;
+                    const totalRedemptionValue = details.totalRedemptionValue;
+                    const effectiveDisc = details.effectiveDisc;
+                    const total = details.totalPayable;
+                    const paid = (selectedPayment.sale as any)?.paidAmount || 0;
+                    const balance = Math.max(0, total - paid);
+
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
                         {/* Info Grid */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1296,7 +1548,12 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Method</p>
-                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentMethod}</p>
+                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
+                                        {details.isSplit 
+                                            ? `Split (${details.allMethods.map(m => getLabel(m)).join(' + ')})` 
+                                            : getLabel(selectedPayment.paymentMethod)
+                                        }
+                                    </p>
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Collection Type</p>
@@ -1565,74 +1822,30 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             }}>
                                 {selectedPayment.sale && (
                                     <>
-                                        {(() => {
-                                            const { originalSubtotal, totalRedemptionValue } = (selectedPayment.sale.items || []).reduce((sums: { originalSubtotal: number, totalRedemptionValue: number }, item: any) => {
-                                                const isRed = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
-                                                let origPrice = item.price || 0;
-                                                if (isRed && origPrice === 0) {
-                                                    const foundService = services.find((s: any) => 
-                                                        (item.serviceId && String(s.id) === String(item.serviceId)) || 
-                                                        (item.itemId && String(s.id) === String(item.itemId)) ||
-                                                        (item.id && String(s.id) === String(item.id)) ||
-                                                        (s.name && s.name.toLowerCase() === item.name.toLowerCase())
-                                                    );
-                                                    if (foundService) {
-                                                        origPrice = foundService.price || 0;
-                                                    } else {
-                                                        const foundProduct = products.find((p: any) => 
-                                                            (item.productId && String(p.id) === String(item.productId)) ||
-                                                            (item.itemId && String(p.id) === String(item.itemId)) ||
-                                                            (item.id && String(p.id) === String(item.id)) ||
-                                                            (p.name && p.name.toLowerCase() === item.name.toLowerCase())
-                                                        );
-                                                        if (foundProduct) {
-                                                            origPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
-                                                        }
-                                                    }
-                                                }
-                                                sums.originalSubtotal += (origPrice * item.quantity);
-                                                if (isRed) {
-                                                    sums.totalRedemptionValue += (origPrice * item.quantity);
-                                                }
-                                                return sums;
-                                            }, { originalSubtotal: 0, totalRedemptionValue: 0 });
-
-                                            const nonRedeemedSubtotal = originalSubtotal - totalRedemptionValue;
-                                            const total = (selectedPayment.sale as any).totalAmount || selectedPayment.amount || 0;
-                                            const explicitDisc = (selectedPayment.sale as any).discount || 0;
-                                            const effectiveDisc = explicitDisc > 0 ? explicitDisc : Math.max(0, nonRedeemedSubtotal - total);
-                                            const paid = (selectedPayment.sale as any).paidAmount || 0;
-                                            const balance = Math.max(0, total - paid);
-
-                                            return (
-                                                <>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                        <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
-                                                        <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
-                                                            {formatPrice(originalSubtotal)}
-                                                        </span>
-                                                    </div>
-                                                    {totalRedemptionValue > 0 && (
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#059669' }}>
-                                                            <span style={{ fontWeight: 500 }}>Package Redemption</span>
-                                                            <span style={{ fontWeight: 700 }}>-{formatPrice(totalRedemptionValue)}</span>
-                                                        </div>
-                                                    )}
-                                                    {effectiveDisc > 0 && (
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                            <span style={{ color: 'var(--text-black)' }}>Discount</span>
-                                                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
-                                                        </div>
-                                                    )}
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
-                                                        <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
-                                                        <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
-                                                            {formatPrice(balance)}
-                                                        </span>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                            <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
+                                            <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
+                                                {formatPrice(originalSubtotal)}
+                                            </span>
+                                        </div>
+                                        {totalRedemptionValue > 0 && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#059669' }}>
+                                                <span style={{ fontWeight: 500 }}>Package Redemption</span>
+                                                <span style={{ fontWeight: 700 }}>-{formatPrice(totalRedemptionValue)}</span>
+                                            </div>
+                                        )}
+                                        {effectiveDisc > 0 && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                <span style={{ color: 'var(--text-black)' }}>Discount</span>
+                                                <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
+                                            </div>
+                                        )}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
+                                            <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
+                                            <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
+                                                {formatPrice(balance)}
+                                            </span>
+                                        </div>
                                     </>
                                 )}
                                 <div style={{
@@ -1645,38 +1858,60 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 }}>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 ? 'Transaction Amount' : 'Net Amount'}
+                                            Net Amount
                                         </span>
-                                        {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 && (
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-black)', fontWeight: 600 }}>
-                                                Total Paid: {formatPrice((selectedPayment.sale as any).paidAmount || 0)}
-                                            </span>
-                                        )}
                                     </div>
-                                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>{formatPrice(selectedPayment.amount)}</span>
+                                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>{formatPrice(getRowDisplayAmount(selectedPayment))}</span>
                                 </div>
 
-                                {/* Split Payment Breakdown */}
-                                {selectedPayment.sale?.payments && selectedPayment.sale.payments.length > 1 && (
-                                    <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
-                                        <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Related Payments</p>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                            {selectedPayment.sale.payments.map((p, idx) => (
-                                                <div key={idx} style={{
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    padding: '0.5rem', background: p.id === selectedPayment.id ? 'var(--bg-hover)' : 'transparent',
-                                                    borderRadius: '0.5rem', border: p.id === selectedPayment.id ? '1px solid var(--border)' : 'none'
-                                                }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)' }}>{p.paymentMethod}</span>
-                                                        {p.id === selectedPayment.id && <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 700 }}>CURRENT</span>}
+                                {/* Settlement Breakdown (including Payments, Package Redemptions, and Vouchers/Discounts) */}
+                                {(() => {
+                                    if (!details.isSplit) return null;
+
+                                    return (
+                                        <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+                                            <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Settlement Breakdown</p>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                {/* 1. Actual Payments */}
+                                                {details.actualPayments.map((p: any, idx: number) => (
+                                                    <div key={`pay-${idx}`} style={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        padding: '0.5rem', background: p.id === selectedPayment.id ? 'var(--bg-hover)' : 'transparent',
+                                                        borderRadius: '0.5rem', border: p.id === selectedPayment.id ? '1px solid var(--border)' : 'none'
+                                                    }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)' }}>{getLabel(p.method)}</span>
+                                                            {p.id === selectedPayment.id && <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 700 }}>CURRENT</span>}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(p.amount)}</span>
                                                     </div>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(p.amount)}</span>
-                                                </div>
-                                            ))}
+                                                ))}
+
+                                                {/* 2. Package Redemptions */}
+                                                {totalRedemptionValue > 0 && (
+                                                    <div style={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(254, 243, 199, 0.3)', border: '1px dashed #fde68a'
+                                                    }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#92400e' }}>Package Redemption</span>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e' }}>{formatPrice(totalRedemptionValue)}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* 3. Voucher / Discount */}
+                                                {effectiveDisc > 0 && (
+                                                    <div style={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(252, 231, 243, 0.3)', border: '1px dashed #fbcfe8'
+                                                    }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#be185d' }}>Voucher / Discount</span>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#be185d' }}>{formatPrice(effectiveDisc)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -1836,8 +2071,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                 </p>
                             </div>
                         )}
-                    </div>
-                )}
+                        </div>
+                    );
+                })()}
             </Modal>
 
             {/* Sale Cancellation Modal */}
