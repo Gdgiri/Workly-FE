@@ -186,6 +186,7 @@ const isValidAvatar = (url: string | null | undefined): boolean => {
 const Stylists: React.FC = () => {
   const { showToast } = useToast();
   const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
+  const appId = (user as any)?.app_id || 'salon';
   const canAdd = hasPermission('stylists', 'add');
   const canEdit = hasPermission('stylists', 'edit');
   const [viewMode, setViewMode] = useState<'list' | 'roaster'>('list');
@@ -461,6 +462,7 @@ const Stylists: React.FC = () => {
       const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement;
       const phoneInput = form.querySelector('input[placeholder="(555) 000-0000"]') as HTMLInputElement;
       const specializationInput = form.querySelector('input[name="specialization"]') as HTMLInputElement;
+      const basicPriceInput = form.querySelector('input[name="basicPrice"]') as HTMLInputElement;
 
       // Collect working hours from state
       const workingHours = newStylistWorkingHours;
@@ -492,6 +494,7 @@ const Stylists: React.FC = () => {
         email: emailInput.value,
         phone: phoneInput.value,
         specialization: specializationInput ? Array.from(new Set(specializationInput.value.split(',').map(s => s.trim()).filter(Boolean))).join(', ') : 'General',
+        basicPrice: basicPriceInput ? parseFloat(basicPriceInput.value) || 0 : 0,
         workingHours,
         isAvailable,
         permissions: newStylistPermissions,
@@ -517,6 +520,7 @@ const Stylists: React.FC = () => {
   };
 
   const handleEditStylist = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!editingStylist) return;
 
     // VALIDATION
@@ -882,7 +886,7 @@ const Stylists: React.FC = () => {
               <div className="relative" style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  placeholder="Search specialists..."
+                  placeholder={appId === 'workly-project' ? "Search staff..." : "Search specialists..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -942,7 +946,7 @@ const Stylists: React.FC = () => {
                     cursor: !canAdd ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  Add Specialist
+                  {appId === 'workly-project' ? 'Add Staff' : 'Add Specialist'}
                 </Button>
             </div>
           </div>
@@ -1428,70 +1432,72 @@ const Stylists: React.FC = () => {
                                 </div>
                               </div>
 
-                              <div style={{
-                                marginTop: '1rem',
-                                paddingTop: '1rem',
-                                borderTop: '1px solid var(--border-light)'
-                              }}>
+                              {appId !== 'workly-project' && (
                                 <div style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 600,
-                                  color: 'var(--text-light)',
-                                  marginBottom: '0.5rem',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.05em'
+                                  marginTop: '1rem',
+                                  paddingTop: '1rem',
+                                  borderTop: '1px solid var(--border-light)'
                                 }}>
-                                  Specializations
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                                  {(() => {
-                                    const specs = stylist.specialization
-                                      ? (typeof stylist.specialization === 'string'
-                                        ? stylist.specialization.split(',').map(s => s.trim()).filter(Boolean)
-                                        : Array.isArray(stylist.specialization)
-                                          ? stylist.specialization
-                                          : [stylist.specialization])
-                                      : [];
+                                  <div style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    color: 'var(--text-light)',
+                                    marginBottom: '0.5rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em'
+                                  }}>
+                                    Specializations
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                                    {(() => {
+                                      const specs = stylist.specialization
+                                        ? (typeof stylist.specialization === 'string'
+                                          ? stylist.specialization.split(',').map(s => s.trim()).filter(Boolean)
+                                          : Array.isArray(stylist.specialization)
+                                            ? stylist.specialization
+                                            : [stylist.specialization])
+                                        : [];
 
-                                    if (specs.length === 0) {
-                                      return (
-                                        <span style={{
-                                          fontSize: '0.7rem',
-                                          background: 'var(--bg-body)',
-                                          padding: '0.375rem 0.75rem',
-                                          borderRadius: 'var(--radius-full)',
-                                          color: 'var(--text-black)',
-                                          border: '1px solid var(--border)',
-                                          fontWeight: 500
-                                        }}>
-                                          General
-                                        </span>
-                                      );
-                                    }
+                                      if (specs.length === 0) {
+                                        return (
+                                          <span style={{
+                                            fontSize: '0.7rem',
+                                            background: 'var(--bg-body)',
+                                            padding: '0.375rem 0.75rem',
+                                            borderRadius: 'var(--radius-full)',
+                                            color: 'var(--text-black)',
+                                            border: '1px solid var(--border)',
+                                            fontWeight: 500
+                                          }}>
+                                            General
+                                          </span>
+                                        );
+                                      }
 
-                                    return specs.map((spec, idx) => (
-                                      <motion.span
-                                        key={idx}
-                                        whileHover={{ scale: 1.05 }}
-                                        style={{
-                                          fontSize: '0.75rem',
-                                          background: 'var(--bg-input)',
-                                          padding: '0.5rem 1rem',
-                                          borderRadius: 'var(--radius-full)',
-                                          color: 'var(--text-dark)',
-                                          fontWeight: 600,
-                                          border: '1px solid var(--border)',
-                                          boxShadow: 'var(--shadow-sm)',
-                                          cursor: 'default',
-                                          transition: 'all var(--transition-fast)'
-                                        }}
-                                      >
-                                        {spec}
-                                      </motion.span>
-                                    ));
-                                  })()}
+                                      return specs.map((spec, idx) => (
+                                        <motion.span
+                                          key={idx}
+                                          whileHover={{ scale: 1.05 }}
+                                          style={{
+                                            fontSize: '0.75rem',
+                                            background: 'var(--bg-input)',
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: 'var(--radius-full)',
+                                            color: 'var(--text-dark)',
+                                            fontWeight: 600,
+                                            border: '1px solid var(--border)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            cursor: 'default',
+                                            transition: 'all var(--transition-fast)'
+                                          }}
+                                        >
+                                          {spec}
+                                        </motion.span>
+                                      ));
+                                    })()}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </Card>
                           </motion.div>
                         )))}
@@ -1615,7 +1621,7 @@ const Stylists: React.FC = () => {
           <Modal
             isOpen={isModalOpen}
             onClose={() => { setIsModalOpen(false); }}
-            title="Add New Specialist"
+            title={appId === 'workly-project' ? 'Add New Staff' : 'Add New Specialist'}
           >
             <form className="space-y-4" onSubmit={handleAddStylist}>
               {/* Circular Avatar Display (Auto-assigned or Uploaded) */}
@@ -1709,6 +1715,7 @@ const Stylists: React.FC = () => {
                   <Input label="Phone" placeholder="(555) 000-0000" />
                   {formErrors.phone && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.phone}</span>}
                 </div>
+                <Input type="number" name="basicPrice" label="Basic Price" placeholder="0" />
                 <Select
                   label="Account Status"
                   name="accountStatus"
@@ -1728,20 +1735,22 @@ const Stylists: React.FC = () => {
                 />
               </div>
 
-              <SearchableSelect
-                label="Specialization"
-                name="specialization"
-                placeholder="Select multiple..."
-                multiple
-                dropdownDirection="up"
-                options={[
-                  { value: '', label: 'Select Specialization' },
-                  ...categories.map(category => ({
-                    value: category.name,
-                    label: category.name
-                  }))
-                ]}
-              />
+              {appId !== 'workly-project' && (
+                <SearchableSelect
+                  label="Specialization"
+                  name="specialization"
+                  placeholder="Select multiple..."
+                  multiple
+                  dropdownDirection="up"
+                  options={[
+                    { value: '', label: 'Select Specialization' },
+                    ...categories.map(category => ({
+                      value: category.name,
+                      label: category.name
+                    }))
+                  ]}
+                />
+              )}
 
               <div style={{ paddingTop: '0.5rem' }}>
                 <label className="input-label" style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1754,7 +1763,7 @@ const Stylists: React.FC = () => {
               </div>
 
 
-              {(!isStaff || isAdmin || isManager) && (
+              {appId !== 'workly-project' && (!isStaff || isAdmin || isManager) && (
                 <div style={{ paddingTop: '1rem' }}>
                   <PermissionsSelector
                     permissions={newStylistPermissions}
@@ -1766,7 +1775,7 @@ const Stylists: React.FC = () => {
               <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <Button variant="ghost" type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
-                  Save Specialist
+                  {appId === 'workly-project' ? 'Save Staff' : 'Save Specialist'}
                 </Button>
               </div>
             </form>
@@ -1981,6 +1990,13 @@ const Stylists: React.FC = () => {
                     onChange={e => setEditingStylist({ ...editingStylist, phone: e.target.value })}
                     required
                   />
+                  <Input
+                    type="number"
+                    label="Basic Price"
+                    name="basicPrice"
+                    value={editingStylist.basicPrice || 0}
+                    onChange={e => setEditingStylist({ ...editingStylist, basicPrice: parseFloat(e.target.value) || 0 })}
+                  />
                   <Select
                     label="Account Status"
                     value={editingStylist.isAvailable ? 'active' : 'inactive'}
@@ -2004,22 +2020,24 @@ const Stylists: React.FC = () => {
                 </div>
 
                 <div>
-                  <SearchableSelect
-                    label="Specialization"
-                    name="specialization"
-                    value={editingStylist.specialization || ''}
-                    onChange={(e) => {
-                      setEditingStylist({ ...editingStylist, specialization: e.target.value });
-                    }}
-                    multiple
-                    options={[
-                      { value: '', label: 'Select Specialization' },
-                      ...categories.map(category => ({
-                        value: category.name,
-                        label: category.name
-                      }))
-                    ]}
-                  />
+                  {appId !== 'workly-project' && (
+                    <SearchableSelect
+                      label="Specialization"
+                      name="specialization"
+                      value={editingStylist.specialization || ''}
+                      onChange={(e) => {
+                        setEditingStylist({ ...editingStylist, specialization: e.target.value });
+                      }}
+                      multiple
+                      options={[
+                        { value: '', label: 'Select Specialization' },
+                        ...categories.map(category => ({
+                          value: category.name,
+                          label: category.name
+                        }))
+                      ]}
+                    />
+                  )}
 
                   {/* Display selected specializations as tags */}
                   {/* <div style={{ marginTop: '0.75rem' }}>
@@ -2075,34 +2093,36 @@ const Stylists: React.FC = () => {
                   />
                 </div>
 
-                {(!isStaff || isAdmin || isManager) && editingStylist.email !== user?.email && editingStylist.authId !== user?.id ? (
-                  <div style={{ paddingTop: '1.5rem' }}>
-                    <PermissionsSelector
-                      permissions={editingStylist.permissions || []}
-                      onChange={(newPerms) => setEditingStylist({ ...editingStylist, permissions: newPerms })}
-                    />
-                  </div>
-                ) : (
-                  <div style={{
-                    paddingTop: '1.5rem',
-                    padding: '1rem',
-                    backgroundColor: 'var(--bg-body)',
-                    borderRadius: '0.75rem',
-                    border: '1px solid var(--border-light)',
-                    fontSize: '0.85rem',
-                    color: 'var(--text-light)',
-                    textAlign: 'center',
-                    marginTop: '1rem'
-                  }}>
-                    🛡️ Access permissions can only be modified by a Supervisor (Administrator or Manager) and self-updating permissions is blocked.
-                  </div>
+                {appId !== 'workly-project' && (
+                  (!isStaff || isAdmin || isManager) && editingStylist.email !== user?.email && editingStylist.authId !== user?.id ? (
+                    <div style={{ paddingTop: '1.5rem' }}>
+                      <PermissionsSelector
+                        permissions={editingStylist.permissions || []}
+                        onChange={(newPerms) => setEditingStylist({ ...editingStylist, permissions: newPerms })}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{
+                      paddingTop: '1.5rem',
+                      padding: '1rem',
+                      backgroundColor: 'var(--bg-body)',
+                      borderRadius: '0.75rem',
+                      border: '1px solid var(--border-light)',
+                      fontSize: '0.85rem',
+                      color: 'var(--text-light)',
+                      textAlign: 'center',
+                      marginTop: '1rem'
+                    }}>
+                      🛡️ Access permissions can only be modified by a Supervisor (Administrator or Manager) and self-updating permissions is blocked.
+                    </div>
+                  )
                 )}
 
 
 
                 <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                   <Button type="button" variant="ghost" onClick={() => { setIsEditModalOpen(false); setEditingStylist(null); }}>Cancel</Button>
-                  <Button type="submit" isLoading={isSubmitting}>Update Specialist</Button>
+                  <Button type="submit" isLoading={isSubmitting}>{appId === 'workly-project' ? 'Update Staff' : 'Update Specialist'}</Button>
                 </div>
               </form>
             )}

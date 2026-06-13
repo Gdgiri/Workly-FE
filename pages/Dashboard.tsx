@@ -230,9 +230,9 @@ const Dashboard: React.FC = () => {
   const fetchAppointments = async () => {
     try {
       setAppointmentsLoading(true);
-      // Only fetch last 90 days of appointments to speed up loading
+      // Only fetch last 12 months of appointments to balance performance and filter needs
       const fromDate = new Date();
-      fromDate.setMonth(fromDate.getMonth() - 3);
+      fromDate.setMonth(fromDate.getMonth() - 12);
       const res = await api.get(`/appointments?from=${fromDate.toISOString()}`);
       const appointments = Array.isArray(res.data) ? res.data : (res.data?.appointments || []);
       setAllAppointments(appointments);
@@ -266,8 +266,8 @@ const Dashboard: React.FC = () => {
       setSalesLoading(true);
       // Date range limit for sales
       const fromDate = new Date();
-      fromDate.setMonth(fromDate.getMonth() - 3);
-      const res = await api.get(`/sales?from=${fromDate.toISOString()}`);
+      fromDate.setMonth(fromDate.getMonth() - 12);
+      const res = await api.get(`/sales?from=${fromDate.toISOString()}&limit=5000`);
       const sales = Array.isArray(res.data.sales) ? res.data.sales : (Array.isArray(res.data) ? res.data : []);
       setAllSalesCache(sales);
     } catch (error) {
@@ -286,12 +286,12 @@ const Dashboard: React.FC = () => {
       setPaymentsLoading(true);
       // Date range limit for payments
       const fromDate = new Date();
-      fromDate.setMonth(fromDate.getMonth() - 3);
+      fromDate.setMonth(fromDate.getMonth() - 12);
       // Assuming /payments supports a 'startDate' or 'from' param similar to others, 
       // or we fetch recent payments. Payments.tsx uses startDate param.
       // Let's use startDate format YYYY-MM-DD
       const fromDateStr = fromDate.toISOString().split('T')[0];
-      const res = await api.get(`/payments?startDate=${fromDateStr}&limit=1000`); // Fetch distinct payments
+      const res = await api.get(`/payments?startDate=${fromDateStr}&limit=5000`); // Fetch distinct payments
 
       const payments = res.data.payments || [];
       setAllPaymentsCache(payments);
@@ -372,7 +372,7 @@ const Dashboard: React.FC = () => {
     // 3. Filter Payments
     const filteredPayments = allPaymentsCache.filter((payment: any) => {
       const paymentDate = new Date(new Date(payment.createdAt).setHours(0, 0, 0, 0));
-      return paymentDate >= start && paymentDate <= end && payment.paymentStatus !== 'FAILED' && payment.paymentStatus !== 'REFUNDED';
+      return paymentDate >= start && paymentDate <= end && payment.paymentStatus === 'COMPLETED';
     });
 
     // 4. Calculate Current Period Totals
@@ -385,7 +385,7 @@ const Dashboard: React.FC = () => {
     ).size;
 
     const revenue = filteredPayments.reduce((sum: number, payment: any) =>
-      payment.paymentStatus === 'COMPLETED' ? sum + (payment.amount || 0) : sum, 0
+      sum + (payment.amount || 0), 0
     );
     const pending = filteredAppointments.filter((apt: any) =>
       apt.status === 'PENDING' || apt.status === 'CONFIRMED'
@@ -417,13 +417,13 @@ const Dashboard: React.FC = () => {
 
       const prevPayments = allPaymentsCache.filter((payment: any) => {
         const paymentDate = new Date(new Date(payment.createdAt).setHours(0, 0, 0, 0));
-        return paymentDate >= prevStart && paymentDate <= prevEnd && payment.paymentStatus !== 'FAILED' && payment.paymentStatus !== 'REFUNDED';
+        return paymentDate >= prevStart && paymentDate <= prevEnd && payment.paymentStatus === 'COMPLETED';
       });
 
       const prevAptCount = prevAppointments.length;
       const prevSpecialists = new Set(prevAppointments.map((a: any) => a.stylistId || a.stylistName)).size;
       const prevRevenue = prevPayments.reduce((sum: number, payment: any) =>
-        payment.paymentStatus === 'COMPLETED' ? sum + (payment.amount || 0) : sum, 0
+        sum + (payment.amount || 0), 0
       );
       const prevPending = prevAppointments.filter((apt: any) => apt.status === 'PENDING' || apt.status === 'CONFIRMED').length;
 

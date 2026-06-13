@@ -2043,6 +2043,101 @@ const Reports: React.FC = () => {
       .filter(c => checkDateInRange(c.createdAt, startDate, endDate))
       .reduce((sum, c) => sum + (c.balance || 0), 0);
 
+    if (activeReport === 'sales') {
+      let directService = 0;
+      let directProduct = 0;
+      let directPackage = 0;
+      let directVoucher = 0;
+      let packageUsage = 0;
+      let voucherUsage = 0;
+      
+      sortedData.forEach((sale: any) => {
+        if (sale.saleStatus !== 'COMPLETED') return;
+        
+        const items = Array.isArray(sale.items) ? sale.items : [];
+        let saleGrossTotal = 0;
+        
+        items.forEach((item: any) => {
+          const isRedeemed = item.redeemedFromPackageId || item.redeemedQuantity > 0;
+          
+          if (isRedeemed) {
+            let originalPrice = item.price || 0;
+            const foundService = services.find((s: any) => 
+              (item.serviceId && String(s.id) === String(item.serviceId)) || 
+              (item.itemId && String(s.id) === String(item.itemId)) ||
+              (item.id && String(s.id) === String(item.id)) ||
+              (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+            );
+            if (foundService) {
+              originalPrice = foundService.price || 0;
+            } else {
+              const foundProduct = products.find((p: any) => 
+                (item.productId && String(p.id) === String(item.productId)) ||
+                (item.itemId && String(p.id) === String(item.itemId)) ||
+                (item.id && String(p.id) === String(item.id)) ||
+                (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+              );
+              if (foundProduct) {
+                originalPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+              }
+            }
+            packageUsage += (originalPrice * item.quantity);
+          } else {
+            const itemNetPrice = (item.price * item.quantity) - (item.discount || 0);
+            saleGrossTotal += Math.max(itemNetPrice, 0);
+          }
+        });
+
+        const actualRevenue = sale.paidAmount || sale.totalAmount || 0;
+
+        if (saleGrossTotal > 0) {
+          const ratio = actualRevenue / saleGrossTotal;
+          items.forEach((item: any) => {
+            const type = String(item.type || '').toUpperCase();
+            const isRedeemed = item.redeemedFromPackageId || item.redeemedQuantity > 0;
+            if (!isRedeemed) {
+              const itemNetPrice = (item.price * item.quantity) - (item.discount || 0);
+              const allocatedValue = Math.max(itemNetPrice, 0) * ratio;
+              
+              if (type === 'SERVICE') directService += allocatedValue;
+              else if (type === 'PRODUCT') directProduct += allocatedValue;
+              else if (type === 'PACKAGE' || type === 'COMBO' || item.packageName) directPackage += allocatedValue;
+              else if (type === 'VOUCHER') directVoucher += allocatedValue;
+              else directService += allocatedValue; 
+            }
+          });
+        } else if (actualRevenue > 0) {
+          // Fallback if there are no gross items but there is revenue
+          directService += actualRevenue;
+        }
+
+        let voucherVal = 0;
+        if (sale.voucherDiscount > 0) voucherVal = sale.voucherDiscount;
+        else if (sale.discount > 0) {
+          const hasPackageRedemption = items.some((item: any) => item && (item.redeemedFromPackageId || item.redeemedQuantity > 0));
+          if (!hasPackageRedemption) voucherVal = sale.discount;
+        }
+        
+        let paymentVoucherVal = 0;
+        if (sale.payments && sale.payments.length > 0) {
+          sale.payments.forEach((p: any) => {
+            const m = String(p.paymentMethod || '').trim().toUpperCase();
+            if (m === 'VOUCHER') paymentVoucherVal += p.amount || 0;
+          });
+        }
+        voucherUsage += Math.max(voucherVal, paymentVoucherVal);
+      });
+
+      return [
+        { label: 'Direct Service Sales', value: formatPrice(directService), color: 'var(--primary)' },
+        { label: 'Direct Product Sales', value: formatPrice(directProduct), color: 'var(--success)' },
+        { label: 'Direct Package Sales', value: formatPrice(directPackage), color: 'var(--warning)' },
+        { label: 'Direct Voucher Sales', value: formatPrice(directVoucher), color: 'var(--danger)' },
+        { label: 'Package Usage Value', value: formatPrice(packageUsage), color: '#8B5CF6' },
+        { label: 'Voucher Usage Value', value: formatPrice(voucherUsage), color: '#06B6D4' }
+      ];
+    }
+
     if (activeReport === 'service_consumption_by_payment') {
       const totalVal = sortedData.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
       const totalQty = sortedData.reduce((sum, r) => sum + (r.qty || 0), 0);
@@ -2175,7 +2270,7 @@ const Reports: React.FC = () => {
       ];
     }
     return [];
-  }, [activeReport, sortedData, selectedCustomerDetail, formatPrice, customerPackages, claims, startDate, endDate]);
+  }, [activeReport, sortedData, selectedCustomerDetail, formatPrice, customerPackages, claims, startDate, endDate, services, products]);
 
   return (
     <div className="space-y-6">

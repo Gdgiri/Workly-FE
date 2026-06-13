@@ -4,7 +4,7 @@ import { AppDispatch, RootState } from './redux/store';
 import { logoutUser } from './redux/slices/authSlice';
 import { fetchSettings } from './redux/slices/settingSlice';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { Sidebar, TopBar } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PaymentMethod, Voucher, VoucherClaim, Customer } from './types';
@@ -31,6 +31,7 @@ import { AskAI } from './pages/AskAI';
 import MessageLog from './pages/MessageLog';
 import ChecklistList from './pages/ChecklistList';
 import ChecklistBuilder from './pages/ChecklistBuilder';
+import WorklyProject from './pages/WorklyProject';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -50,6 +51,19 @@ import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 
 import { ToastProvider, useToast } from './components/ToastContext';
 import { CurrencyProvider } from './components/CurrencyContext';
+
+const DashboardRouteWrapper: React.FC = () => {
+  const { appId, businessName } = useParams<{ appId: string; businessName: string }>();
+  if (appId === 'workly-project') {
+    return <Navigate to={`/${appId}/${businessName}/workly-project`} replace />;
+  }
+  return (
+    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'SUPER_ADMIN']}>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+};
+
 
 const AppContent: React.FC = () => {
   // Use Redux state for authentication
@@ -145,19 +159,20 @@ const AppContent: React.FC = () => {
         // @ts-ignore
         const { appName, businessName } = user || {};
 
-        if (appName && businessName) {
+        const getTargetPage = (app: string) => {
+          if (app === 'workly-project') return 'workly-project';
           const isStaff = user?.role?.toUpperCase() === 'STAFF';
-          const targetPage = isStaff ? 'sales' : 'dashboard';
-          navigate(`/${appName}/${businessName}/${targetPage}`);
+          return isStaff ? 'sales' : 'dashboard';
+        };
+
+        if (appName && businessName) {
+          navigate(`/${appName}/${businessName}/${getTargetPage(appName)}`);
         } else {
           // Fallback to URL parsing
           const currentPath = location.pathname;
           const pathParts = currentPath.split('/').filter(p => p);
           if (pathParts.length >= 2) {
-            // Check if user is staff even in fallback
-            const isStaff = user?.role?.toUpperCase() === 'STAFF';
-            const targetPage = isStaff ? 'sales' : 'dashboard';
-            navigate(`/${pathParts[0]}/${pathParts[1]}/${targetPage}`);
+            navigate(`/${pathParts[0]}/${pathParts[1]}/${getTargetPage(pathParts[0])}`);
           } else {
             navigate('/dashboard');
           }
@@ -382,6 +397,7 @@ const AppContent: React.FC = () => {
             if (pathLeaf === 'stylists') return 'Specialist';
             if (pathLeaf === 'appointments') return 'Schedule';
             if (pathLeaf === 'payments') return 'Transaction';
+            if (pathLeaf === 'workly-project') return 'Manpower Supply';
             return pathLeaf ? pathLeaf.charAt(0).toUpperCase() + pathLeaf.slice(1).toLowerCase() : 'Dashboard';
           })()}
           subtitle={(() => {
@@ -391,6 +407,8 @@ const AppContent: React.FC = () => {
               case undefined:
               case '':
                 return "Welcome back, here is today's overview.";
+              case 'workly-project':
+                return "Independent billing, breaks & clock tracker for client project locations.";
               case 'payments':
                 return "Track your business transactions and history";
               case 'sales':
@@ -441,11 +459,7 @@ const AppContent: React.FC = () => {
         <main className="page-content">
           <AnimatePresence mode="wait">
             <Routes>
-              <Route path="/:appId/:businessName/dashboard" element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'SUPER_ADMIN']}>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
+              <Route path="/:appId/:businessName/dashboard" element={<DashboardRouteWrapper />} />
               <Route path="/:appId/:businessName/payments" element={<Payments paymentMethods={paymentMethods.filter(m => m.active)} fraudProtection={fraudProtection} />} />
               <Route path="/:appId/:businessName/sales" element={
                 <Sales
@@ -485,6 +499,7 @@ const AppContent: React.FC = () => {
               <Route path="/:appId/:businessName/message-log" element={<MessageLog />} />
               <Route path="/:appId/:businessName/checklist" element={<ChecklistList />} />
               <Route path="/:appId/:businessName/checklist-builder" element={<ChecklistBuilder />} />
+              <Route path="/:appId/:businessName/workly-project/*" element={<WorklyProject />} />
 
 
               {/* Default redirect if no subpath match, but still under /app/biz/ ??? */}

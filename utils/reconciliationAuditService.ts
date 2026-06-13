@@ -61,6 +61,9 @@ export interface AuditStatsResponse {
             successful: number;
             failed: number;
         }>;
+        totalSavedSystem: number;
+        totalSavedCounted: number;
+        totalSavedDifference: number;
     };
 }
 

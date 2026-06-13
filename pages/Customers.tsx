@@ -87,6 +87,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const [loadingPackages, setLoadingPackages] = useState(false);
     const [customerVoucherClaims, setCustomerVoucherClaims] = useState<VoucherClaim[]>([]);
     const [loadingVoucherClaims, setLoadingVoucherClaims] = useState(false);
+    const [customerProjects, setCustomerProjects] = useState<any[]>([]);
+    const [loadingCustomerProjects, setLoadingCustomerProjects] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [formData, setFormData] = useState({
@@ -401,13 +403,32 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         }
     };
 
+    const fetchCustomerProjects = async (customerId: string) => {
+        setLoadingCustomerProjects(true);
+        try {
+            const response = await api.get(`/projects?customerId=${customerId}`);
+            setCustomerProjects(response.data || []);
+        } catch (err) {
+            console.error('Failed to fetch projects', err);
+        } finally {
+            setLoadingCustomerProjects(false);
+        }
+    };
+
     const handleViewProfile = (customer: Customer) => {
         setSelectedCustomerId(customer.id.toString());
         setIsProfileModalOpen(true);
-        fetchCustomerAppointments(customer.id.toString());
+        
         fetchCustomerSales(customer.id.toString());
-        fetchCustomerActivePackages(customer.id.toString());
-        fetchCustomerVoucherClaims(customer.id.toString());
+        
+        if (appId !== 'workly-project') {
+            fetchCustomerAppointments(customer.id.toString());
+            fetchCustomerActivePackages(customer.id.toString());
+            fetchCustomerVoucherClaims(customer.id.toString());
+        }
+        if (appId === 'workly-project') {
+            fetchCustomerProjects(customer.id.toString());
+        }
     };
 
     const handleEdit = (customer: Customer) => {
@@ -493,8 +514,13 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
             });
             setAcceptedTerms(true);
             setTermsError('');
+            
+            showToast(editingCustomer ? 'Customer updated successfully' : 'Customer created successfully', 'success');
         } catch (err: any) {
-            setError(err.response?.data?.error || err.message);
+            const errorMessage = err.response?.data?.error || err.message || 'Failed to save customer';
+            setError(errorMessage);
+            showToast(errorMessage, 'error');
+            console.error("Customer Save Error:", err.response?.data || err);
         } finally {
 
         }
@@ -1700,322 +1726,382 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
 
                         {/* Enhanced Statistics Section */}
-                        <div style={{
-                            borderTop: '1px solid var(--border-light)',
-                            paddingTop: '1.5rem',
-                            marginTop: '1.5rem'
-                        }}>
-                            <h3 style={{
-                                fontSize: '1.125rem',
-                                fontWeight: 700,
-                                marginBottom: '1rem',
-                                letterSpacing: '-0.025em',
-                                background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text'
+                        {appId !== 'workly-project' && (
+                            <div style={{
+                                borderTop: '1px solid var(--border-light)',
+                                paddingTop: '1.5rem',
+                                marginTop: '1.5rem'
                             }}>
-                                Statistics
-                            </h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                                <motion.div
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    style={{
-                                        padding: '1.25rem',
-                                        background: 'var(--bg-card)',
-                                        borderRadius: 'var(--radius-lg)',
-                                        border: '1px solid var(--border-light)',
-                                        boxShadow: 'var(--shadow-sm)',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-20%',
-                                        right: '-20%',
-                                        width: '80px',
-                                        height: '80px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                                        opacity: 0.1,
-                                        filter: 'blur(30px)'
-                                    }} />
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <h3 style={{
+                                    fontSize: '1.125rem',
+                                    fontWeight: 700,
+                                    marginBottom: '1rem',
+                                    letterSpacing: '-0.025em',
+                                    background: 'linear-gradient(135deg, var(--text-dark) 0%, var(--text-black) 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text'
+                                }}>
+                                    Statistics
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                                    <motion.div
+                                        whileHover={{ y: -4, scale: 1.02 }}
+                                        style={{
+                                            padding: '1.25rem',
+                                            background: 'var(--bg-card)',
+                                            borderRadius: 'var(--radius-lg)',
+                                            border: '1px solid var(--border-light)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
                                         <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: 'var(--radius-md)',
-                                            background: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#3B82F6'
-                                        }}>
-                                            <Calendar size={18} />
+                                            position: 'absolute',
+                                            top: '-20%',
+                                            right: '-20%',
+                                            width: '80px',
+                                            height: '80px',
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, var(--primary-light), var(--primary))',
+                                            opacity: 0.1,
+                                            filter: 'blur(30px)'
+                                        }} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: 'var(--radius-md)',
+                                                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#3B82F6'
+                                            }}>
+                                                <Calendar size={18} />
+                                            </div>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Visit Count</label>
                                         </div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Visit Count</label>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-dark)', letterSpacing: '-0.03em' }}>{selectedCustomer.visitCount || 0}</p>
-                                </motion.div>
-                                <motion.div
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    style={{
-                                        padding: '1.25rem',
-                                        background: 'var(--bg-card)',
-                                        borderRadius: 'var(--radius-lg)',
-                                        border: '1px solid var(--border-light)',
-                                        boxShadow: 'var(--shadow-sm)',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-20%',
-                                        right: '-20%',
-                                        width: '80px',
-                                        height: '80px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #10B981, #059669)',
-                                        opacity: 0.1,
-                                        filter: 'blur(30px)'
-                                    }} />
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                        <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-dark)', letterSpacing: '-0.03em' }}>
+                                            {selectedCustomer.visitCount || 0}
+                                        </p>
+                                    </motion.div>
+                                    <motion.div
+                                        whileHover={{ y: -4, scale: 1.02 }}
+                                        style={{
+                                            padding: '1.25rem',
+                                            background: 'var(--bg-card)',
+                                            borderRadius: 'var(--radius-lg)',
+                                            border: '1px solid var(--border-light)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
                                         <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: 'var(--radius-md)',
-                                            background: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#10B981'
-                                        }}>
-                                            <DollarSign size={18} />
+                                            position: 'absolute',
+                                            top: '-20%',
+                                            right: '-20%',
+                                            width: '80px',
+                                            height: '80px',
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #10B981, #059669)',
+                                            opacity: 0.1,
+                                            filter: 'blur(30px)'
+                                        }} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: 'var(--radius-md)',
+                                                background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#10B981'
+                                            }}>
+                                                <DollarSign size={18} />
+                                            </div>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Spend</label>
                                         </div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Spend</label>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#10B981', letterSpacing: '-0.03em' }}>
-                                        {symbol}{(selectedCustomer.totalSpend || 0).toFixed(2)}
-                                    </p>
-                                </motion.div>
-                                <motion.div
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    style={{
-                                        padding: '1.25rem',
-                                        background: 'var(--bg-card)',
-                                        borderRadius: 'var(--radius-lg)',
-                                        border: '1px solid var(--border-light)',
-                                        boxShadow: 'var(--shadow-sm)',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-20%',
-                                        right: '-20%',
-                                        width: '80px',
-                                        height: '80px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
-                                        opacity: 0.1,
-                                        filter: 'blur(30px)'
-                                    }} />
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                        <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#10B981', letterSpacing: '-0.03em' }}>
+                                            {symbol}{(selectedCustomer.totalSpend || 0).toFixed(2)}
+                                        </p>
+                                    </motion.div>
+                                    <motion.div
+                                        whileHover={{ y: -4, scale: 1.02 }}
+                                        style={{
+                                            padding: '1.25rem',
+                                            background: 'var(--bg-card)',
+                                            borderRadius: 'var(--radius-lg)',
+                                            border: '1px solid var(--border-light)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
                                         <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: 'var(--radius-md)',
-                                            background: 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#8B5CF6'
-                                        }}>
-                                            <TrendingUp size={18} />
+                                            position: 'absolute',
+                                            top: '-20%',
+                                            right: '-20%',
+                                            width: '80px',
+                                            height: '80px',
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
+                                            opacity: 0.1,
+                                            filter: 'blur(30px)'
+                                        }} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: 'var(--radius-md)',
+                                                background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#8B5CF6'
+                                            }}>
+                                                <TrendingUp size={18} />
+                                            </div>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Visit</label>
                                         </div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Visit</label>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>
-                                        {selectedCustomer.lastVisit ? new Date(selectedCustomer.lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Visit'}
-                                    </p>
-                                </motion.div>
-                                <motion.div
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    style={{
-                                        padding: '1.25rem',
-                                        background: 'var(--bg-card)',
-                                        borderRadius: 'var(--radius-lg)',
-                                        border: '1px solid var(--border-light)',
-                                        boxShadow: 'var(--shadow-sm)',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-20%',
-                                        right: '-20%',
-                                        width: '80px',
-                                        height: '80px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-                                        opacity: 0.1,
-                                        filter: 'blur(30px)'
-                                    }} />
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                        <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>
+                                            {selectedCustomer.lastVisit ? new Date(selectedCustomer.lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Visit'}
+                                        </p>
+                                    </motion.div>
+                                    <motion.div
+                                        whileHover={{ y: -4, scale: 1.02 }}
+                                        style={{
+                                            padding: '1.25rem',
+                                            background: 'var(--bg-card)',
+                                            borderRadius: 'var(--radius-lg)',
+                                            border: '1px solid var(--border-light)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
                                         <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: 'var(--radius-md)',
-                                            background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#D97706'
-                                        }}>
-                                            <Ticket size={18} />
+                                            position: 'absolute',
+                                            top: '-20%',
+                                            right: '-20%',
+                                            width: '80px',
+                                            height: '80px',
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                                            opacity: 0.1,
+                                            filter: 'blur(30px)'
+                                        }} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: 'var(--radius-md)',
+                                                background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#D97706'
+                                            }}>
+                                                <Ticket size={18} />
+                                            </div>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Voucher Bal</label>
                                         </div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Voucher Bal</label>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#D97706', letterSpacing: '-0.03em' }}>
-                                        {symbol}{totalVoucherBalance.toFixed(2)}
-                                    </p>
-                                </motion.div>
+                                        <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#D97706', letterSpacing: '-0.03em' }}>
+                                            {symbol}{totalVoucherBalance.toFixed(2)}
+                                        </p>
+                                    </motion.div>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Active Packages / Memberships */}
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Active Memberships & Packages</h3>
-                                <button
-                                    onClick={() => selectedCustomerId && fetchCustomerActivePackages(selectedCustomerId)}
-                                    title="Refresh packages"
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
-                                >
-                                    <RefreshCw size={15} className={loadingPackages ? 'animate-spin' : ''} />
-                                </button>
-                            </div>
-                            {loadingPackages ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem' }}>Loading packages...</p>
-                            ) : activePackages.length === 0 ? (
-                                <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem', fontSize: '0.9rem' }}>No active packages</p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {activePackages.map(pkg => (
-                                        <div key={pkg.id} style={{
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '0.5rem',
-                                            padding: '0.4rem 0.75rem',
-                                            backgroundColor: '#f8fafc'
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{pkg.package?.name}</span>
+                        {/* Customer Projects (Only for Project Module) */}
+                        {appId === 'workly-project' && (
+                            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Customer Projects</h3>
+                                    <button
+                                        onClick={() => selectedCustomerId && fetchCustomerProjects(selectedCustomerId)}
+                                        title="Refresh projects"
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                                    >
+                                        <RefreshCw size={15} className={loadingCustomerProjects ? 'animate-spin' : ''} />
+                                    </button>
+                                </div>
+                                {loadingCustomerProjects ? (
+                                    <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem' }}>Loading projects...</p>
+                                ) : customerProjects.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem', fontSize: '0.9rem' }}>No projects assigned to this customer.</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {customerProjects.map(proj => (
+                                            <div key={proj.id} style={{
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '0.5rem',
+                                                padding: '0.75rem',
+                                                backgroundColor: '#f8fafc',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: 'var(--text-dark)', marginBottom: '0.25rem' }}>{proj.name}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                                                        {new Date(proj.startDate).toLocaleDateString()} - {proj.endDate ? new Date(proj.endDate).toLocaleDateString() : 'Ongoing'}
+                                                    </div>
                                                 </div>
-                                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
-                                                        Purchased: {pkg.purchaseDate ? new Date(pkg.purchaseDate).toLocaleDateString() : 'N/A'}
-                                                    </span>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
-                                                        Expires: {pkg.expiryDate ? new Date(pkg.expiryDate).toLocaleDateString() : 'Never'}
+                                                <div>
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        padding: '0.25rem 0.5rem',
+                                                        borderRadius: '1rem',
+                                                        backgroundColor: proj.status === 'COMPLETED' ? '#D1FAE5' : (proj.status === 'ACTIVE' ? '#DBEAFE' : '#FEE2E2'),
+                                                        color: proj.status === 'COMPLETED' ? '#059669' : (proj.status === 'ACTIVE' ? '#2563EB' : '#DC2626')
+                                                    }}>
+                                                        {proj.status || 'ACTIVE'}
                                                     </span>
                                                 </div>
                                             </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                                            {/* Usage Details / Balances */}
-                                            {pkg.usageDetails && Array.isArray(pkg.usageDetails) && pkg.usageDetails.length > 0 ? (
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem' }}>
-                                                    {pkg.usageDetails.map((item: any, idx: number) => (
-                                                        <div key={idx} style={{
-                                                            backgroundColor: 'white', padding: '0.5rem', borderRadius: '0.375rem',
-                                                            border: '1px solid #e2e8f0', fontSize: '0.8rem'
-                                                        }}>
-                                                            <div style={{ fontWeight: 500, marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', alignItems: 'center' }}>
-                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                                    Rem: <span style={{ fontWeight: 600, color: item.remainingQuantity > 0 ? 'var(--success)' : 'var(--danger)' }}>{item.remainingQuantity}</span>
-                                                                    {!pkg.isCombo && (
-                                                                        <button
-                                                                            onClick={() => handleStartAdjustment('package', pkg.id, item.itemId || item.name, item.name, item.remainingQuantity)}
-                                                                            title="Adjust Quantity"
-                                                                            style={{
-                                                                                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)',
-                                                                                padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                                                borderRadius: '4px', transition: 'all 0.2s'
-                                                                            }}
-                                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                                        >
-                                                                            <Edit size={12} />
-                                                                        </button>
-                                                                    )}
-                                                                </span>
-                                                                <span>Total: {Math.max(item.totalQuantity, item.remainingQuantity)}</span>
-                                                            </div>
-                                                            {isUserAdmin && item.adjustments && Array.isArray(item.adjustments) && item.adjustments.length > 0 && (
-                                                                <div style={{ marginTop: '0.35rem', borderTop: '1px dashed #e2e8f0', paddingTop: '0.25rem' }}>
-                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.15rem' }}>Adj History:</span>
-                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '60px', overflowY: 'auto' }}>
-                                                                        {item.adjustments.map((adj: any, adjIdx: number) => (
-                                                                            <div key={adjIdx} style={{ fontSize: '0.65rem', color: '#64748b', backgroundColor: '#fef9c3', padding: '0.15rem 0.25rem', borderRadius: '2px', borderLeft: '2px solid #ca8a04' }}>
-                                                                                <strong>{adj.oldQuantity} → {adj.newQuantity}</strong> by {adj.adjustedBy || 'Staff'}
-                                                                                <div style={{ fontStyle: 'italic', fontSize: '0.6rem', color: '#475569', marginTop: '0.1rem', wordBreak: 'break-word' }}>
-                                                                                    "{adj.reason}"
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : pkg.isCombo ? (
-                                                /* Combo purchase fallback if definition not found */
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                                                    <Ticket size={14} style={{ color: 'var(--text-black)' }} />
-                                                    <span style={{ color: 'var(--text-black)', fontStyle: 'italic' }}>
-                                                        Combo items available for redemption
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                /* Legacy View */
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', width: '100%' }}>
-                                                    <div style={{ flex: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                                                        <div style={{
-                                                            width: `${(pkg.remainingQuantity / pkg.totalQuantity) * 100}%`,
-                                                            height: '100%', backgroundColor: 'var(--success)'
-                                                        }} />
-                                                    </div>
-                                                    <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}>
-                                                        {pkg.remainingQuantity}/{Math.max(pkg.totalQuantity, pkg.remainingQuantity)} left
-                                                        {!pkg.isCombo && (
-                                                            <button
-                                                                onClick={() => handleStartAdjustment('package', pkg.id, 'LEGACY', pkg.package?.name || 'Package', pkg.remainingQuantity)}
-                                                                title="Adjust Quantity"
-                                                                style={{
-                                                                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)',
-                                                                    padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                                    borderRadius: '4px', transition: 'all 0.2s'
-                                                                }}
-                                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                            >
-                                                                <Edit size={12} />
-                                                            </button>
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                        {/* Active Packages / Memberships */}
+                        {appId !== 'workly-project' && (
+                            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Active Memberships & Packages</h3>
+                                    <button
+                                        onClick={() => selectedCustomerId && fetchCustomerActivePackages(selectedCustomerId)}
+                                        title="Refresh packages"
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
+                                    >
+                                        <RefreshCw size={15} className={loadingPackages ? 'animate-spin' : ''} />
+                                    </button>
                                 </div>
-                            )}
-                        </div>
+                                {loadingPackages ? (
+                                    <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem' }}>Loading packages...</p>
+                                ) : activePackages.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: 'var(--text-black)', padding: '1rem', fontSize: '0.9rem' }}>No active packages</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {activePackages.map(pkg => (
+                                            <div key={pkg.id} style={{
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '0.5rem',
+                                                padding: '0.4rem 0.75rem',
+                                                backgroundColor: '#f8fafc'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{pkg.package?.name}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
+                                                            Purchased: {pkg.purchaseDate ? new Date(pkg.purchaseDate).toLocaleDateString() : 'N/A'}
+                                                        </span>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-black)' }}>
+                                                            Expires: {pkg.expiryDate ? new Date(pkg.expiryDate).toLocaleDateString() : 'Never'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Usage Details / Balances */}
+                                                {pkg.usageDetails && Array.isArray(pkg.usageDetails) && pkg.usageDetails.length > 0 ? (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem' }}>
+                                                        {pkg.usageDetails.map((item: any, idx: number) => (
+                                                            <div key={idx} style={{
+                                                                backgroundColor: 'white', padding: '0.5rem', borderRadius: '0.375rem',
+                                                                border: '1px solid #e2e8f0', fontSize: '0.8rem'
+                                                            }}>
+                                                                <div style={{ fontWeight: 500, marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', alignItems: 'center' }}>
+                                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                                        Rem: <span style={{ fontWeight: 600, color: item.remainingQuantity > 0 ? 'var(--success)' : 'var(--danger)' }}>{item.remainingQuantity}</span>
+                                                                        {!pkg.isCombo && (
+                                                                            <button
+                                                                                onClick={() => handleStartAdjustment('package', pkg.id, item.itemId || item.name, item.name, item.remainingQuantity)}
+                                                                                title="Adjust Quantity"
+                                                                                style={{
+                                                                                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)',
+                                                                                    padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                                    borderRadius: '4px', transition: 'all 0.2s'
+                                                                                }}
+                                                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                            >
+                                                                                <Edit size={12} />
+                                                                            </button>
+                                                                        )}
+                                                                    </span>
+                                                                    <span>Total: {Math.max(item.totalQuantity, item.remainingQuantity)}</span>
+                                                                </div>
+                                                                {isUserAdmin && item.adjustments && Array.isArray(item.adjustments) && item.adjustments.length > 0 && (
+                                                                    <div style={{ marginTop: '0.35rem', borderTop: '1px dashed #e2e8f0', paddingTop: '0.25rem' }}>
+                                                                        <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.15rem' }}>Adj History:</span>
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '60px', overflowY: 'auto' }}>
+                                                                            {item.adjustments.map((adj: any, adjIdx: number) => (
+                                                                                <div key={adjIdx} style={{ fontSize: '0.65rem', color: '#64748b', backgroundColor: '#fef9c3', padding: '0.15rem 0.25rem', borderRadius: '2px', borderLeft: '2px solid #ca8a04' }}>
+                                                                                    <strong>{adj.oldQuantity} → {adj.newQuantity}</strong> by {adj.adjustedBy || 'Staff'}
+                                                                                    <div style={{ fontStyle: 'italic', fontSize: '0.6rem', color: '#475569', marginTop: '0.1rem', wordBreak: 'break-word' }}>
+                                                                                        "{adj.reason}"
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : pkg.isCombo ? (
+                                                    /* Combo purchase fallback if definition not found */
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                                        <Ticket size={14} style={{ color: 'var(--text-black)' }} />
+                                                        <span style={{ color: 'var(--text-black)', fontStyle: 'italic' }}>
+                                                            Combo items available for redemption
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    /* Legacy View */
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', width: '100%' }}>
+                                                        <div style={{ flex: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                                            <div style={{
+                                                                width: `${(pkg.remainingQuantity / pkg.totalQuantity) * 100}%`,
+                                                                height: '100%', backgroundColor: 'var(--success)'
+                                                            }} />
+                                                        </div>
+                                                        <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}>
+                                                            {pkg.remainingQuantity}/{Math.max(pkg.totalQuantity, pkg.remainingQuantity)} left
+                                                            {!pkg.isCombo && (
+                                                                <button
+                                                                    onClick={() => handleStartAdjustment('package', pkg.id, 'LEGACY', pkg.package?.name || 'Package', pkg.remainingQuantity)}
+                                                                    title="Adjust Quantity"
+                                                                    style={{
+                                                                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)',
+                                                                        padding: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                                        borderRadius: '4px', transition: 'all 0.2s'
+                                                                    }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                >
+                                                                    <Edit size={12} />
+                                                                </button>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Attachments Section */}
                         {selectedCustomer.attachments && selectedCustomer.attachments.length > 0 && (
@@ -2043,8 +2129,10 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         )}
 
                         {/* Enhanced Appointment History Timeline */}
-                        <div style={{
-                            borderTop: '1px solid var(--border-light)',
+                        {appId !== 'workly-project' && (
+                            <>
+                                <div style={{
+                                    borderTop: '1px solid var(--border-light)',
                             paddingTop: '1.5rem',
                             marginTop: '1.5rem'
                         }}>
@@ -2214,6 +2302,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 </div>
                             )}
                         </div>
+                            </>
+                        )}
 
                         {/* Enhanced Sales History Timeline */}
                         <div style={{
@@ -2417,6 +2507,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                             )}
                         </div>
 
+                        {appId !== 'workly-project' && (
+                            <>
                         {/* Voucher History */}
                         <div style={{
                             borderTop: '1px solid var(--border-light)',
@@ -2657,6 +2749,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 </div>
                             )}
                         </div>
+                            </>
+                        )}
 
                         <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
                             <Button type="button" onClick={() => { setIsProfileModalOpen(false); setSelectedCustomerId(null); }}>Close</Button>

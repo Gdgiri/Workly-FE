@@ -52,6 +52,7 @@ export const loginUser = createAsyncThunk(
     async ({ email, password, appId, businessName }: LoginPayload, { rejectWithValue, dispatch }) => {
         try {
             const AUTH_SERVICE_URL = (import.meta as any).env.VITE_AUTH_SERVICE_URL || 'https://authservice-salon-backend-1.onrender.com';
+            const targetAppId = appId;
 
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
@@ -66,7 +67,7 @@ export const loginUser = createAsyncThunk(
                 body: JSON.stringify({
                     email,
                     password,
-                    app_id: appId
+                    app_id: targetAppId
                 }),
             });
 
@@ -159,6 +160,7 @@ export const registerUser = createAsyncThunk(
     async ({ name, email, phone, password, appId, businessName }: RegisterPayload, { rejectWithValue, dispatch }) => {
         try {
             const AUTH_SERVICE_URL = (import.meta as any).env.VITE_AUTH_SERVICE_URL || 'https://authservice-salon-backend-1.onrender.com';
+            const targetAppId = appId;
 
             const response = await fetch(`${AUTH_SERVICE_URL}/auth/register`, {
                 method: 'POST',
@@ -171,7 +173,7 @@ export const registerUser = createAsyncThunk(
                     email,
                     phone_number: phone,
                     password,
-                    app_id: appId,
+                    app_id: targetAppId,
                     role: 'USER' // Default user role for registration
                 }),
             });
@@ -212,7 +214,8 @@ export const forgotPassword = createAsyncThunk(
     async ({ email, appId, businessName }: ForgotPasswordPayload, { rejectWithValue }) => {
         try {
             const AUTH_SERVICE_URL = (import.meta as any).env.VITE_AUTH_SERVICE_URL || 'https://authservice-salon-backend-1.onrender.com';
-            const response = await fetch(`${AUTH_SERVICE_URL}/${appId}/${businessName}/forgot-password`, {
+            const targetAppId = appId;
+            const response = await fetch(`${AUTH_SERVICE_URL}/${targetAppId}/${businessName}/forgot-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -243,7 +246,8 @@ export const resetPassword = createAsyncThunk(
     async ({ password, token, appId, businessName }: ResetPasswordPayload, { rejectWithValue }) => {
         try {
             const AUTH_SERVICE_URL = (import.meta as any).env.VITE_AUTH_SERVICE_URL || 'https://authservice-salon-backend-1.onrender.com';
-            const response = await fetch(`${AUTH_SERVICE_URL}/${appId}/${businessName}/reset-password`, {
+            const targetAppId = appId;
+            const response = await fetch(`${AUTH_SERVICE_URL}/${targetAppId}/${businessName}/reset-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

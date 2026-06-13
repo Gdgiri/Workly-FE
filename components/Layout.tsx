@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Briefcase, Users,
   UserCircle, BarChart2, Settings, LogOut, Bell, Search,
   Box, Package, ClipboardCheck, BadgeDollarSign, Ticket, Building2, Tags, Sparkles,
-  Sun, Moon, CreditCard, Menu, X, Power, ChevronLeft, ChevronRight, MessageSquare, ClipboardList
+  Sun, Moon, CreditCard, Menu, X, Power, ChevronLeft, ChevronRight, MessageSquare, ClipboardList, Clock
 } from 'lucide-react';
 
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -75,16 +75,7 @@ export const allMenuItems = [
     shortcutKey: 't',
     shortcutLabel: 'Alt+T'
   },
-  {
-    id: 'message-log',
-    label: 'Message Log',
-    icon: MessageSquare,
-    roles: ['ADMIN', 'MANAGER'],
-    color: '#10B981', // Changed to Emerald/Green to match "WhatsApp-inspired" request
-    gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-    shortcutKey: 'm',
-    shortcutLabel: 'Alt+M'
-  },
+
   {
     id: 'appointments',
     label: 'Schedule',
@@ -147,6 +138,56 @@ export const allMenuItems = [
     shortcutLabel: 'Alt+C'
   },
   {
+    id: 'workly-project/overview',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    roles: ['ADMIN', 'MANAGER', 'STAFF'],
+    color: '#6366F1',
+    gradient: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+    shortcutKey: 'w',
+    shortcutLabel: 'Alt+W'
+  },
+  {
+    id: 'workly-project/tasks',
+    label: 'Schedules',
+    icon: ClipboardList,
+    roles: ['ADMIN', 'MANAGER', 'STAFF'],
+    color: '#F59E0B',
+    gradient: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+  },
+  {
+    id: 'workly-project/attendance',
+    label: 'Shift Logs',
+    icon: Clock,
+    roles: ['ADMIN', 'MANAGER', 'STAFF'],
+    color: '#10B981',
+    gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+  },
+  {
+    id: 'workly-project/billing',
+    label: 'Billing',
+    icon: BadgeDollarSign,
+    roles: ['ADMIN', 'MANAGER'],
+    color: '#3B82F6',
+    gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+  },
+  {
+    id: 'workly-project/services',
+    label: 'Services',
+    icon: Sparkles,
+    roles: ['ADMIN', 'MANAGER'],
+    color: '#EC4899',
+    gradient: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
+  },
+  {
+    id: 'workly-project/categories',
+    label: 'Categories',
+    icon: Tags,
+    roles: ['ADMIN', 'MANAGER'],
+    color: '#F97316',
+    gradient: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+  },
+  {
     id: 'stylists',
     label: 'Specialist',
     icon: UserCircle,
@@ -206,7 +247,16 @@ export const allMenuItems = [
     shortcutKey: 'g',
     shortcutLabel: 'Alt+G'
   },
-  
+  {
+    id: 'message-log',
+    label: 'Message Log',
+    icon: MessageSquare,
+    roles: ['ADMIN', 'MANAGER'],
+    color: '#10B981', // Changed to Emerald/Green to match "WhatsApp-inspired" request
+    gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+    shortcutKey: 'm',
+    shortcutLabel: 'Alt+M'
+  },
   {
     id: 'settings',
     label: 'Settings',
@@ -263,12 +313,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
       return false;
     }
 
+    if (item.id.startsWith('workly-project/') && appId !== 'workly-project') {
+      return false;
+    }
+
+    if (appId === 'workly-project') {
+      const allowedProjectModules = [
+        'workly-project/overview', 
+        'workly-project/tasks', 
+        'workly-project/attendance', 
+        'workly-project/billing',
+        'workly-project/services',
+        'workly-project/categories',
+        'customers', 
+        'stylists', 
+        'settings', 
+        'ask-ai'
+      ];
+      if (!allowedProjectModules.includes(item.id)) {
+        return false;
+      }
+    }
+
     return true;
   });
 
   // Determine active tab from URL
-  const currentPath = location.pathname.split('/').pop();
-  const activeTab = currentPath || 'dashboard';
+  const currentPathSegments = location.pathname.split('/').filter(Boolean);
+  let activeTab = currentPathSegments[currentPathSegments.length - 1] || 'dashboard';
+  const projectSubPages = ['overview', 'tasks', 'attendance', 'billing', 'services', 'categories'];
+  if (currentPathSegments.length >= 2 && currentPathSegments[currentPathSegments.length - 2] === 'workly-project') {
+    activeTab = `workly-project/${currentPathSegments[currentPathSegments.length - 1]}`;
+  }
 
   const { hasPermission } = useAuth();
   const { showToast } = useToast();

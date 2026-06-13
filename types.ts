@@ -56,6 +56,7 @@ export interface Stylist {
   isAvailable?: boolean;
   permissions?: string[];
   imgUrl?: string;
+  basicPrice?: number;
   status: 'working' | 'off' | 'break';
   workingHours?: Record<string, WorkingHour>;
   dateSpecificHours?: Record<string, WorkingHour>;

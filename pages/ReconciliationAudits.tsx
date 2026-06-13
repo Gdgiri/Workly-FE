@@ -3,7 +3,7 @@ import { Card, Button, Skeleton } from '../components/UI';
 import { useToast } from '../components/ToastContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useCurrency } from '../components/CurrencyContext';
-import { History, Users, CheckCircle, XCircle, Filter, RefreshCw, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { History, Users, CheckCircle, XCircle, Filter, RefreshCw, ChevronDown, ChevronUp, Search, Download } from 'lucide-react';
 import reconciliationAuditService, { ReconciliationAudit, AuditFilters } from '../utils/reconciliationAuditService';
 
 const ReconciliationAudits: React.FC = () => {
@@ -88,6 +88,57 @@ const ReconciliationAudits: React.FC = () => {
         setAttemptType('');
         setAttemptStatus('');
         setFilters({ page: 1, limit: 20 });
+    };
+
+    const downloadLedgerCSV = () => {
+        if (audits.length === 0) {
+            showToast('No audits to download', 'error');
+            return;
+        }
+
+        const headers = [
+            'Timestamp',
+            'User',
+            'Role',
+            'Type',
+            'Status',
+            'System Expected',
+            'Counted Total',
+            'Difference',
+            'Discrepancy Type',
+            'Total Expenses',
+            'Notes'
+        ];
+
+        const rows = audits.map(audit => {
+            const date = new Date(audit.attemptTimestamp).toLocaleString();
+            const results = audit.calculatedResults || {};
+            const input = audit.inputData || {};
+            
+            return [
+                `"${date}"`,
+                `"${audit.userName || 'Unknown'}"`,
+                `"${audit.userRole || 'N/A'}"`,
+                `"${audit.attemptType}"`,
+                `"${audit.attemptStatus}"`,
+                `"${results.systemTotal || 0}"`,
+                `"${results.countedTotal || 0}"`,
+                `"${results.difference || results.discrepancy || 0}"`,
+                `"${audit.discrepancyType || 'N/A'}"`,
+                `"${results.totalExpenses || 0}"`,
+                `"${(input.notes || '').replace(/"/g, '""')}"`
+            ].join(',');
+        });
+
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `day_end_audit_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const toggleRow = (id: string) => {
@@ -195,7 +246,8 @@ const ReconciliationAudits: React.FC = () => {
                     ))}
                 </div>
             ) : stats && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
                     {/* 1. Total Attempts - Prismatic Blue */}
                     <div style={{
                         background: 'linear-gradient(135deg, #e0f2fe 0%, #ffffff 100%)',
@@ -364,6 +416,130 @@ const ReconciliationAudits: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Saved Totals Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                    {/* Saved System Expected */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                        borderRadius: '1.25rem',
+                        padding: '1rem',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: '85px',
+                        color: '#334155',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 15px -3px rgba(226, 232, 240, 0.3), 0 4px 6px -2px rgba(226, 232, 240, 0.2)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                            <div style={{
+                                width: '2rem', height: '2rem', borderRadius: '0.5rem',
+                                background: '#e2e8f0', color: '#334155',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <History size={16} />
+                            </div>
+                            <h4 style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.05em' }}>Saved System Expected</h4>
+                        </div>
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.6)',
+                            backdropFilter: 'blur(8px)',
+                            borderRadius: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '0.5rem',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.4)'
+                        }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                                {formatPrice(stats.totalSavedSystem || 0)}
+                            </h3>
+                        </div>
+                    </div>
+
+                    {/* Saved Counted Total */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                        borderRadius: '1.25rem',
+                        padding: '1rem',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: '85px',
+                        color: '#334155',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 15px -3px rgba(226, 232, 240, 0.3), 0 4px 6px -2px rgba(226, 232, 240, 0.2)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                            <div style={{
+                                width: '2rem', height: '2rem', borderRadius: '0.5rem',
+                                background: '#e2e8f0', color: '#334155',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <CheckCircle size={16} />
+                            </div>
+                            <h4 style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.05em' }}>Saved Counted Total</h4>
+                        </div>
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.6)',
+                            backdropFilter: 'blur(8px)',
+                            borderRadius: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '0.5rem',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.4)'
+                        }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                                {formatPrice(stats.totalSavedCounted || 0)}
+                            </h3>
+                        </div>
+                    </div>
+
+                    {/* Saved Difference */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                        borderRadius: '1.25rem',
+                        padding: '1rem',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: '85px',
+                        color: '#334155',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 15px -3px rgba(226, 232, 240, 0.3), 0 4px 6px -2px rgba(226, 232, 240, 0.2)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                            <div style={{
+                                width: '2rem', height: '2rem', borderRadius: '0.5rem',
+                                background: '#e2e8f0', color: '#334155',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <Filter size={16} />
+                            </div>
+                            <h4 style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.05em' }}>Saved Difference</h4>
+                        </div>
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.6)',
+                            backdropFilter: 'blur(8px)',
+                            borderRadius: '0.75rem',
+                            padding: '0.5rem 0.75rem',
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: '0.5rem',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.4)'
+                        }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: (stats.totalSavedDifference || 0) < 0 ? '#b91c1c' : (stats.totalSavedDifference || 0) > 0 ? '#15803d' : '#0f172a', letterSpacing: '-0.02em' }}>
+                                {formatPrice(stats.totalSavedDifference || 0)}
+                            </h3>
+                        </div>
+                    </div>
+                    </div>
+                </>
             )}
 
             {/* Filters and Search Combined - Single Row */}
@@ -496,6 +672,25 @@ const ReconciliationAudits: React.FC = () => {
                             >
                                 <RefreshCw size={14} className={(loading || refreshing) ? 'animate-spin' : ''} />
                                 Refresh
+                            </Button>
+                            <Button
+                                onClick={downloadLedgerCSV}
+                                disabled={audits.length === 0}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    height: '40px',
+                                    background: '#10B981',
+                                    color: 'white',
+                                    padding: '0 1rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8125rem',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                <Download size={14} />
+                                Download Ledger
                             </Button>
                         </div>
                     </div>

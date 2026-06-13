@@ -154,7 +154,17 @@ const ReconciliationPage: React.FC<ReconciliationProps> = ({ paymentMethods, fra
         try {
             const response = await api.get('/reconciliations');
             const data = response.data;
-            const reconciliations = data.reconciliations || [];
+            let reconciliations = data.reconciliations || [];
+
+            // Filter history for non-admin users to only show today's history
+            const userRole = user?.role?.toUpperCase();
+            if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+                const today = new Date().toDateString();
+                reconciliations = reconciliations.filter((r: Reconciliation) => 
+                    new Date(r.date).toDateString() === today
+                );
+            }
+
             setHistory(reconciliations);
 
             // Check if today's reconciliation is already submitted
