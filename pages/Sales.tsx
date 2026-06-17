@@ -122,6 +122,7 @@ const Sales: React.FC<SalesProps> = ({
     specialistName: string;
     depositAmount: number;
     appointmentId: string | null;
+    tailorOrderId: string | null;
     pendingSaleId: string | null;
     manualDiscount: string;
     showManualDiscount: boolean;
@@ -138,6 +139,7 @@ const Sales: React.FC<SalesProps> = ({
     specialistName: '',
     depositAmount: 0,
     appointmentId: null,
+    tailorOrderId: null,
     pendingSaleId: null,
     manualDiscount: '',
     showManualDiscount: false,
@@ -200,6 +202,9 @@ const Sales: React.FC<SalesProps> = ({
   const pendingSaleId: string | null = activeOrderTab.pendingSaleId;
   const setPendingSaleId = (v: string | null) => updateActiveTab({ pendingSaleId: v });
 
+  const tailorOrderId: string | null = activeOrderTab.tailorOrderId;
+  const setTailorOrderId = (v: string | null) => updateActiveTab({ tailorOrderId: v });
+
   const manualDiscount: string = activeOrderTab.manualDiscount;
   const setManualDiscount = (v: string) => updateActiveTab({ manualDiscount: v });
 
@@ -248,6 +253,7 @@ const Sales: React.FC<SalesProps> = ({
       specialistName: '',
       depositAmount: 0,
       appointmentId: null,
+      tailorOrderId: null,
       pendingSaleId: null,
       manualDiscount: '',
       customerSearchTerm: ''
@@ -645,6 +651,58 @@ const Sales: React.FC<SalesProps> = ({
 
       showToast(`Resumed Sale ${saleNumber || ''} (Paid: ${formatPrice(paidAmount || 0)})`, 'info');
     }
+    else if (location.state?.tailorOrderData) {
+      const {
+        id: tailorOrderId,
+        customerId,
+        customerName,
+        garments,
+        paidAmount
+      } = location.state.tailorOrderData;
+
+      // Prevent duplicate processing
+      if (processedStateRef.current === `tailor-${tailorOrderId}`) return;
+      processedStateRef.current = `tailor-${tailorOrderId}`;
+
+      console.log("POS: Received tailorOrderData", location.state.tailorOrderData);
+
+      const itemsArray = Array.isArray(garments) ? garments : [];
+
+      const tailorCart: CartItem[] = itemsArray.map((item: any) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        itemId: item.id || item.itemId,
+        name: `Stitching: ${item.name} (${item.garmentType})`,
+        price: item.price || 0,
+        type: 'service',
+        quantity: item.quantity || 1,
+        specialistId: item.assignedTailorId || item.tailor?.id || '',
+        specialistName: item.tailor?.name || ''
+      }));
+
+      const tailorPatch: Partial<SalesTab> = {
+        cart: tailorCart,
+        customerId: customerId ? customerId.toString() : '',
+        customerName: customerName || '',
+        depositAmount: paidAmount || 0,
+        appointmentId: null,
+        tailorOrderId: tailorOrderId,
+        pendingSaleId: null,
+        manualDiscount: '0',
+        showManualDiscount: false,
+        customerSearchTerm: customerName || ''
+      };
+
+      if (activeOrderTab.cart.length === 0) {
+        setSalesTabs(prev => prev.map(t => t.id === activeOrderTab.id ? { ...t, ...tailorPatch } : t));
+        setActiveSalesTabId(activeOrderTab.id);
+      } else {
+        const newTab = makeNewTab(salesTabs.length + 1);
+        const filledTab = { ...newTab, ...tailorPatch };
+        setSalesTabs(prev => [...prev, filledTab]);
+        setActiveSalesTabId(filledTab.id);
+      }
+      showToast(`Loaded Tailor Order in POS`, 'info');
+    }
   }, [location.state]);
 
 
@@ -859,7 +917,8 @@ const Sales: React.FC<SalesProps> = ({
       customerSearchTerm: '',
       depositAmount: 0,
       pendingSaleId: null,
-      appointmentId: null
+      appointmentId: null,
+      tailorOrderId: null
     });
     setAppliedVouchers([]);
     setVoucherError('');
@@ -1521,7 +1580,6 @@ const Sales: React.FC<SalesProps> = ({
   const processDirectPayment = async () => {
     try {
       // Calculate actual total and paid amounts to determine status
-      // Calculate actual total and paid amounts to determine status
       const actualTotal = Math.max(0, subtotal - (totalDiscount || 0));
 
       let currentPaid = 0;
@@ -1573,31 +1631,6 @@ const Sales: React.FC<SalesProps> = ({
       // Actually, individual payments are "COMPLETED" (money received), but the SALE status is PARTIAL.
       // So keeping paymentStatus as COMPLETED for the money received is correct.
 
-      // CHECK: Are we adding payment to an EXISTING sale?
-      if (pendingSaleId) {
-        let lastResponse;
-        if (finalPayments.length > 0) {
-          for (const payment of finalPayments) {
-            lastResponse = await api.post(`/sales/${pendingSaleId}/payments`, {
-              amount: payment.amount,
-              paymentMethod: payment.paymentMethod,
-              transactionId: payment.transactionId,
-              notes: paymentModal.notes,
-            });
-          }
-        }
-
-        showToast(`Payments added to Sale #${pendingSaleId}`, 'success');
-        if (selectedCustomerId) {
-          await fetchCustomerPackages(selectedCustomerId);
-        }
-        clearCart();
-        setPaymentModal({ ...paymentModal, open: false, processing: false });
-        setShowPartialConfirmation(false);
-        // Return the updated sale object from response
-        return lastResponse?.data?.sale;
-      }
-
       // 1. Prepare sale data
       const saleData = {
         items: cart.map(item => ({
@@ -1641,6 +1674,7 @@ const Sales: React.FC<SalesProps> = ({
           }).filter(v => v.amount > 0);
         })(),
         appointmentId: appointmentId,
+        tailorOrderId: tailorOrderId,
         notes: `Sale created from POS.${paymentModal.notes || ''} `,
         createdBy: user?.name || 'Admin',
         // Fallback to user.id because backend UserController returns authId in the `id` field for the user profile
@@ -1650,6 +1684,34 @@ const Sales: React.FC<SalesProps> = ({
         payments: finalPayments
       };
 
+      // CHECK: Are we adding payment to an EXISTING sale?
+      if (pendingSaleId) {
+        let lastResponse;
+        
+        // FIRST: Update the sale with the latest items and totals
+        await api.put(`/sales/${pendingSaleId}`, saleData);
+
+        if (finalPayments.length > 0) {
+          for (const payment of finalPayments) {
+            lastResponse = await api.post(`/sales/${pendingSaleId}/payments`, {
+              amount: payment.amount,
+              paymentMethod: payment.paymentMethod,
+              transactionId: payment.transactionId,
+              notes: paymentModal.notes,
+            });
+          }
+        }
+
+        showToast(`Payments added to Sale #${pendingSaleId}`, 'success');
+        if (selectedCustomerId) {
+          await fetchCustomerPackages(selectedCustomerId);
+        }
+        clearCart();
+        setPaymentModal({ ...paymentModal, open: false, processing: false });
+        setShowPartialConfirmation(false);
+        // Return the updated sale object from response
+        return lastResponse?.data?.sale;
+      }
 
       // 2. Create sale via backend API
       const response = await api.post('/sales', saleData);
@@ -1793,6 +1855,7 @@ const Sales: React.FC<SalesProps> = ({
         customerId: selectedCustomerId || null,
         specialistId: (selectedSpecialistId && selectedSpecialistId !== 'none' ? String(selectedSpecialistId) : null),
         appointmentId: appointmentId, // Link to appointment
+        tailorOrderId: tailorOrderId,
         items: calculatedItems,
         subtotal: calculatedSubtotal,
         tax: 0, // No tax
@@ -1822,8 +1885,13 @@ const Sales: React.FC<SalesProps> = ({
         payments: []
       };
 
-      const saleResponse = await api.post('/sales', saleData);
-      const sale = saleResponse.data.sale; // Correctly extract the sale object
+      let saleResponse;
+      if (pendingSaleId) {
+        saleResponse = await api.put(`/sales/${pendingSaleId}`, saleData);
+      } else {
+        saleResponse = await api.post('/sales', saleData);
+      }
+      const sale = saleResponse.data.sale;
 
       // 2. Create Razorpay order
       const orderResponse = await api.post('/payments/razorpay/create-order', {
@@ -1855,7 +1923,8 @@ const Sales: React.FC<SalesProps> = ({
               razorpaySignature: response.razorpay_signature,
               amount: Number(paymentModal.amount), // Ensure number
               saleId: sale.id,
-              appointmentId: appointmentId, // Pass appointmentId
+              appointmentId: appointmentId,
+          tailorOrderId: tailorOrderId,
               // Pass deposit info again? Usually verify endpoint just records the razorpay transaction.
               // The sale should already have the deposit recorded from creation step.
             });
@@ -1975,9 +2044,14 @@ const Sales: React.FC<SalesProps> = ({
         payments: []
       };
 
-      const saleResponse = await api.post('/sales', saleData);
+      let saleResponse;
+      if (pendingSaleId) {
+        saleResponse = await api.put(`/sales/${pendingSaleId}`, saleData);
+      } else {
+        saleResponse = await api.post('/sales', saleData);
+        setPendingSaleId(saleResponse.data.sale.id);
+      }
       const sale = saleResponse.data.sale;
-      setPendingSaleId(sale.id);
 
       // 2. Create Payment Link
       const response = await api.post('/payments/razorpay/payment-link', {
@@ -2249,76 +2323,80 @@ const Sales: React.FC<SalesProps> = ({
                 >
                   Products
                 </button>
-                <button
-                  onClick={() => handleTabChange('combos')}
-                  style={{
-                    padding: '0.45rem 1rem',
-                    borderRadius: '0.625rem',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    background: activeTab === 'combos' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'combos' ? 'var(--primary)' : 'var(--text-black)',
-                    boxShadow: activeTab === 'combos' ? 'var(--shadow-md)' : 'none',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transform: activeTab === 'combos' ? 'translateY(-1px)' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'combos') {
-                      e.currentTarget.style.background = 'var(--bg-active)';
-                      e.currentTarget.style.color = 'var(--text-dark)';
-                      e.currentTarget.style.transform = 'translateY(-0.5px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'combos') {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-black)';
-                      e.currentTarget.style.transform = 'none';
-                    }
-                  }}
-                >
-                  Packages
-                </button>
-                <button
-                  onClick={() => handleTabChange('vouchers')}
-                  style={{
-                    padding: '0.45rem 1rem',
-                    borderRadius: '0.625rem',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    background: activeTab === 'vouchers' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'vouchers' ? 'var(--primary)' : 'var(--text-black)',
-                    boxShadow: activeTab === 'vouchers' ? 'var(--shadow-md)' : 'none',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transform: activeTab === 'vouchers' ? 'translateY(-1px)' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'vouchers') {
-                      e.currentTarget.style.background = 'var(--bg-active)';
-                      e.currentTarget.style.color = 'var(--text-dark)';
-                      e.currentTarget.style.transform = 'translateY(-0.5px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'vouchers') {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-black)';
-                      e.currentTarget.style.transform = 'none';
-                    }
-                  }}
-                >
-                  Vouchers
-                </button>
+                {appId !== 'workly-tailor' && (
+                  <>
+                    <button
+                      onClick={() => handleTabChange('combos')}
+                      style={{
+                        padding: '0.45rem 1rem',
+                        borderRadius: '0.625rem',
+                        border: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        background: activeTab === 'combos' ? 'var(--bg-card)' : 'transparent',
+                        color: activeTab === 'combos' ? 'var(--primary)' : 'var(--text-black)',
+                        boxShadow: activeTab === 'combos' ? 'var(--shadow-md)' : 'none',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transform: activeTab === 'combos' ? 'translateY(-1px)' : 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (activeTab !== 'combos') {
+                          e.currentTarget.style.background = 'var(--bg-active)';
+                          e.currentTarget.style.color = 'var(--text-dark)';
+                          e.currentTarget.style.transform = 'translateY(-0.5px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (activeTab !== 'combos') {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--text-black)';
+                          e.currentTarget.style.transform = 'none';
+                        }
+                      }}
+                    >
+                      Packages
+                    </button>
+                    <button
+                      onClick={() => handleTabChange('vouchers')}
+                      style={{
+                        padding: '0.45rem 1rem',
+                        borderRadius: '0.625rem',
+                        border: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        background: activeTab === 'vouchers' ? 'var(--bg-card)' : 'transparent',
+                        color: activeTab === 'vouchers' ? 'var(--primary)' : 'var(--text-black)',
+                        boxShadow: activeTab === 'vouchers' ? 'var(--shadow-md)' : 'none',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transform: activeTab === 'vouchers' ? 'translateY(-1px)' : 'none'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (activeTab !== 'vouchers') {
+                          e.currentTarget.style.background = 'var(--bg-active)';
+                          e.currentTarget.style.color = 'var(--text-dark)';
+                          e.currentTarget.style.transform = 'translateY(-0.5px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (activeTab !== 'vouchers') {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--text-black)';
+                          e.currentTarget.style.transform = 'none';
+                        }
+                      }}
+                    >
+                      Vouchers
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Show Inactive Toggle commented out as requested */}

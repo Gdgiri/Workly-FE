@@ -52,7 +52,7 @@ export const fetchServices = createAsyncThunk(
 
             // Process categories
             const catNames = (categoriesRes.data || [])
-                .filter((c: any) => c && c.name)
+                .filter((c: any) => c && c.name && c.isActive !== false)
                 .map((c: any) => c.name);
 
             return { services: mappedServices, categories: catNames, fromCache: false };

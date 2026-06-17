@@ -79,6 +79,7 @@ export interface Customer {
   dateOfBirth?: string;
   ageGroup?: string;
   attachments?: Attachment[];
+  measurements?: Record<string, string> | Record<string, Record<string, string>>;
 }
 
 export interface Appointment {

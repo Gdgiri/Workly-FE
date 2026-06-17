@@ -422,7 +422,7 @@ const Stylists: React.FC = () => {
     try {
       const response = await api.get('/categories', { params: { type: 'SERVICE' } });
       const data = Array.isArray(response.data) ? response.data : (response.data?.categories || []);
-      setCategories(data.filter((c: any) => c.active !== false));
+      setCategories(data.filter((c: any) => c.isActive !== false && c.active !== false));
     } catch (error) {
       console.error("Error fetching categories for stylist view:", error);
     }
@@ -1715,7 +1715,9 @@ const Stylists: React.FC = () => {
                   <Input label="Phone" placeholder="(555) 000-0000" />
                   {formErrors.phone && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.phone}</span>}
                 </div>
-                <Input type="number" name="basicPrice" label="Basic Price" placeholder="0" />
+                {appId === 'workly-tailor' && (
+                  <Input type="number" name="basicPrice" label="Basic Price" placeholder="0" />
+                )}
                 <Select
                   label="Account Status"
                   name="accountStatus"
@@ -1990,13 +1992,15 @@ const Stylists: React.FC = () => {
                     onChange={e => setEditingStylist({ ...editingStylist, phone: e.target.value })}
                     required
                   />
-                  <Input
-                    type="number"
-                    label="Basic Price"
-                    name="basicPrice"
-                    value={editingStylist.basicPrice || 0}
-                    onChange={e => setEditingStylist({ ...editingStylist, basicPrice: parseFloat(e.target.value) || 0 })}
-                  />
+                  {appId === 'workly-tailor' && (
+                    <Input
+                      type="number"
+                      label="Basic Price"
+                      name="basicPrice"
+                      value={editingStylist.basicPrice || 0}
+                      onChange={e => setEditingStylist({ ...editingStylist, basicPrice: parseFloat(e.target.value) || 0 })}
+                    />
+                  )}
                   <Select
                     label="Account Status"
                     value={editingStylist.isAvailable ? 'active' : 'inactive'}

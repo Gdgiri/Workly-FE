@@ -32,6 +32,8 @@ import MessageLog from './pages/MessageLog';
 import ChecklistList from './pages/ChecklistList';
 import ChecklistBuilder from './pages/ChecklistBuilder';
 import WorklyProject from './pages/WorklyProject';
+import TailorOrders from './pages/TailorOrders';
+import CreateTailorOrder from './pages/CreateTailorOrder';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -449,6 +451,8 @@ const AppContent: React.FC = () => {
                 return "Manage your standard operating procedures and tasks";
               case 'checklist-builder':
                 return "Create and edit checklist templates";
+              case 'tailor':
+                return "Manage tailor orders and garment production";
               default:
                 return undefined;
             }
@@ -500,6 +504,8 @@ const AppContent: React.FC = () => {
               <Route path="/:appId/:businessName/checklist" element={<ChecklistList />} />
               <Route path="/:appId/:businessName/checklist-builder" element={<ChecklistBuilder />} />
               <Route path="/:appId/:businessName/workly-project/*" element={<WorklyProject />} />
+              <Route path="/:appId/:businessName/tailor" element={<TailorOrders customers={customers} />} />
+              <Route path="/:appId/:businessName/tailor/new" element={<CreateTailorOrder customers={customers} />} />
 
 
               {/* Default redirect if no subpath match, but still under /app/biz/ ??? */}

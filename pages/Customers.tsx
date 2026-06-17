@@ -14,6 +14,7 @@ import { useCurrency } from '../components/CurrencyContext';
 import { AttachmentsInput, Attachment } from '../components/AttachmentsInput';
 import { useAuth } from '../hooks/useAuth';
 import { Customer, Appointment, VoucherClaim } from '../types';
+import { CustomerMeasurements } from '../components/CustomerMeasurements';
 
 interface Sale {
     id: string;
@@ -1515,15 +1516,14 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                 title="Customer Profile"
             >
                 {selectedCustomer && (
-                    <div className="space-y-6">
-                        {/* Premium Export / Download Action Row for Admin */}
-                        {isUserAdmin && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {/* Export / Download Action Row */}
+                        {isUserAdmin && appId !== 'workly-tailor' && (
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'flex-end',
                                 gap: '0.75rem',
-                                borderBottom: '1px solid var(--border-light)',
-                                paddingBottom: '0.75rem'
+                                paddingBottom: '0.25rem'
                             }}>
                                 <motion.button
                                     whileHover={{ scale: 1.02, y: -1 }}
@@ -1554,8 +1554,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: '1rem',
-                            padding: '1.5rem',
+                            gap: '0.75rem',
+                            padding: '1rem',
                             background: 'var(--bg-body)',
                             borderRadius: 'var(--radius-lg)',
                             border: '1px solid var(--border-light)'
@@ -1724,6 +1724,13 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                             </div>
                         </div>
 
+                        <CustomerMeasurements 
+                            customer={selectedCustomer} 
+                            onUpdate={(updatedCustomer) => {
+                                dispatch(invalidateCustomerCache());
+                                dispatch(fetchCustomers());
+                            }} 
+                        />
 
                         {/* Enhanced Statistics Section */}
                         {appId !== 'workly-project' && (
@@ -1744,7 +1751,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                 }}>
                                     Statistics
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: appId === 'workly-tailor' ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: '1rem' }}>
                                     <motion.div
                                         whileHover={{ y: -4, scale: 1.02 }}
                                         style={{
@@ -1871,48 +1878,50 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                             {selectedCustomer.lastVisit ? new Date(selectedCustomer.lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Visit'}
                                         </p>
                                     </motion.div>
-                                    <motion.div
-                                        whileHover={{ y: -4, scale: 1.02 }}
-                                        style={{
-                                            padding: '1.25rem',
-                                            background: 'var(--bg-card)',
-                                            borderRadius: 'var(--radius-lg)',
-                                            border: '1px solid var(--border-light)',
-                                            boxShadow: 'var(--shadow-sm)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
-                                        }}
-                                    >
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '-20%',
-                                            right: '-20%',
-                                            width: '80px',
-                                            height: '80px',
-                                            borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-                                            opacity: 0.1,
-                                            filter: 'blur(30px)'
-                                        }} />
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                    {appId !== 'workly-tailor' && (
+                                        <motion.div
+                                            whileHover={{ y: -4, scale: 1.02 }}
+                                            style={{
+                                                padding: '1.25rem',
+                                                background: 'var(--bg-card)',
+                                                borderRadius: 'var(--radius-lg)',
+                                                border: '1px solid var(--border-light)',
+                                                boxShadow: 'var(--shadow-sm)',
+                                                position: 'relative',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
                                             <div style={{
-                                                width: '40px',
-                                                height: '40px',
-                                                borderRadius: 'var(--radius-md)',
-                                                background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: '#D97706'
-                                            }}>
-                                                <Ticket size={18} />
+                                                position: 'absolute',
+                                                top: '-20%',
+                                                right: '-20%',
+                                                width: '80px',
+                                                height: '80px',
+                                                borderRadius: '50%',
+                                                background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                                                opacity: 0.1,
+                                                filter: 'blur(30px)'
+                                            }} />
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: 'var(--radius-md)',
+                                                    background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#D97706'
+                                                }}>
+                                                    <Ticket size={18} />
+                                                </div>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Voucher Bal</label>
                                             </div>
-                                            <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Voucher Bal</label>
-                                        </div>
-                                        <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#D97706', letterSpacing: '-0.03em' }}>
-                                            {symbol}{totalVoucherBalance.toFixed(2)}
-                                        </p>
-                                    </motion.div>
+                                            <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#D97706', letterSpacing: '-0.03em' }}>
+                                                {symbol}{totalVoucherBalance.toFixed(2)}
+                                            </p>
+                                        </motion.div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -1972,7 +1981,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         )}
 
                         {/* Active Packages / Memberships */}
-                        {appId !== 'workly-project' && (
+                        {appId !== 'workly-project' && appId !== 'workly-tailor' && (
                             <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Active Memberships & Packages</h3>
@@ -2129,7 +2138,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         )}
 
                         {/* Enhanced Appointment History Timeline */}
-                        {appId !== 'workly-project' && (
+                        {appId !== 'workly-project' && appId !== 'workly-tailor' && (
                             <>
                                 <div style={{
                                     borderTop: '1px solid var(--border-light)',
@@ -2507,7 +2516,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                             )}
                         </div>
 
-                        {appId !== 'workly-project' && (
+                        {appId !== 'workly-project' && appId !== 'workly-tailor' && (
                             <>
                         {/* Voucher History */}
                         <div style={{

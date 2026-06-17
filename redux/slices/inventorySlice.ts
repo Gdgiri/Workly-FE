@@ -48,7 +48,7 @@ export const fetchInventory = createAsyncThunk(
 
             // Process categories
             const catNames = (categoriesRes.data || [])
-                .filter((c: any) => c && c.name)
+                .filter((c: any) => c && c.name && c.isActive !== false)
                 .map((c: any) => c.name);
 
             return { products: productsData, categories: catNames, fromCache: false };

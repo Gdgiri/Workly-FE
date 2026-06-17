@@ -59,7 +59,9 @@ const ExpenseList: React.FC = () => {
                 params: { type: 'EXPENSE' }
             });
             if (categoriesResponse.data) {
-                setExpenseCategories(categoriesResponse.data.map((cat: any) => ({
+                setExpenseCategories(categoriesResponse.data
+                    .filter((cat: any) => cat.isActive !== false && cat.active !== false)
+                    .map((cat: any) => ({
                     id: cat.id,
                     name: cat.name
                 })));

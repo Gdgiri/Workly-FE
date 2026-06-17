@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Briefcase, Users,
   UserCircle, BarChart2, Settings, LogOut, Bell, Search,
   Box, Package, ClipboardCheck, BadgeDollarSign, Ticket, Building2, Tags, Sparkles,
-  Sun, Moon, CreditCard, Menu, X, Power, ChevronLeft, ChevronRight, MessageSquare, ClipboardList, Clock
+  Sun, Moon, CreditCard, Menu, X, Power, ChevronLeft, ChevronRight, MessageSquare, ClipboardList, Clock, Scissors
 } from 'lucide-react';
 
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -112,10 +112,20 @@ export const allMenuItems = [
     label: 'Checklist',
     icon: ClipboardList,
     roles: ['ADMIN', 'MANAGER', 'STAFF'],
-    color: '#0EA5E9', // Sky Blue
+    color: '#0EA5E9',
     gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
     shortcutKey: 'h',
     shortcutLabel: 'Alt+H'
+  },
+  {
+    id: 'tailor',
+    label: 'Orders',
+    icon: Scissors,
+    roles: ['ADMIN', 'MANAGER', 'STAFF'],
+    color: '#7C3AED',
+    gradient: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
+    shortcutKey: 'n',
+    shortcutLabel: 'Alt+N'
   },
   {
     id: 'inventory',
@@ -313,6 +323,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
       return false;
     }
 
+    if (item.id === 'tailor' && appId !== 'workly-tailor') {
+      return false;
+    }
+
     if (item.id.startsWith('workly-project/') && appId !== 'workly-project') {
       return false;
     }
@@ -331,6 +345,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
         'ask-ai'
       ];
       if (!allowedProjectModules.includes(item.id)) {
+        return false;
+      }
+    }
+
+    if (appId === 'workly-tailor') {
+      const allowedTailorModules = [
+        'dashboard',
+        'tailor',
+        'sales',
+        'payments',
+        'stylists', // Tailors
+        'customers',
+        'reports',
+        'settings'
+      ];
+      if (!allowedTailorModules.includes(item.id)) {
         return false;
       }
     }
@@ -557,7 +587,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
                     fontWeight: isActive ? 600 : 500,
                     whiteSpace: 'nowrap'
                   }}>
-                    {item.label}
+                    {appId === 'workly-tailor' && item.id === 'stylists' ? 'Tailors' : item.label}
                   </span>
                   {/* {item.shortcutLabel && (
                     <span style={{
