@@ -354,9 +354,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
         'dashboard',
         'tailor',
         'sales',
+        'services',
+        'expenses',
         'payments',
         'stylists', // Tailors
         'customers',
+        'inventory',
+        'category',
         'reports',
         'settings'
       ];

@@ -45,6 +45,14 @@ interface GarmentDraft {
     assignedTailorId?: string;
     price: number;
     quantity: number;
+    fabricDetails?: {
+        type: 'None' | 'Customer' | 'Shop';
+        source?: 'customer' | 'shop';
+        details?: string;
+        description?: string;
+        productId?: string;
+        quantity?: number;
+    };
     photoUrls?: string[]; // Stored in measurementSnapshot in DB
 }
 
@@ -63,6 +71,8 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
     // Data fetched
     const [stylists, setStylists] = useState<Stylist[]>([]);
     const [services, setServices] = useState<Service[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+    const [productCategories, setProductCategories] = useState<string[]>([]);
 
     // Loading states
     const [isLoadingData, setIsLoadingData] = useState(true);
@@ -87,15 +97,21 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [stylistsRes, servicesRes] = await Promise.all([
+                const [stylistsRes, servicesRes, productsRes] = await Promise.all([
                     api.get('/stylists'),
-                    api.get('/services')
+                    api.get('/services'),
+                    api.get('/inventory')
                 ]);
-                setStylists(stylistsRes.data);
-                setServices(servicesRes.data);
+                setStylists(stylistsRes.data || []);
+                setServices(servicesRes.data || []);
+                
+                const activeProds = (productsRes.data || []).filter((p: any) => p.isActive !== false);
+                setProducts(activeProds);
+                const cats = Array.from(new Set(activeProds.map((p: any) => p.category).filter(Boolean))) as string[];
+                setProductCategories(cats);
             } catch (error) {
                 console.error("Failed to load tailor dependencies", error);
-                showToast("Failed to load stylists or services", "error");
+                showToast("Failed to load stylists, services, or products", "error");
             } finally {
                 setIsLoadingData(false);
             }
@@ -120,6 +136,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
             garmentType: '',
             price: 0,
             quantity: 1,
+            fabricDetails: { type: 'None' }
         };
         setGarments([...garments, newGarment]);
     };
@@ -226,6 +243,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                     assignedTailorId: g.assignedTailorId,
                     price: g.price,
                     quantity: g.quantity,
+                    fabricDetails: g.fabricDetails && g.fabricDetails.type !== 'None' ? g.fabricDetails : null,
                     measurementSnapshot: g.photoUrls && g.photoUrls.length > 0 ? { photoUrls: g.photoUrls } : null
                 }))
             };
@@ -473,6 +491,149 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Fabric Details (Temporarily Hidden) */}
+                    {false && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-body)', borderRadius: '12px', border: '1px solid var(--border-light)', boxSizing: 'border-box' }}>
+                        <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>🧵 Fabric Details</h4>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+                            {/* Fabric Source Selection */}
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)', fontSize: '0.9rem' }}>Fabric Source</label>
+                                <select
+                                    value={garment.fabricDetails?.type || 'None'}
+                                    onChange={(e) => {
+                                        const type = e.target.value as 'None' | 'Customer' | 'Shop';
+                                        if (type === 'None') {
+                                            updateGarment(garment.id, 'fabricDetails', { type: 'None' });
+                                        } else if (type === 'Customer') {
+                                            updateGarment(garment.id, 'fabricDetails', { type: 'Customer', source: 'customer', description: '', details: '' });
+                                        } else {
+                                            updateGarment(garment.id, 'fabricDetails', { type: 'Shop', source: 'shop', productId: '', quantity: 1, details: '' });
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)',
+                                        fontSize: '0.95rem',
+                                        background: 'var(--bg-card)',
+                                        color: 'var(--text-dark)',
+                                        boxSizing: 'border-box'
+                                    }}
+                                >
+                                    <option value="None">No Fabric / Billed Separately</option>
+                                    <option value="Customer">Customer Provided Fabric</option>
+                                    <option value="Shop">Shop Fabric (Inventory)</option>
+                                </select>
+                            </div>
+
+                            {/* Customer Fabric Description */}
+                            {garment.fabricDetails?.type === 'Customer' && (
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)', fontSize: '0.9rem' }}>Fabric Description</label>
+                                    <input
+                                        type="text"
+                                        value={garment.fabricDetails?.description || ''}
+                                        onChange={(e) => {
+                                            updateGarment(garment.id, 'fabricDetails', {
+                                                type: 'Customer',
+                                                source: 'customer',
+                                                description: e.target.value,
+                                                details: e.target.value
+                                            });
+                                        }}
+                                        placeholder="E.g., Blue cotton fabric provided by customer"
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border)',
+                                            fontSize: '0.95rem',
+                                            background: 'var(--bg-card)',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Shop Fabric Category Selection */}
+                            {garment.fabricDetails?.type === 'Shop' && (
+                                <>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)', fontSize: '0.9rem' }}>Inventory Category</label>
+                                        <Select
+                                            options={productCategories.map(c => ({ value: c, label: c }))}
+                                            placeholder="Filter Category"
+                                            isClearable
+                                            onChange={(selected: any) => {
+                                                updateGarment(garment.id, 'fabricDetails', {
+                                                    ...garment.fabricDetails,
+                                                    tempCategory: selected ? selected.value : ''
+                                                });
+                                            }}
+                                            styles={{ control: (base) => ({ ...base, padding: '0.1rem', borderRadius: '8px', borderColor: 'var(--border)', background: 'var(--bg-card)' }) }}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)', fontSize: '0.9rem' }}>Select Product / Fabric</label>
+                                        <Select
+                                            value={garment.fabricDetails?.productId ? {
+                                                value: garment.fabricDetails.productId,
+                                                label: products.find(p => p.id === garment.fabricDetails?.productId)?.name || 'Select Product'
+                                            } : null}
+                                            options={products
+                                                .filter(p => !garment.fabricDetails?.tempCategory || p.category === garment.fabricDetails.tempCategory)
+                                                .map(p => ({ value: p.id, label: `${p.name} (SKU: ${p.sku}, Stock: ${p.stock})` }))
+                                            }
+                                            placeholder="-- Select Product --"
+                                            onChange={(selected: any) => {
+                                                const prod = products.find(p => p.id === (selected ? selected.value : ''));
+                                                updateGarment(garment.id, 'fabricDetails', {
+                                                    ...garment.fabricDetails,
+                                                    productId: selected ? selected.value : '',
+                                                    details: prod ? `${prod.name} (${garment.fabricDetails?.quantity || 1} qty)` : ''
+                                                });
+                                            }}
+                                            styles={{ control: (base) => ({ ...base, padding: '0.1rem', borderRadius: '8px', borderColor: 'var(--border)', background: 'var(--bg-card)' }) }}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)', fontSize: '0.9rem' }}>Fabric Quantity</label>
+                                        <input
+                                            type="number"
+                                            value={garment.fabricDetails?.quantity || 1}
+                                            min="0.1"
+                                            step="0.1"
+                                            onChange={(e) => {
+                                                const qty = parseFloat(e.target.value) || 1;
+                                                const prod = products.find(p => p.id === garment.fabricDetails?.productId);
+                                                updateGarment(garment.id, 'fabricDetails', {
+                                                    ...garment.fabricDetails,
+                                                    quantity: qty,
+                                                    details: prod ? `${prod.name} (${qty} qty)` : ''
+                                                });
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.75rem',
+                                                borderRadius: '8px',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '0.95rem',
+                                                background: 'var(--bg-card)',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    )}
 
                     {/* Measurement Photo Upload */}
                     <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-body)', borderRadius: '8px', border: '1px dashed var(--border-light)' }}>

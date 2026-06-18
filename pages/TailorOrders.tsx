@@ -4,7 +4,7 @@ import {
     Plus, Search, Scissors, Package, User, Calendar, DollarSign,
     ChevronRight, ChevronDown, LayoutGrid, List, X, Check, Clock, Loader2,
     Ruler, Palette, Tag, Trash2, Edit2, RefreshCw, AlertCircle,
-    Receipt, ExternalLink, Filter
+    Receipt, ExternalLink, Filter, FileText, CreditCard
 } from 'lucide-react';
 import { Modal, Button, Input } from '../components/UI';
 import api from '../utils/api';
@@ -73,6 +73,8 @@ interface TailorOrder {
     balanceAmount: number;
     paymentStatus: string;
     orderDate: string;
+    createdAt: string;
+    updatedAt?: string;
     targetDeliveryDate?: string;
     notes?: string;
     garments: Garment[];
@@ -129,6 +131,7 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
     const [selectedOrder, setSelectedOrder] = useState<TailorOrder | null>(null);
     const [sendingToBilling, setSendingToBilling] = useState(false);
     const [stylists, setStylists] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
 
 
     // Order Detail Modal
@@ -186,15 +189,19 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
     useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
     useEffect(() => {
-        const fetchStylists = async () => {
+        const fetchStylistsAndProducts = async () => {
             try {
-                const res = await api.get('/stylists');
-                setStylists(res.data || []);
+                const [stylistsRes, productsRes] = await Promise.all([
+                    api.get('/stylists'),
+                    api.get('/inventory')
+                ]);
+                setStylists(stylistsRes.data || []);
+                setProducts(productsRes.data || []);
             } catch (err) {
-                console.error('Failed to fetch stylists', err);
+                console.error('Failed to fetch stylists or products', err);
             }
         };
-        fetchStylists();
+        fetchStylistsAndProducts();
     }, []);
 
     // ── Derived ────────────────────────────────────────────────
@@ -311,7 +318,7 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
     };
 
     // ── Send to Billing ────────────────────────────────────────
-    const requestSendToBilling = () => setOrderToSendToBilling(selectedOrder);
+    const requestSendToBilling = (order?: TailorOrder | null) => setOrderToSendToBilling(order || selectedOrder);
 
     const confirmSendToBilling = async () => {
         if (!orderToSendToBilling) return;
@@ -836,12 +843,32 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                             <p style={{ margin: '0.1rem 0 0', fontSize: '0.78rem', color: 'var(--text-light)' }}>
                                                 {g.garmentType} · Qty: {g.quantity} · {symbol}{(g.price * g.quantity).toFixed(2)}
                                             </p>
-                                            {g.fabricDetails && (
-                                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.72rem', color: 'var(--text-light)' }}>
-                                                    🧵 {g.fabricDetails?.source === 'customer' ? 'Customer Fabric' : 'Shop Fabric'}
-                                                    {g.fabricDetails?.details ? ` — ${g.fabricDetails.details}` : ''}
-                                                </p>
-                                            )}
+                                            {g.fabricDetails && (() => {
+                                                const fd = g.fabricDetails;
+                                                const isCustomer = fd.type === 'Customer' || fd.source === 'customer';
+                                                const isShop = fd.type === 'Shop' || fd.source === 'shop';
+                                                
+                                                if (isCustomer) {
+                                                    const desc = fd.description || fd.details || 'Customer Fabric';
+                                                    return (
+                                                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.72rem', color: 'var(--text-light)' }}>
+                                                            🧵 <strong>Customer Fabric</strong> — {desc}
+                                                        </p>
+                                                    );
+                                                }
+                                                if (isShop) {
+                                                    const product = products.find(p => p.id === fd.productId);
+                                                    const prodName = product ? product.name : (fd.details || 'Shop Fabric');
+                                                    const categoryName = product ? product.category : '';
+                                                    const qty = fd.quantity || '';
+                                                    return (
+                                                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.72rem', color: 'var(--text-light)' }}>
+                                                            🧵 <strong>Shop Fabric</strong> — {categoryName ? `[${categoryName}] ` : ''}{prodName} {qty ? `(Qty: ${qty})` : ''}
+                                                        </p>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                             {selectedOrder.status !== 'DELIVERED' ? (
                                                 <div style={{ marginTop: '0.5rem', width: '200px' }}>
                                                     <label style={{ display: 'block', marginBottom: '0.2rem', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-light)' }}>
