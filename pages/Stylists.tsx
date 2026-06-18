@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
@@ -40,7 +41,8 @@ const PermissionsSelector = ({ permissions, onChange }: { permissions: string[],
   const [isExpanded, setIsExpanded] = useState(false);
 
   const { user } = useAuth();
-  const appId = (user as any)?.app_id || 'salon';
+  const { appId: urlAppId } = useParams();
+  const appId = urlAppId || (user as any)?.app_id || 'salon';
 
   // Dynamically generate modules from Sidebar items that are accessible to STAFF
   const modules = allMenuItems
@@ -186,7 +188,8 @@ const isValidAvatar = (url: string | null | undefined): boolean => {
 const Stylists: React.FC = () => {
   const { showToast } = useToast();
   const { user, isStaff, isAdmin, isManager, hasPermission } = useAuth();
-  const appId = (user as any)?.app_id || 'salon';
+  const { appId: urlAppId } = useParams();
+  const appId = urlAppId || (user as any)?.app_id || 'salon';
   const canAdd = hasPermission('stylists', 'add');
   const canEdit = hasPermission('stylists', 'edit');
   const [viewMode, setViewMode] = useState<'list' | 'roaster'>('list');
@@ -476,7 +479,9 @@ const Stylists: React.FC = () => {
 
       // VALIDATION
       const newErrors: Record<string, string> = {};
-      if (!nameInput.value.trim()) newErrors.name = 'Specialist name is required';
+      if (!nameInput.value.trim()) {
+        newErrors.name = appId === 'workly-project' ? 'Staff name is required' : (appId === 'workly-tailor' ? 'Tailor name is required' : 'Specialist name is required');
+      }
       if (!gender) newErrors.gender = 'Gender is required';
       if (!phoneInput.value.trim()) newErrors.phone = 'Phone number is required';
 
@@ -503,7 +508,7 @@ const Stylists: React.FC = () => {
 
       const response = await api.post('/stylists', newStylist);
 
-      showToast('Specialist added successfully!', 'success');
+      showToast(appId === 'workly-project' ? 'Staff added successfully!' : (appId === 'workly-tailor' ? 'Tailor added successfully!' : 'Specialist added successfully!'), 'success');
       setNewStylistImgUrl('');
       setNewStylistWorkingHours(INITIAL_WORKING_HOURS);
       setNewStylistPermissions([]);
@@ -525,7 +530,9 @@ const Stylists: React.FC = () => {
 
     // VALIDATION
     const newErrors: Record<string, string> = {};
-    if (!editingStylist.name.trim()) newErrors.name = 'Specialist name is required';
+    if (!editingStylist.name.trim()) {
+      newErrors.name = appId === 'workly-project' ? 'Staff name is required' : (appId === 'workly-tailor' ? 'Tailor name is required' : 'Specialist name is required');
+    }
     if (!editingStylist.gender) newErrors.gender = 'Gender is required';
     if (!editingStylist.phone.trim()) newErrors.phone = 'Phone number is required';
 
@@ -541,14 +548,14 @@ const Stylists: React.FC = () => {
     try {
       await api.put(`/stylists/${editingStylist.id}`, editingStylist);
 
-      showToast('Specialist updated successfully!', 'success');
+      showToast(appId === 'workly-project' ? 'Staff updated successfully!' : (appId === 'workly-tailor' ? 'Tailor updated successfully!' : 'Specialist updated successfully!'), 'success');
       setIsEditModalOpen(false);
       setEditingStylist(null);
       dispatch(invalidateStylistCache());
       dispatch(fetchStylists(true));
     } catch (error) {
       console.error('Error updating stylist:', error);
-      showToast('Error updating specialist', 'error');
+      showToast(appId === 'workly-project' ? 'Error updating staff' : (appId === 'workly-tailor' ? 'Error updating tailor' : 'Error updating specialist'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -564,7 +571,7 @@ const Stylists: React.FC = () => {
     try {
       await api.put(`/stylists/${stylist.id}`, updatedStylist);
 
-      showToast(`Specialist marked as ${newStatus}`, 'success');
+      showToast(`${appId === 'workly-project' ? 'Staff' : (appId === 'workly-tailor' ? 'Tailor' : 'Specialist')} marked as ${newStatus}`, 'success');
       dispatch(invalidateStylistCache());
       dispatch(fetchStylists(true));
     } catch (error) {
@@ -886,7 +893,7 @@ const Stylists: React.FC = () => {
               <div className="relative" style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  placeholder={appId === 'workly-project' ? "Search staff..." : "Search specialists..."}
+                  placeholder={appId === 'workly-project' ? "Search staff..." : (appId === 'workly-tailor' ? "Search tailors..." : "Search specialists...")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -946,7 +953,7 @@ const Stylists: React.FC = () => {
                     cursor: !canAdd ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {appId === 'workly-project' ? 'Add Staff' : 'Add Specialist'}
+                  {appId === 'workly-project' ? 'Add Staff' : (appId === 'workly-tailor' ? 'Add Tailor' : 'Add Specialist')}
                 </Button>
             </div>
           </div>
@@ -1029,7 +1036,7 @@ const Stylists: React.FC = () => {
                 <table className="table" style={{ minWidth: '800px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '150px' }}>Specialist</th>
+                      <th style={{ width: '150px' }}>{appId === 'workly-project' ? 'Staff' : (appId === 'workly-tailor' ? 'Tailor' : 'Specialist')}</th>
                       {currentWeekDates.map(d => {
                         const leaveCount = filteredStylists.filter(s => s.leaves?.includes(d.date)).length;
                         return (
@@ -1342,7 +1349,7 @@ const Stylists: React.FC = () => {
                                         e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
                                       }
                                     }}
-                                    title={!canEdit ? "Ask Admin for permission" : "Edit Specialist"}
+                                    title={!canEdit ? "Ask Admin for permission" : (appId === 'workly-project' ? "Edit Staff" : (appId === 'workly-tailor' ? "Edit Tailor" : "Edit Specialist"))}
                                   >
                                     <MdEdit size={18} />
                                   </button>
@@ -1523,7 +1530,7 @@ const Stylists: React.FC = () => {
                         }}>
                           Showing <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
                           <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{Math.min(currentPage * itemsPerPage, filteredStylists.length)}</span> of{' '}
-                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{filteredStylists.length}</span> specialists
+                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{filteredStylists.length}</span> {appId === 'workly-project' ? 'staff' : (appId === 'workly-tailor' ? 'tailors' : 'specialists')}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <motion.button
@@ -1621,7 +1628,7 @@ const Stylists: React.FC = () => {
           <Modal
             isOpen={isModalOpen}
             onClose={() => { setIsModalOpen(false); }}
-            title={appId === 'workly-project' ? 'Add New Staff' : 'Add New Specialist'}
+            title={appId === 'workly-project' ? 'Add New Staff' : (appId === 'workly-tailor' ? 'Add New Tailor' : 'Add New Specialist')}
           >
             <form className="space-y-4" onSubmit={handleAddStylist}>
               {/* Circular Avatar Display (Auto-assigned or Uploaded) */}
@@ -1715,8 +1722,8 @@ const Stylists: React.FC = () => {
                   <Input label="Phone" placeholder="(555) 000-0000" />
                   {formErrors.phone && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '-0.25rem', marginBottom: '0.5rem', display: 'block' }}>{formErrors.phone}</span>}
                 </div>
-                {appId === 'workly-tailor' && (
-                  <Input type="number" name="basicPrice" label="Basic Price" placeholder="0" />
+                {appId === 'workly-project' && (
+                  <Input type="number" name="basicPrice" label="Base Rate" placeholder="0" />
                 )}
                 <Select
                   label="Account Status"
@@ -1777,7 +1784,7 @@ const Stylists: React.FC = () => {
               <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <Button variant="ghost" type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
-                  {appId === 'workly-project' ? 'Save Staff' : 'Save Specialist'}
+                  {appId === 'workly-project' ? 'Save Staff' : (appId === 'workly-tailor' ? 'Save Tailor' : 'Save Specialist')}
                 </Button>
               </div>
             </form>
@@ -1884,7 +1891,7 @@ const Stylists: React.FC = () => {
           <Modal
             isOpen={isEditModalOpen}
             onClose={() => { setIsEditModalOpen(false); setEditingStylist(null); }}
-            title="Edit Specialist"
+            title={appId === 'workly-project' ? 'Edit Staff' : (appId === 'workly-tailor' ? 'Edit Tailor' : 'Edit Specialist')}
           >
             {editingStylist && (
               <form className="space-y-6" onSubmit={handleEditStylist}>
@@ -1992,10 +1999,10 @@ const Stylists: React.FC = () => {
                     onChange={e => setEditingStylist({ ...editingStylist, phone: e.target.value })}
                     required
                   />
-                  {appId === 'workly-tailor' && (
+                  {appId === 'workly-project' && (
                     <Input
                       type="number"
-                      label="Basic Price"
+                      label="Base Rate"
                       name="basicPrice"
                       value={editingStylist.basicPrice || 0}
                       onChange={e => setEditingStylist({ ...editingStylist, basicPrice: parseFloat(e.target.value) || 0 })}
@@ -2126,7 +2133,7 @@ const Stylists: React.FC = () => {
 
                 <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                   <Button type="button" variant="ghost" onClick={() => { setIsEditModalOpen(false); setEditingStylist(null); }}>Cancel</Button>
-                  <Button type="submit" isLoading={isSubmitting}>{appId === 'workly-project' ? 'Update Staff' : 'Update Specialist'}</Button>
+                  <Button type="submit" disabled={isSubmitting} isLoading={isSubmitting}>{appId === 'workly-project' ? 'Update Staff' : (appId === 'workly-tailor' ? 'Update Tailor' : 'Update Specialist')}</Button>
                 </div>
               </form>
             )}

@@ -396,7 +396,7 @@ const AppContent: React.FC = () => {
         <TopBar
           title={(() => {
             const pathLeaf = location.pathname.split('/').pop();
-            if (pathLeaf === 'stylists') return 'Specialist';
+            if (pathLeaf === 'stylists') return appId === 'workly-project' ? 'Staff' : (appId === 'workly-tailor' ? 'Tailor' : 'Specialist');
             if (pathLeaf === 'appointments') return 'Schedule';
             if (pathLeaf === 'payments') return 'Transaction';
             if (pathLeaf === 'workly-project') return 'Manpower Supply';
