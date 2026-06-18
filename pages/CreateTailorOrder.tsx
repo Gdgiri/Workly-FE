@@ -52,6 +52,7 @@ interface GarmentDraft {
         description?: string;
         productId?: string;
         quantity?: number;
+        tempCategory?: string;
     };
     photoUrls?: string[]; // Stored in measurementSnapshot in DB
 }
