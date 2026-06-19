@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, Link, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Plus, Minus, User, UserPlus, CreditCard, ShoppingBag, UserCog, Package, Ticket, X, AlertTriangle, CheckCircle, Smartphone, DollarSign, Wallet, Paperclip, Printer, ChevronDown } from 'lucide-react';
 import { Card, Button, Input, Modal, Select, Checkbox } from '../components/UI';
 import { PaymentMethod, CartItem, ComboPackage, Voucher, VoucherClaim, Customer, Stylist } from '../types';
@@ -88,6 +88,7 @@ const Sales: React.FC<SalesProps> = ({
   const canAddCustomer = hasPermission('customer', 'add');
   const { appId: appIdParam, businessName: businessNameParam } = useParams<{ appId: string; businessName: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Robust extraction of business info
   const businessName = businessNameParam || (user as any)?.businessName || localStorage.getItem('businessName') || '';
@@ -5150,7 +5151,12 @@ const Sales: React.FC<SalesProps> = ({
       </Modal >
 
       {/* Success Modal */}
-      < Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)}>
+      < Modal isOpen={showSuccessModal} onClose={() => {
+        setShowSuccessModal(false);
+        setSuccessMessage('');
+        dispatch(invalidatePaymentCache());
+        navigate(`/${appId}/${businessName}/payments`);
+      }}>
         <div style={{
           background: 'white',
           borderRadius: '1.5rem',
@@ -5197,6 +5203,8 @@ const Sales: React.FC<SalesProps> = ({
             onClick={() => {
               setShowSuccessModal(false);
               setSuccessMessage('');
+              dispatch(invalidatePaymentCache());
+              navigate(`/${appId}/${businessName}/payments`);
             }}
             style={{
               padding: '0.875rem 2rem',
