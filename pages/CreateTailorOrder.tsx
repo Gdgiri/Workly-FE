@@ -86,6 +86,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
     const [showNewCustomer, setShowNewCustomer] = useState(false);
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
+    const [newCustomerCountryCode, setNewCustomerCountryCode] = useState('+65');
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
 
     const [garments, setGarments] = useState<GarmentDraft[]>([]);
@@ -199,9 +200,12 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
         try {
             const res = await api.post('/customers', {
                 name: newCustomerName,
-                phone: newCustomerPhone
+                phone: `${newCustomerCountryCode}${newCustomerPhone.trim()}`
             });
             setSelectedCustomer(res.data);
+            setNewCustomerName('');
+            setNewCustomerPhone('');
+            setNewCustomerCountryCode('+65');
             setStep(2);
             if (garments.length === 0) handleAddGarment();
         } catch (error) {
@@ -372,13 +376,38 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                     
                     <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)' }}>Phone Number</label>
-                        <input
-                            type="tel"
-                            value={newCustomerPhone}
-                            onChange={e => setNewCustomerPhone(e.target.value)}
-                            placeholder="E.g. 9876543210"
-                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem' }}
-                        />
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <select
+                                value={newCustomerCountryCode}
+                                onChange={e => setNewCustomerCountryCode(e.target.value)}
+                                style={{
+                                    width: '90px',
+                                    height: '48px',
+                                    padding: '0 0.5rem',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '8px',
+                                    backgroundColor: 'white',
+                                    fontSize: '1rem',
+                                    outline: 'none',
+                                    color: 'var(--text-dark)'
+                                }}
+                            >
+                                <option value="+65">+65 (SG)</option>
+                                <option value="+91">+91 (IN)</option>
+                                <option value="+60">+60 (MY)</option>
+                                <option value="+62">+62 (ID)</option>
+                                <option value="+1">+1 (US)</option>
+                                <option value="+44">+44 (UK)</option>
+                                <option value="+61">+61 (AU)</option>
+                            </select>
+                            <input
+                                type="tel"
+                                value={newCustomerPhone}
+                                onChange={e => setNewCustomerPhone(e.target.value)}
+                                placeholder="E.g. 9876543210"
+                                style={{ flex: 1, padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem' }}
+                            />
+                        </div>
                     </div>
 
                     <button

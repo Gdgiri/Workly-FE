@@ -331,6 +331,7 @@ const Sales: React.FC<SalesProps> = ({
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerCountryCode, setNewCustomerCountryCode] = useState('+65');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerCity, setNewCustomerCity] = useState('');
   const [newCustomerDOB, setNewCustomerDOB] = useState('');
@@ -944,7 +945,7 @@ const Sales: React.FC<SalesProps> = ({
       // Call backend API to create customer via Redux thunk
       const newCustomer = await dispatch(createCustomer({
         name: newCustomerName,
-        phone: newCustomerPhone,
+        phone: `${newCustomerCountryCode}${newCustomerPhone.trim()}`,
         email: newCustomerEmail,
         city: newCustomerCity,
         dateOfBirth: newCustomerDOB,
@@ -978,6 +979,7 @@ const Sales: React.FC<SalesProps> = ({
       setIsAddCustomerModalOpen(false);
       setNewCustomerName('');
       setNewCustomerPhone('');
+      setNewCustomerCountryCode('+65');
       setNewCustomerEmail('');
       setNewCustomerCity('');
       setNewCustomerDOB('');
@@ -4367,13 +4369,42 @@ const Sales: React.FC<SalesProps> = ({
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-            <Input
-              label="Mobile Number"
-              placeholder="e.g. 91234567"
-              value={newCustomerPhone}
-              onChange={e => setNewCustomerPhone(e.target.value)}
-              required
-            />
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Mobile Number</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <select
+                  value={newCustomerCountryCode}
+                  onChange={e => setNewCustomerCountryCode(e.target.value)}
+                  style={{
+                    width: '90px',
+                    height: '42px',
+                    padding: '0 0.5rem',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'white',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    color: 'var(--text-dark)'
+                  }}
+                >
+                  <option value="+65">+65 (SG)</option>
+                  <option value="+91">+91 (IN)</option>
+                  <option value="+60">+60 (MY)</option>
+                  <option value="+62">+62 (ID)</option>
+                  <option value="+1">+1 (US)</option>
+                  <option value="+44">+44 (UK)</option>
+                  <option value="+61">+61 (AU)</option>
+                </select>
+                <div style={{ flex: 1 }}>
+                  <Input
+                    placeholder="e.g. 91234567"
+                    value={newCustomerPhone}
+                    onChange={e => setNewCustomerPhone(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
             <Input
               label="Location"
               placeholder="Springfield"

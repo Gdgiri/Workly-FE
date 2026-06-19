@@ -92,6 +92,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const [loadingCustomerProjects, setLoadingCustomerProjects] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+    const [countryCode, setCountryCode] = useState('+65');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -434,10 +435,23 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
     const handleEdit = (customer: Customer) => {
         setEditingCustomer(customer);
+
+        let parsedCountryCode = '+65';
+        let parsedPhone = customer.phone || '';
+        const commonCodes = ['+65', '+91', '+60', '+62', '+1', '+44', '+61'];
+        for (const code of commonCodes) {
+            if (parsedPhone.startsWith(code)) {
+                parsedCountryCode = code;
+                parsedPhone = parsedPhone.slice(code.length);
+                break;
+            }
+        }
+
+        setCountryCode(parsedCountryCode);
         setFormData({
             name: customer.name,
             email: customer.email,
-            phone: customer.phone || '',
+            phone: parsedPhone,
             city: customer.city || '',
             role: customer.role || 'CUSTOMER',
             dateOfBirth: customer.dateOfBirth || '',
@@ -493,6 +507,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
             await api[method](endpoint, {
                 ...formData,
+                phone: `${countryCode}${formData.phone.trim()}`,
                 attachments: (formData.attachments || []).map(a => ({
                     ...a,
                     imgUrl: a.url // Map url to imgUrl for backend compatibility
@@ -501,6 +516,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
             setIsModalOpen(false);
             setEditingCustomer(null);
+            setCountryCode('+65');
             dispatch(invalidateCustomerCache());
             dispatch(fetchCustomers());
             setFormData({
@@ -525,6 +541,24 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         } finally {
 
         }
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingCustomer(null);
+        setCountryCode('+65');
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            city: '',
+            role: 'CUSTOMER',
+            dateOfBirth: '',
+            ageGroup: '',
+            attachments: []
+        });
+        setAcceptedTerms(true);
+        setTermsError('');
     };
 
     const columns = [
@@ -1149,6 +1183,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                     <Button
                         onClick={() => {
                             if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                            handleCloseModal();
                             setIsModalOpen(true);
                         }}
                         icon={<Plus size={18} />}
@@ -1330,7 +1365,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
             <Modal
                 isOpen={isModalOpen}
-                onClose={() => { setIsModalOpen(false); setEditingCustomer(null); }}
+                onClose={handleCloseModal}
                 title={editingCustomer ? "Edit Customer" : "Add New Customer"}
             >
                 <form className="space-y-6" onSubmit={handleSubmit}>
@@ -1372,13 +1407,40 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
                     <div className="grid md-grid-cols-4 gap-4">
                         <div className="flex flex-col">
-                            <Input
-                                label="Phone Number"
-                                name="phone"
-                                placeholder="(555) 000-0000"
-                                value={formData.phone}
-                                onChange={handleInputChange}
-                            />
+                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Phone Number</label>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <select
+                                    value={countryCode}
+                                    onChange={(e) => setCountryCode(e.target.value)}
+                                    style={{
+                                        width: '90px',
+                                        height: '42px',
+                                        padding: '0 0.5rem',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--radius-md)',
+                                        backgroundColor: 'white',
+                                        fontSize: '0.9rem',
+                                        outline: 'none',
+                                        color: 'var(--text-dark)'
+                                    }}
+                                >
+                                    <option value="+65">+65 (SG)</option>
+                                    <option value="+91">+91 (IN)</option>
+                                    <option value="+60">+60 (MY)</option>
+                                    <option value="+62">+62 (ID)</option>
+                                    <option value="+1">+1 (US)</option>
+                                    <option value="+44">+44 (UK)</option>
+                                    <option value="+61">+61 (AU)</option>
+                                </select>
+                                <div style={{ flex: 1 }}>
+                                    <Input
+                                        name="phone"
+                                        placeholder="84997535"
+                                        value={formData.phone}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
+                            </div>
                             {formErrors.phone && <span style={{ color: 'red', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{formErrors.phone}</span>}
                         </div>
                         <Input
@@ -1503,7 +1565,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                     )}
 
                     <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <Button type="button" variant="ghost" onClick={() => { setIsModalOpen(false); setEditingCustomer(null); }}>Cancel</Button>
+                        <Button type="button" variant="ghost" onClick={handleCloseModal}>Cancel</Button>
                         <Button type="submit" disabled={customersLoading}>{editingCustomer ? 'Update' : 'Save'} Customer</Button>
                     </div>
                 </form>
