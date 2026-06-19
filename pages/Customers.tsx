@@ -1724,13 +1724,15 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                             </div>
                         </div>
 
-                        <CustomerMeasurements 
-                            customer={selectedCustomer} 
-                            onUpdate={(updatedCustomer) => {
-                                dispatch(invalidateCustomerCache());
-                                dispatch(fetchCustomers());
-                            }} 
-                        />
+                        {appId === 'workly-tailor' && (
+                            <CustomerMeasurements 
+                                customer={selectedCustomer} 
+                                onUpdate={(updatedCustomer) => {
+                                    dispatch(invalidateCustomerCache());
+                                    dispatch(fetchCustomers());
+                                }} 
+                            />
+                        )}
 
                         {/* Enhanced Statistics Section */}
                         {appId !== 'workly-project' && (
