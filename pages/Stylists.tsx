@@ -49,7 +49,54 @@ const PermissionsSelector = ({ permissions, onChange }: { permissions: string[],
     .filter(item => {
       if (item.id === 'dashboard' || item.id === 'ask-ai') return false;
       if (!item.roles.includes('STAFF')) return false;
+      
+      // Filter by appId compatibility
       if (item.id === 'checklist' && appId !== 'workly-service') return false;
+      if (item.id === 'tailor' && appId !== 'workly-tailor') return false;
+      if (item.id.startsWith('workly-project/') && appId !== 'workly-project') return false;
+
+      if (appId === 'workly-tailor') {
+        const allowedTailorModules = [
+          'tailor',
+          'sales',
+          'services',
+          'payments',
+          'stylists',
+          'customers',
+          'inventory',
+          'category'
+        ];
+        if (!allowedTailorModules.includes(item.id)) return false;
+      }
+
+      if (appId === 'workly-project') {
+        const allowedProjectModules = [
+          'workly-project/overview',
+          'workly-project/tasks',
+          'workly-project/attendance',
+          'workly-project/billing',
+          'workly-project/services',
+          'workly-project/categories',
+          'customers',
+          'stylists'
+        ];
+        if (!allowedProjectModules.includes(item.id)) return false;
+      }
+
+      if (appId !== 'workly-tailor' && appId !== 'workly-project' && appId !== 'workly-service') {
+        // Exclude tailor & project specific items from salon/other apps
+        const excludedSalonModules = [
+          'tailor',
+          'workly-project/overview',
+          'workly-project/tasks',
+          'workly-project/attendance',
+          'workly-project/billing',
+          'workly-project/services',
+          'workly-project/categories'
+        ];
+        if (excludedSalonModules.includes(item.id)) return false;
+      }
+
       return true;
     })
     .map(item => ({
