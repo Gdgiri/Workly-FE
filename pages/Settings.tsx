@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import { AppDispatch, RootState } from '../redux/store';
 import { fetchSettings, invalidateSettingCache } from '../redux/slices/settingSlice';
 import { Card, Button, Input } from '../components/UI';
@@ -39,6 +40,7 @@ interface WhatsAppConfig {
 const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMethods, setFraudProtection }) => {
   const { showToast } = useToast();
   const { refreshCurrency } = useCurrency();
+  const { appId } = useParams<{ appId: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const { settings, loading: settingsLoading } = useSelector((state: RootState) => state.settings);
   const [newMethodName, setNewMethodName] = useState('');
@@ -123,6 +125,10 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
     fraudProtection: false,
     enableVoucherOtp: true,
   });
+
+  // Tailor WhatsApp Web Integration State
+  const [tailorWhatsappWebEnabled, setTailorWhatsappWebEnabled] = useState(false);
+  const [savingTailorWhatsapp, setSavingTailorWhatsapp] = useState(false);
 
   // Payment Modes State (local copy)
   const [localPaymentMethods, setLocalPaymentMethods] = useState(paymentMethods);
@@ -272,6 +278,9 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
         fraudProtection: data.fraudProtection !== undefined ? data.fraudProtection : false,
         enableVoucherOtp: data.enableVoucherOtp !== undefined ? data.enableVoucherOtp : true,
       });
+
+      // Tailor WhatsApp Web Integration
+      setTailorWhatsappWebEnabled(data.tailorWhatsappWebEnabled !== undefined ? data.tailorWhatsappWebEnabled : false);
 
       // Payment Modes - Load array from database and convert to frontend format
       if (data.activePaymentMethods) {
@@ -726,6 +735,21 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
       showToast('Failed to save WhatsApp settings', 'error');
     } finally {
       setSavingWhatsapp(false);
+    }
+  };
+
+  const saveTailorWhatsappSettings = async () => {
+    setSavingTailorWhatsapp(true);
+    try {
+      await api.put('/settings', {
+        tailorWhatsappWebEnabled
+      });
+      showToast('Tailor WhatsApp Web settings saved successfully!', 'success');
+      fetchAllSettings();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Failed to save settings', 'error');
+    } finally {
+      setSavingTailorWhatsapp(false);
     }
   };
 
@@ -2014,6 +2038,53 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
               </div>
             </div>
           </Card>
+
+          {appId === 'workly-tailor' && (
+            <Card title="Tailor WhatsApp Web Integration">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageCircle size={18} style={{ color: 'var(--primary)' }} />
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-black)' }}>
+                    Enable quick WhatsApp sharing for order status updates and billing details.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 500, color: '#374151' }}>Enable WhatsApp Web Share</span>
+                    <label style={{ position: 'relative', display: 'inline-block', width: '2.75rem', height: '1.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={tailorWhatsappWebEnabled}
+                        onChange={(e) => setTailorWhatsappWebEnabled(e.target.checked)}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span style={{
+                        position: 'absolute', cursor: 'pointer', inset: 0,
+                        backgroundColor: tailorWhatsappWebEnabled ? 'var(--success)' : '#e5e7eb',
+                        transition: '0.3s', borderRadius: '34px'
+                      }}></span>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '1.1rem', width: '1.1rem',
+                        left: '0.2rem', bottom: '0.2rem', backgroundColor: 'white',
+                        transition: '0.3s', borderRadius: '50%',
+                        transform: tailorWhatsappWebEnabled ? 'translateX(1.25rem)' : 'translateX(0)'
+                      }}></span>
+                    </label>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-black)', margin: 0 }}>
+                    When ON, a "Send Status" button appears in Order Details and a "Share Bill" button appears in Transaction details — both open WhatsApp Web with a pre-filled message.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                  <Button onClick={saveTailorWhatsappSettings} disabled={savingTailorWhatsapp || loading} isLoading={savingTailorWhatsapp} icon={<Save size={18} />}>
+                    {savingTailorWhatsapp ? 'Saving...' : 'Save WhatsApp Settings'}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
         </>
       )}
     </div >

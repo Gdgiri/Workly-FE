@@ -4,7 +4,7 @@ import {
     Plus, Search, Scissors, Package, User, Calendar, DollarSign,
     ChevronRight, ChevronDown, LayoutGrid, List, X, Check, Clock, Loader2,
     Ruler, Palette, Tag, Trash2, Edit2, RefreshCw, AlertCircle,
-    Receipt, ExternalLink, Filter, FileText, CreditCard
+    Receipt, ExternalLink, Filter, FileText, CreditCard, MessageCircle
 } from 'lucide-react';
 import { Modal, Button, Input } from '../components/UI';
 import api from '../utils/api';
@@ -123,6 +123,20 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
 
     // ── State ──────────────────────────────────────────────────
     const [orders, setOrders] = useState<TailorOrder[]>([]);
+    const [settings, setSettings] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchSettingsData = async () => {
+            try {
+                const res = await api.get('/settings');
+                setSettings(res.data);
+            } catch (err) {
+                console.error('Failed to fetch settings in TailorOrders:', err);
+            }
+        };
+        fetchSettingsData();
+    }, []);
+
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
@@ -494,45 +508,47 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                 </span>
                                 <OrderStatusBadge status={order.status} />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.5rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-dark)', fontSize: '0.875rem' }}>
-                                    <User size={14} color="var(--primary)" />
-                                    {order.customer?.name || 'N/A'}
+                            {/* ── Fixed 4-column info row ── */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '2.5fr 1.5fr 1.5fr 1.5fr',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                marginTop: '0.75rem',
+                                paddingTop: '0.75rem',
+                                borderTop: '1px solid var(--border-light)'
+                            }}>
+                                {/* Customer - Left */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-dark)', fontSize: '0.875rem', overflow: 'hidden' }}>
+                                    <User size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                                        {order.customer?.name || 'N/A'}
+                                    </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
-                                    <Scissors size={14} />
-                                    {order.garments?.length || 0} garment{order.garments?.length !== 1 ? 's' : ''}
+                                {/* Garments - Center */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                                    <Scissors size={14} style={{ flexShrink: 0 }} />
+                                    <span>{order.garments?.length || 0} garment{order.garments?.length !== 1 ? 's' : ''}</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-dark)', fontSize: '0.875rem', fontWeight: 600 }}>
-                                    <DollarSign size={14} color="var(--primary)" />
-                                    {symbol}{(order.totalAmount || 0).toFixed(2)}
+                                {/* Amount - Right (with some padding so it doesn't touch Date) */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', color: 'var(--text-dark)', fontSize: '0.9rem', fontWeight: 800, paddingRight: '1.5rem' }}>
+                                    <DollarSign size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+                                    <span>{symbol}{(order.totalAmount || 0).toFixed(2)}</span>
                                 </div>
-                                {order.targetDeliveryDate && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
-                                        <Calendar size={14} />
-                                        {new Date(order.targetDeliveryDate).toLocaleDateString()}
-                                    </div>
-                                )}
+                                {/* Date - Center */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                                    <Calendar size={14} style={{ flexShrink: 0 }} />
+                                    <span>
+                                        {order.targetDeliveryDate
+                                            ? new Date(order.targetDeliveryDate).toLocaleDateString()
+                                            : '—'}
+                                    </span>
+                                </div>
                             </div>
+
                         </div>
                         {/* Right side: Order status changer + garment pills */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
-                            {/* Garment status mini-pills */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', maxWidth: '200px', justifyContent: 'flex-end' }}>
-                                {order.garments?.map(g => (
-                                    <span key={g.id} style={{
-                                        padding: '0.125rem 0.5rem',
-                                        borderRadius: '999px',
-                                        fontSize: '0.65rem',
-                                        fontWeight: 600,
-                                        background: statusConfig(g.status).bg,
-                                        color: statusConfig(g.status).color,
-                                        border: `1px solid ${statusConfig(g.status).border}`
-                                    }}>
-                                        {g.name}
-                                    </span>
-                                ))}
-                            </div>
                             {/* Order status quick-change dropdown */}
                             {(() => {
                                 const osCfg = ORDER_STATUSES.find(s => s.id === order.status) || ORDER_STATUSES[0];
@@ -582,6 +598,67 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
     // ════════════════════════════════════════════════════════════
     // CREATE ORDER MODAL
 
+    const handleSendStatusWhatsApp = (order: TailorOrder) => {
+        const customer = order.customer;
+        if (!customer) {
+            showToast('Customer information is missing!', 'error');
+            return;
+        }
+
+        const rawPhone = customer.phone || '';
+        const phone = rawPhone.replace(/[^\d+]/g, ''); // keep only numbers and optionally leading plus
+        if (!phone) {
+            showToast('Customer phone number is missing!', 'error');
+            return;
+        }
+
+        const orderNumber = order.orderNumber;
+        const status = order.status;
+        const totalAmount = (order.totalAmount || 0).toFixed(2);
+        const paidAmount = (order.paidAmount || 0).toFixed(2);
+        const balanceAmount = (order.balanceAmount || 0).toFixed(2);
+
+        const message = `Hello *${customer.name}*,\n\nYour Tailor Order *#${orderNumber}* status is now *${status}*.\n\n*Summary:*\n• Total Amount: ${symbol}${totalAmount}\n• Paid: ${symbol}${paidAmount}\n• Balance: ${symbol}${balanceAmount}\n\nThank you!`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+        window.open(url, '_blank');
+    };
+
+    const handleShareBillWhatsApp = (order: TailorOrder, transaction: any) => {
+        const customer = order.customer;
+        if (!customer) {
+            showToast('Customer information is missing!', 'error');
+            return;
+        }
+
+        const rawPhone = customer.phone || '';
+        const phone = rawPhone.replace(/[^\d+]/g, ''); // keep only numbers and optionally leading plus
+        if (!phone) {
+            showToast('Customer phone number is missing!', 'error');
+            return;
+        }
+
+        const orderNumber = order.orderNumber;
+        const invoiceNumber = transaction.invoiceNumber || order.orderNumber || 'N/A';
+        const transactionAmount = (transaction.amount || 0).toFixed(2);
+        const paymentMethod = transaction.paymentMethod || 'Cash';
+        const balanceAmount = (order.balanceAmount || 0).toFixed(2);
+        const totalAmount = (order.totalAmount || 0).toFixed(2);
+
+        let invoiceLinkText = '';
+        if (order.saleId) {
+            const invoiceUrl = `${window.location.origin}/${appId}/${businessName}/invoice/${order.saleId}`;
+            invoiceLinkText = `\n\n📥 *View and download your invoice here:*\n${invoiceUrl}`;
+        }
+
+        const message = `Hello *${customer.name}*,\n\nHere is your receipt for Tailor Order *#${orderNumber}* (Invoice: *#${invoiceNumber}*).\n\n*Receipt Details:*\n• Amount Received: ${symbol}${transactionAmount} via ${paymentMethod}\n• Remaining Balance: ${symbol}${balanceAmount}\n• Total Order Value: ${symbol}${totalAmount}${invoiceLinkText}\n\nThank you for choosing us!`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+        window.open(url, '_blank');
+    };
+
     // ════════════════════════════════════════════════════════════
     // ORDER DETAIL MODAL
     // ════════════════════════════════════════════════════════════
@@ -618,42 +695,44 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                         FINISHING: '🧵', READY: '✅', DELIVERED: '📦', CANCELLED: '❌', BILLED: '🧾'
                                     };
                                     return (
-                                        <div style={{ position: 'relative', width: 'fit-content' }}>
-                                            <select
-                                                value={selectedOrder.status}
-                                                onChange={e => {
-                                                    setStatusConfirmPayload({ orderId: selectedOrder.id, newStatus: e.target.value });
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '32px',
-                                                    padding: '0 1.5rem 0 0.5rem',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 700,
-                                                    borderRadius: '8px',
-                                                    border: `1.5px solid ${dc.border}`,
-                                                    background: dc.bg,
-                                                    color: dc.color,
-                                                    cursor: 'pointer',
-                                                    appearance: 'none',
-                                                    WebkitAppearance: 'none',
-                                                    outline: 'none',
-                                                    boxShadow: `0 1px 2px ${dc.border}55`,
-                                                    letterSpacing: '0.02em',
-                                                    textTransform: 'uppercase'
-                                                }}
-                                            >
-                                                {GARMENT_STATUSES.map(s => (
-                                                    <option key={s.id} value={s.id}>{ICONS[s.id] || ''} {s.label}</option>
-                                                ))}
-                                                <option value="BILLED">🧾 Billed</option>
-                                                <option value="CANCELLED">❌ Cancelled</option>
-                                            </select>
-                                            <div style={{
-                                                position: 'absolute', right: '0.4rem', top: '50%',
-                                                transform: 'translateY(-50%)', pointerEvents: 'none',
-                                                fontSize: '0.75rem', color: dc.color, fontWeight: 900
-                                            }}>▾</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ position: 'relative', width: 'fit-content' }}>
+                                                <select
+                                                    value={selectedOrder.status}
+                                                    onChange={e => {
+                                                        setStatusConfirmPayload({ orderId: selectedOrder.id, newStatus: e.target.value });
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '32px',
+                                                        padding: '0 1.5rem 0 0.5rem',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 700,
+                                                        borderRadius: '8px',
+                                                        border: `1.5px solid ${dc.border}`,
+                                                        background: dc.bg,
+                                                        color: dc.color,
+                                                        cursor: 'pointer',
+                                                        appearance: 'none',
+                                                        WebkitAppearance: 'none',
+                                                        outline: 'none',
+                                                        boxShadow: `0 1px 2px ${dc.border}55`,
+                                                        letterSpacing: '0.02em',
+                                                        textTransform: 'uppercase'
+                                                    }}
+                                                >
+                                                    {GARMENT_STATUSES.map(s => (
+                                                        <option key={s.id} value={s.id}>{ICONS[s.id] || ''} {s.label}</option>
+                                                    ))}
+                                                    <option value="BILLED">🧾 Billed</option>
+                                                    <option value="CANCELLED">❌ Cancelled</option>
+                                                </select>
+                                                <div style={{
+                                                    position: 'absolute', right: '0.4rem', top: '50%',
+                                                    transform: 'translateY(-50%)', pointerEvents: 'none',
+                                                    fontSize: '0.75rem', color: dc.color, fontWeight: 900
+                                                }}>▾</div>
+                                            </div>
                                         </div>
                                     );
                                 })()}
@@ -1007,8 +1086,8 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                     </div>
 
                     {/* Actions */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
-                        <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.25rem', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                             {selectedOrder.saleId ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: '#10B981', fontWeight: 700, fontSize: '0.875rem' }}>
@@ -1029,6 +1108,15 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                     style={{ background: '#10B981', color: '#fff', border: 'none' }}
                                 >
                                     {sendingToBilling ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : <><Receipt size={16} style={{ marginRight: '0.5rem' }} /> Send to Billing</>}
+                                </Button>
+                            )}
+
+                            {settings?.tailorWhatsappWebEnabled && (
+                                <Button 
+                                    onClick={() => handleSendStatusWhatsApp(selectedOrder)}
+                                    style={{ background: '#22c55e', color: '#fff', border: 'none' }}
+                                >
+                                    <MessageCircle size={16} style={{ marginRight: '0.5rem' }} /> Send Status via WhatsApp
                                 </Button>
                             )}
                         </div>
@@ -1395,6 +1483,35 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                         {symbol}{(selectedTransaction.amount || 0).toFixed(2)}
                                     </p>
                                 </div>
+
+                                {settings?.tailorWhatsappWebEnabled && (
+                                    <div style={{ marginTop: '0.5rem' }}>
+                                        <button
+                                            onClick={() => handleShareBillWhatsApp(selectedOrder, selectedTransaction)}
+                                            style={{
+                                                width: '100%',
+                                                height: '42px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.5rem',
+                                                borderRadius: '8px',
+                                                border: 'none',
+                                                background: '#22c55e',
+                                                color: '#fff',
+                                                fontWeight: 700,
+                                                fontSize: '0.9rem',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 2px 4px rgba(34, 197, 94, 0.3)',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseOver={e => e.currentTarget.style.background = '#16a34a'}
+                                            onMouseOut={e => e.currentTarget.style.background = '#22c55e'}
+                                        >
+                                            <MessageCircle size={18} /> Share Bill on WhatsApp
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

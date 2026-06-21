@@ -50,6 +50,7 @@ import { BusinessApprovals } from './pages/SuperAdmin/BusinessApprovals';
 // Public Pages
 import TermsAndConditions from './pages/Public/TermsAndConditions';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
+import PublicInvoice from './pages/Public/PublicInvoice';
 
 import { ToastProvider, useToast } from './components/ToastContext';
 import { CurrencyProvider } from './components/CurrencyContext';
@@ -80,9 +81,10 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Check if current path is a public policy route
+  // Check if current path is a public policy or invoice route
   const isPublicRoute = location.pathname.includes('/terms-and-conditions') ||
-    location.pathname.includes('/privacy-policy');
+    location.pathname.includes('/privacy-policy') ||
+    location.pathname.includes('/invoice/');
 
   const isAuthRoute = location.pathname.endsWith('/login') ||
     location.pathname.endsWith('/register') ||
@@ -347,6 +349,7 @@ const AppContent: React.FC = () => {
         <Route path="/:appId/:businessName/auth/callback" element={<AuthCallback />} />
         <Route path="/:appId/:businessName/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/:appId/:businessName/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/:appId/:businessName/invoice/:saleId" element={<PublicInvoice />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/business-register" element={<BusinessRegister />} />
         <Route path="/pending-approval" element={<PendingApproval />} />

@@ -1977,22 +1977,19 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     }
 
                                     try {
-                                        showToast('Preparing invoice and opening WhatsApp...', 'info');
+                                        showToast('Preparing invoice link and opening WhatsApp...', 'info');
 
-                                        // 1. Generate PDF Blob
-                                        const data = getInvoiceData();
-                                        if (!data) return;
-                                        const file = getInvoicePDFFile(data);
-
-                                        // 2. Upload to Cloudinary
-                                        // Use 'raw' resource type for PDFs to ensure direct, stable delivery as a document
-                                        const invoiceNum = data.invoiceNumber || 'Invoice_Download';
-                                        const pdfUrl = await uploadToCloudinary(file, 'raw', invoiceNum);
+                                        const appId = (user as any)?.app_id || 'salon';
+                                        const businessName = (user as any)?.businessName || 'admin';
+                                        const saleId = (selectedPayment.sale as any)?.id || selectedPayment.transactionId;
+                                        const invoiceNum = (selectedPayment.sale as any)?.saleNumber || selectedPayment.invoiceNumber || 'Invoice';
+                                        
+                                        const invoiceUrl = `${window.location.origin}/${appId}/${businessName}/invoice/${saleId}`;
 
                                         // 3. Construct message with link
                                         const message = `Hi ${customerName}, thank you for visiting ${settings?.salonName || 'our salon'}! 🌸\n\n` +
                                             `Your invoice *${invoiceNum}* for *${formatPrice(selectedPayment.amount)}* is ready.\n\n` +
-                                            `📥 *Download your invoice here:*\n${pdfUrl}\n\n` +
+                                            `📥 *View and download your invoice here:*\n${invoiceUrl}\n\n` +
                                             `We look forward to seeing you again! ✨`;
 
                                         const encodedMessage = encodeURIComponent(message);
