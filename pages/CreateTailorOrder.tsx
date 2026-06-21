@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, Plus, Image as ImageIcon, CheckCircle2, ChevronRight,
     X, UserPlus, UploadCloud, Trash2, Search, Scissors, User, Calendar,
-    IndianRupee, Loader2
+    IndianRupee, Loader2, Camera
 } from 'lucide-react';
 import api from '../utils/api';
 import { uploadToCloudinary } from '../utils/cloudinary';
@@ -681,18 +681,33 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                                     </button>
                                 </div>
                             ))}
-                            <div>
-                                <input
-                                    type="file"
-                                    id={`photo-upload-${garment.id}`}
-                                    accept="image/*"
-                                    multiple
-                                    onChange={(e) => handleImageUpload(garment.id, e)}
-                                    style={{ display: 'none' }}
-                                />
-                                <label htmlFor={`photo-upload-${garment.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-dark)', fontWeight: 500, fontSize: '0.95rem' }}>
-                                    <UploadCloud size={18} /> {garment.photoUrls?.length ? 'Add More' : 'Upload Photo'}
-                                </label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div>
+                                    <input
+                                        type="file"
+                                        id={`photo-upload-${garment.id}`}
+                                        accept="image/*"
+                                        multiple
+                                        onChange={(e) => handleImageUpload(garment.id, e)}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label htmlFor={`photo-upload-${garment.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '0.75rem 1rem', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-dark)', fontWeight: 500, fontSize: '0.95rem' }}>
+                                        <UploadCloud size={18} /> {garment.photoUrls?.length ? 'Upload More' : 'Upload'}
+                                    </label>
+                                </div>
+                                <div>
+                                    <input
+                                        type="file"
+                                        id={`photo-capture-${garment.id}`}
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={(e) => handleImageUpload(garment.id, e)}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label htmlFor={`photo-capture-${garment.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '0.75rem 1rem', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-dark)', fontWeight: 500, fontSize: '0.95rem' }}>
+                                        <Camera size={18} /> {garment.photoUrls?.length ? 'Capture More' : 'Capture'}
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
