@@ -2416,7 +2416,7 @@ const Reports: React.FC = () => {
                     }}
                   >
                     {/* Search Bar */}
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                       <Search 
                         size={16} 
                         style={{ 
@@ -2460,7 +2460,7 @@ const Reports: React.FC = () => {
                     </div>
 
                     {/* Report List */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flexShrink: 0 }}>
                       {reportOptions.map((cat, catIdx) => {
                         // Filter items inside category
                         const filteredItems = cat.items.filter(item => 
@@ -2641,7 +2641,7 @@ const Reports: React.FC = () => {
                       }}
                     >
                       {/* Search Bar */}
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                         <Search 
                           size={16} 
                           style={{ 
@@ -2685,7 +2685,7 @@ const Reports: React.FC = () => {
                       </div>
 
                       {/* Customer List */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
                         <button
                           type="button"
                           onClick={() => {
@@ -2863,7 +2863,7 @@ const Reports: React.FC = () => {
                           }}
                         >
                           {/* Search bar inside Staff dropdown */}
-                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '0.25rem' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: '0.25rem', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                             <Search size={14} style={{ position: 'absolute', left: '0.5rem', color: 'var(--text-light)' }} />
                             <input
                               type="text"
@@ -2901,7 +2901,8 @@ const Reports: React.FC = () => {
                               fontSize: '0.8rem',
                               fontWeight: 600,
                               color: selectedStaff === 'ALL' ? 'var(--primary)' : 'var(--text-black)',
-                              transition: 'all 0.15s'
+                              transition: 'all 0.15s',
+                              flexShrink: 0
                             }}
                           >
                             All Staff
@@ -2931,7 +2932,8 @@ const Reports: React.FC = () => {
                                     fontSize: '0.8rem',
                                     fontWeight: 600,
                                     color: isActive ? 'var(--primary)' : 'var(--text-black)',
-                                    transition: 'all 0.15s'
+                                    transition: 'all 0.15s',
+                                    flexShrink: 0
                                   }}
                                   onMouseEnter={e => {
                                     if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
@@ -3049,7 +3051,8 @@ const Reports: React.FC = () => {
                                     fontSize: '0.8rem',
                                     fontWeight: 600,
                                     color: isActive ? 'var(--primary)' : 'var(--text-black)',
-                                    transition: 'all 0.15s'
+                                    transition: 'all 0.15s',
+                                    flexShrink: 0
                                   }}
                                   onMouseEnter={e => {
                                     if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
