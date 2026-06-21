@@ -1405,7 +1405,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                         />
                     </div>
 
-                    <div className="grid md-grid-cols-4 gap-4">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
                         <div className="flex flex-col">
                             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Phone Number</label>
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -1433,11 +1433,14 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                                     <option value="+61">+61 (AU)</option>
                                 </select>
                                 <div style={{ flex: 1 }}>
-                                    <Input
+                                    <input
+                                        type="tel"
                                         name="phone"
                                         placeholder="84997535"
                                         value={formData.phone}
                                         onChange={handleInputChange}
+                                        className="form-control"
+                                        style={{ width: '100%', height: '42px', margin: 0 }}
                                     />
                                 </div>
                             </div>
