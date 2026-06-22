@@ -35,8 +35,10 @@ interface Category {
 interface Service {
     id: string;
     name: string;
-    categoryId: string;
+    categoryId?: string;
+    category?: string;
     price: number;
+    imgUrl?: string;
 }
 
 interface GarmentDraft {
@@ -74,6 +76,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
     
     // UI selection state
     const [selectingServiceFor, setSelectingServiceFor] = useState<string | null>(null);
+    const [selectedServiceCategory, setSelectedServiceCategory] = useState<string>('All');
     const [selectingTailorFor, setSelectingTailorFor] = useState<string | null>(null);
 
     // Data fetched
@@ -915,56 +918,88 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
 
             {/* Service Selection Modal */}
             <Modal isOpen={!!selectingServiceFor} onClose={() => setSelectingServiceFor(null)} title="Select Service">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem', padding: '1rem' }}>
-                    {services.map(s => (
+                <div style={{ padding: '0 1rem 1rem' }}>
+                    {/* Category Filter */}
+                    <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '1rem', scrollbarWidth: 'none' }}>
+                        {['All', ...Array.from(new Set(services.map(s => s.category || 'General')))].map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedServiceCategory(cat)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '20px',
+                                    border: selectedServiceCategory === cat ? 'none' : '1px solid var(--border)',
+                                    background: selectedServiceCategory === cat ? 'var(--primary)' : 'var(--bg-body)',
+                                    color: selectedServiceCategory === cat ? 'white' : 'var(--text-dark)',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
+                        {services.filter(s => selectedServiceCategory === 'All' || (s.category || 'General') === selectedServiceCategory).map(s => (
+                            <div 
+                                key={s.id}
+                                onClick={() => {
+                                    if (selectingServiceFor) {
+                                        handleServiceSelect(selectingServiceFor, s.id);
+                                    }
+                                    setSelectingServiceFor(null);
+                                }}
+                                style={{
+                                    background: 'var(--bg-body)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    padding: '1.5rem 1rem',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.5rem',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                    alignItems: 'center'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                            >
+                                {s.imgUrl ? (
+                                    <img src={s.imgUrl} alt={s.name} style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Scissors size={20} color="var(--primary)" />
+                                    </div>
+                                )}
+                                <div style={{ fontWeight: 600, color: 'var(--text-dark)', fontSize: '1rem' }}>{s.name}</div>
+                                <div style={{ color: 'var(--primary)', fontWeight: 700 }}>{symbol}{s.price}</div>
+                            </div>
+                        ))}
                         <div 
-                            key={s.id}
                             onClick={() => {
                                 if (selectingServiceFor) {
-                                    handleServiceSelect(selectingServiceFor, s.id);
+                                    handleServiceSelect(selectingServiceFor, '');
                                 }
                                 setSelectingServiceFor(null);
                             }}
                             style={{
-                                background: 'var(--bg-body)',
-                                border: '1px solid var(--border)',
+                                background: '#fef2f2',
+                                border: '1px dashed #f87171',
                                 borderRadius: '12px',
                                 padding: '1.5rem 1rem',
                                 textAlign: 'center',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s',
                                 display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                alignItems: 'center',
+                                justifyContent: 'center'
                             }}
-                            onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                            onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                         >
-                            <div style={{ fontWeight: 600, color: 'var(--text-dark)', fontSize: '1rem' }}>{s.name}</div>
-                            <div style={{ color: 'var(--primary)', fontWeight: 700 }}>{symbol}{s.price}</div>
+                            <span style={{ fontWeight: 600, color: '#ef4444' }}>Clear Selection</span>
                         </div>
-                    ))}
-                    <div 
-                        onClick={() => {
-                            if (selectingServiceFor) {
-                                handleServiceSelect(selectingServiceFor, '');
-                            }
-                            setSelectingServiceFor(null);
-                        }}
-                        style={{
-                            background: '#fef2f2',
-                            border: '1px dashed #f87171',
-                            borderRadius: '12px',
-                            padding: '1.5rem 1rem',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <span style={{ fontWeight: 600, color: '#ef4444' }}>Clear Selection</span>
                     </div>
                 </div>
             </Modal>
