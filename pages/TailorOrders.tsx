@@ -28,20 +28,17 @@ interface GarmentStatus {
 
 const GARMENT_STATUSES: GarmentStatus[] = [
     { id: 'PENDING',   label: 'Pending',   color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
-    { id: 'CUTTING',   label: 'Cutting',   color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-    { id: 'STITCHING', label: 'Stitching', color: '#5B21B6', bg: '#F5F3FF', border: '#DDD6FE' },
-    { id: 'FINISHING', label: 'Finishing', color: '#065F46', bg: '#ECFDF5', border: '#A7F3D0' },
     { id: 'READY',     label: 'Ready',     color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
     { id: 'DELIVERED', label: 'Delivered', color: '#1E3A5F', bg: '#DBEAFE', border: '#93C5FD' },
+    { id: 'CANCELLED', label: 'Cancelled', color: '#991B1B', bg: '#FEE2E2', border: '#FECACA' }
 ];
 
 // Order-level work statuses
 const ORDER_STATUSES = [
     { id: 'PENDING',     label: 'Pending',     color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
-    { id: 'IN_PROGRESS', label: 'In Progress', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
     { id: 'READY',       label: 'Ready',       color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
-    { id: 'BILLED',      label: 'Billed',      color: '#5B21B6', bg: '#F5F3FF', border: '#DDD6FE' },
     { id: 'DELIVERED',   label: 'Delivered',   color: '#1E3A5F', bg: '#DBEAFE', border: '#93C5FD' },
+    { id: 'CANCELLED',   label: 'Cancelled',   color: '#991B1B', bg: '#FEE2E2', border: '#FECACA' }
 ];
 
 interface Garment {
@@ -691,8 +688,7 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                 {(() => {
                                     const dc = statusConfig(selectedOrder.status);
                                     const ICONS: Record<string, string> = {
-                                        PENDING: '⏳', CUTTING: '✂️', STITCHING: '🪡',
-                                        FINISHING: '🧵', READY: '✅', DELIVERED: '📦', CANCELLED: '❌', BILLED: '🧾'
+                                        PENDING: '⏳', READY: '✅', DELIVERED: '📦', CANCELLED: '❌', BILLED: '🧾'
                                     };
                                     return (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -721,11 +717,10 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                                         textTransform: 'uppercase'
                                                     }}
                                                 >
-                                                    {GARMENT_STATUSES.map(s => (
+                                                    {ORDER_STATUSES.map(s => (
                                                         <option key={s.id} value={s.id}>{ICONS[s.id] || ''} {s.label}</option>
                                                     ))}
                                                     <option value="BILLED">🧾 Billed</option>
-                                                    <option value="CANCELLED">❌ Cancelled</option>
                                                 </select>
                                                 <div style={{
                                                     position: 'absolute', right: '0.4rem', top: '50%',
@@ -1005,45 +1000,30 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
 
                                         {/* ── RIGHT: status dropdown + photo ── */}
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', minWidth: '130px' }}>
-                                            {/* Compact status dropdown */}
+                                            {/* Compact status badge */}
                                             {(() => {
                                                 const dc = statusConfig(g.status);
                                                 const ICONS: Record<string, string> = {
-                                                    PENDING: '⏳', CUTTING: '✂️', STITCHING: '🪡',
-                                                    FINISHING: '🧵', READY: '✅', DELIVERED: '📦'
+                                                    PENDING: '⏳', READY: '✅', DELIVERED: '📦', CANCELLED: '❌'
                                                 };
                                                 return (
-                                                    <div style={{ position: 'relative', width: '100%' }}>
-                                                        <select
-                                                            value={g.status}
-                                                            onChange={e => handleStatusChange(g.id, e.target.value, selectedOrder.id)}
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '38px',
-                                                                padding: '0 2rem 0 0.6rem',
-                                                                fontSize: '0.78rem',
-                                                                fontWeight: 700,
-                                                                borderRadius: '10px',
-                                                                border: `2px solid ${dc.border}`,
-                                                                background: dc.bg,
-                                                                color: dc.color,
-                                                                cursor: 'pointer',
-                                                                appearance: 'none',
-                                                                WebkitAppearance: 'none',
-                                                                outline: 'none',
-                                                                boxShadow: `0 1px 4px ${dc.border}55`,
-                                                                letterSpacing: '0.02em'
-                                                            }}
-                                                        >
-                                                            {GARMENT_STATUSES.map(s => (
-                                                                <option key={s.id} value={s.id}>{ICONS[s.id]} {s.label}</option>
-                                                            ))}
-                                                        </select>
-                                                        <div style={{
-                                                            position: 'absolute', right: '0.5rem', top: '50%',
-                                                            transform: 'translateY(-50%)', pointerEvents: 'none',
-                                                            fontSize: '0.8rem', color: dc.color, fontWeight: 900
-                                                        }}>▾</div>
+                                                    <div style={{
+                                                        width: '100%',
+                                                        height: '38px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        padding: '0 0.6rem',
+                                                        fontSize: '0.78rem',
+                                                        fontWeight: 700,
+                                                        borderRadius: '10px',
+                                                        border: `2px solid ${dc.border}`,
+                                                        background: dc.bg,
+                                                        color: dc.color,
+                                                        justifyContent: 'center',
+                                                        letterSpacing: '0.02em',
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {ICONS[g.status] || ''} {g.status}
                                                     </div>
                                                 );
                                             })()}
@@ -1108,6 +1088,24 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                     style={{ background: '#10B981', color: '#fff', border: 'none' }}
                                 >
                                     {sendingToBilling ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : <><Receipt size={16} style={{ marginRight: '0.5rem' }} /> Send to Billing</>}
+                                </Button>
+                            )}
+
+                            {selectedOrder.status === 'PENDING' && (
+                                <Button
+                                    onClick={() => setStatusConfirmPayload({ orderId: selectedOrder.id, newStatus: 'READY' })}
+                                    style={{ background: '#3b82f6', color: '#fff', border: 'none' }}
+                                >
+                                    <Check size={16} style={{ marginRight: '0.5rem' }} /> Mark as Ready
+                                </Button>
+                            )}
+                            
+                            {selectedOrder.status === 'READY' && (
+                                <Button
+                                    onClick={() => setStatusConfirmPayload({ orderId: selectedOrder.id, newStatus: 'DELIVERED' })}
+                                    style={{ background: '#1E3A5F', color: '#fff', border: 'none' }}
+                                >
+                                    <Package size={16} style={{ marginRight: '0.5rem' }} /> Mark as Delivered
                                 </Button>
                             )}
 

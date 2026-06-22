@@ -563,8 +563,11 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)' }}>Qty</label>
                                 <input
                                     type="number"
-                                    value={garment.quantity}
-                                    onChange={(e) => updateGarment(garment.id, 'quantity', parseInt(e.target.value) || 1)}
+                                    value={garment.quantity === 0 ? '' : garment.quantity}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateGarment(garment.id, 'quantity', val === '' ? 0 : parseInt(val));
+                                    }}
                                     min="1"
                                     style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem', background: 'var(--bg-body)' }}
                                 />
@@ -822,7 +825,8 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                             type="date"
                             value={targetDeliveryDate}
                             onChange={(e) => setTargetDeliveryDate(e.target.value)}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1.1rem', background: 'var(--bg-body)' }}
+                            min={new Date().toISOString().split('T')[0]}
+                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1.1rem', background: 'var(--bg-body)', cursor: 'pointer', color: targetDeliveryDate ? 'var(--text-dark)' : 'var(--text-light)' }}
                         />
                     </div>
                 )}
@@ -834,7 +838,8 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                             type="date"
                             value={targetDeliveryDate}
                             onChange={(e) => setTargetDeliveryDate(e.target.value)}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1.1rem', background: 'var(--bg-body)' }}
+                            min={new Date().toISOString().split('T')[0]}
+                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1.1rem', background: 'var(--bg-body)', cursor: 'pointer', color: targetDeliveryDate ? 'var(--text-dark)' : 'var(--text-light)' }}
                         />
                     </div>
                 ) : (
