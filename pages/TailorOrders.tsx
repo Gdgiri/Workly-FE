@@ -1091,21 +1091,12 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                 </Button>
                             )}
 
-                            {selectedOrder.status === 'PENDING' && (
-                                <Button
-                                    onClick={() => setStatusConfirmPayload({ orderId: selectedOrder.id, newStatus: 'READY' })}
-                                    style={{ background: '#3b82f6', color: '#fff', border: 'none' }}
-                                >
-                                    <Check size={16} style={{ marginRight: '0.5rem' }} /> Mark as Ready
-                                </Button>
-                            )}
-                            
-                            {selectedOrder.status === 'READY' && (
+                            {selectedOrder.status !== 'DELIVERED' && selectedOrder.status !== 'CANCELLED' && (
                                 <Button
                                     onClick={() => setStatusConfirmPayload({ orderId: selectedOrder.id, newStatus: 'DELIVERED' })}
-                                    style={{ background: '#1E3A5F', color: '#fff', border: 'none' }}
+                                    style={{ background: '#10B981', color: '#fff', border: 'none' }}
                                 >
-                                    <Package size={16} style={{ marginRight: '0.5rem' }} /> Mark as Delivered
+                                    <Check size={16} style={{ marginRight: '0.5rem' }} /> Mark as Completed
                                 </Button>
                             )}
 
