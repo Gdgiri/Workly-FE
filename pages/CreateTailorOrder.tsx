@@ -10,6 +10,7 @@ import { uploadToCloudinary } from '../utils/cloudinary';
 
 import { useToast } from '../components/ToastContext';
 import Select from 'react-select';
+import { useCurrency } from '../components/CurrencyContext';
 
 // Basic Types
 interface Customer {
@@ -65,6 +66,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
     const navigate = useNavigate();
     const { appId, businessName } = useParams();
     const { showToast } = useToast();
+    const { symbol } = useCurrency();
 
     // Steps state
     const [step, setStep] = useState<number>(1);
@@ -462,7 +464,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                             <Select
                                 value={garment.serviceId ? { value: garment.serviceId, label: services.find(s => s.id === garment.serviceId)?.name || 'Unknown' } : null}
                                 onChange={(selected: any) => handleServiceSelect(garment.id, selected ? selected.value : '')}
-                                options={services.map(s => ({ value: s.id, label: `${s.name} - ₹${s.price}` }))}
+                                options={services.map(s => ({ value: s.id, label: `${s.name} - ${symbol}${s.price}` }))}
                                 placeholder="-- Select Service --"
                                 isClearable
                                 styles={{ control: (base) => ({ ...base, padding: '0.3rem', borderRadius: '8px', borderColor: 'var(--border)', background: 'var(--bg-body)' }) }}
@@ -760,7 +762,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                 
                 <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>Total Amount:</span>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)' }}>₹{totalAmount.toFixed(2)}</span>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)' }}>{symbol}{totalAmount.toFixed(2)}</span>
                 </div>
             </div>
 
@@ -791,7 +793,7 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-dark)', fontSize: '1.1rem' }}>Advance Payment (Optional)</label>
                         <div style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-light)' }}>₹</span>
+                            <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-light)' }}>{symbol}</span>
                             <input
                                 type="number"
                                 value={advanceAmount || ''}
