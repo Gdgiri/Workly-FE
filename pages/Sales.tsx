@@ -4369,7 +4369,7 @@ const Sales: React.FC<SalesProps> = ({
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Mobile Number</label>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
