@@ -11,6 +11,7 @@ import { uploadToCloudinary } from '../utils/cloudinary';
 import { useToast } from '../components/ToastContext';
 import Select from 'react-select';
 import { useCurrency } from '../components/CurrencyContext';
+import { Modal } from '../components/UI';
 
 // Basic Types
 interface Customer {
@@ -70,6 +71,10 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
 
     // Steps state
     const [step, setStep] = useState<number>(1);
+    
+    // UI selection state
+    const [selectingServiceFor, setSelectingServiceFor] = useState<string | null>(null);
+    const [selectingTailorFor, setSelectingTailorFor] = useState<string | null>(null);
 
     // Data fetched
     const [stylists, setStylists] = useState<Stylist[]>([]);
@@ -458,17 +463,37 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                        {/* Service Dropdown */}
+                        {/* Service Selection Modal Trigger */}
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)' }}>Service (Optional)</label>
-                            <Select
-                                value={garment.serviceId ? { value: garment.serviceId, label: services.find(s => s.id === garment.serviceId)?.name || 'Unknown' } : null}
-                                onChange={(selected: any) => handleServiceSelect(garment.id, selected ? selected.value : '')}
-                                options={services.map(s => ({ value: s.id, label: `${s.name} - ${symbol}${s.price}` }))}
-                                placeholder="-- Select Service --"
-                                isClearable
-                                styles={{ control: (base) => ({ ...base, padding: '0.3rem', borderRadius: '8px', borderColor: 'var(--border)', background: 'var(--bg-body)' }) }}
-                            />
+                            <div 
+                                onClick={() => setSelectingServiceFor(garment.id)}
+                                style={{ 
+                                    padding: '0.8rem 1rem', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid var(--border)', 
+                                    background: 'var(--bg-body)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    fontSize: '1rem'
+                                }}
+                            >
+                                <span style={{ color: garment.serviceId ? 'var(--text-dark)' : '#9ca3af' }}>
+                                    {garment.serviceId ? services.find(s => s.id === garment.serviceId)?.name : '-- Select Service --'}
+                                </span>
+                                {garment.serviceId ? (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleServiceSelect(garment.id, ''); }}
+                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}
+                                    >
+                                        <X size={16} color="#6b7280" />
+                                    </button>
+                                ) : (
+                                    <ChevronRight size={16} color="#9ca3af" />
+                                )}
+                            </div>
                         </div>
                         
                         {/* Garment Type / Name */}
@@ -486,17 +511,37 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                             />
                         </div>
 
-                        {/* Specialist */}
+                        {/* Tailor Selection Modal Trigger */}
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-dark)' }}>Assign Tailor</label>
-                            <Select
-                                value={garment.assignedTailorId ? { value: garment.assignedTailorId, label: stylists.find(s => s.id === garment.assignedTailorId)?.name || 'Unknown' } : null}
-                                onChange={(selected: any) => updateGarment(garment.id, 'assignedTailorId', selected ? selected.value : '')}
-                                options={stylists.map(s => ({ value: s.id, label: s.name }))}
-                                placeholder="-- Select Tailor --"
-                                isClearable
-                                styles={{ control: (base) => ({ ...base, padding: '0.3rem', borderRadius: '8px', borderColor: 'var(--border)', background: 'var(--bg-body)' }) }}
-                            />
+                            <div 
+                                onClick={() => setSelectingTailorFor(garment.id)}
+                                style={{ 
+                                    padding: '0.8rem 1rem', 
+                                    borderRadius: '8px', 
+                                    border: '1px solid var(--border)', 
+                                    background: 'var(--bg-body)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    fontSize: '1rem'
+                                }}
+                            >
+                                <span style={{ color: garment.assignedTailorId ? 'var(--text-dark)' : '#9ca3af' }}>
+                                    {garment.assignedTailorId ? stylists.find(s => s.id === garment.assignedTailorId)?.name : '-- Select Tailor --'}
+                                </span>
+                                {garment.assignedTailorId ? (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); updateGarment(garment.id, 'assignedTailorId', ''); }}
+                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}
+                                    >
+                                        <X size={16} color="#6b7280" />
+                                    </button>
+                                ) : (
+                                    <ChevronRight size={16} color="#9ca3af" />
+                                )}
+                            </div>
                         </div>
 
                         {/* Price & Quantity */}
@@ -867,6 +912,122 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
             {step === 3 && renderStep3()}
+
+            {/* Service Selection Modal */}
+            <Modal isOpen={!!selectingServiceFor} onClose={() => setSelectingServiceFor(null)} title="Select Service">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem', padding: '1rem' }}>
+                    {services.map(s => (
+                        <div 
+                            key={s.id}
+                            onClick={() => {
+                                if (selectingServiceFor) {
+                                    handleServiceSelect(selectingServiceFor, s.id);
+                                }
+                                setSelectingServiceFor(null);
+                            }}
+                            style={{
+                                background: 'var(--bg-body)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '12px',
+                                padding: '1.5rem 1rem',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                            onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                        >
+                            <div style={{ fontWeight: 600, color: 'var(--text-dark)', fontSize: '1rem' }}>{s.name}</div>
+                            <div style={{ color: 'var(--primary)', fontWeight: 700 }}>{symbol}{s.price}</div>
+                        </div>
+                    ))}
+                    <div 
+                        onClick={() => {
+                            if (selectingServiceFor) {
+                                handleServiceSelect(selectingServiceFor, '');
+                            }
+                            setSelectingServiceFor(null);
+                        }}
+                        style={{
+                            background: '#fef2f2',
+                            border: '1px dashed #f87171',
+                            borderRadius: '12px',
+                            padding: '1.5rem 1rem',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <span style={{ fontWeight: 600, color: '#ef4444' }}>Clear Selection</span>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Tailor Selection Modal */}
+            <Modal isOpen={!!selectingTailorFor} onClose={() => setSelectingTailorFor(null)} title="Assign Tailor">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem', padding: '1rem' }}>
+                    {stylists.map(s => (
+                        <div 
+                            key={s.id}
+                            onClick={() => {
+                                if (selectingTailorFor) {
+                                    updateGarment(selectingTailorFor, 'assignedTailorId', s.id);
+                                }
+                                setSelectingTailorFor(null);
+                            }}
+                            style={{
+                                background: 'var(--bg-body)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '12px',
+                                padding: '1.5rem 1rem',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                            onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                        >
+                            <div style={{ background: 'var(--bg-card)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <User size={20} color="var(--primary)" />
+                            </div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-dark)', fontSize: '1rem' }}>{s.name}</div>
+                        </div>
+                    ))}
+                    <div 
+                        onClick={() => {
+                            if (selectingTailorFor) {
+                                updateGarment(selectingTailorFor, 'assignedTailorId', '');
+                            }
+                            setSelectingTailorFor(null);
+                        }}
+                        style={{
+                            background: '#fef2f2',
+                            border: '1px dashed #f87171',
+                            borderRadius: '12px',
+                            padding: '1.5rem 1rem',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <span style={{ fontWeight: 600, color: '#ef4444' }}>Clear Selection</span>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

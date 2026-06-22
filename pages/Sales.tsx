@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Plus, Minus, User, UserPlus, CreditCard, ShoppingBag, UserCog, Package, Ticket, X, AlertTriangle, CheckCircle, Smartphone, DollarSign, Wallet, Paperclip, Printer, ChevronDown } from 'lucide-react';
+import { Search, Plus, Minus, User, UserPlus, CreditCard, ShoppingBag, UserCog, Package, Ticket, X, AlertTriangle, CheckCircle, Smartphone, DollarSign, Wallet, Paperclip, Printer, ChevronDown, MessageCircle } from 'lucide-react';
 import { Card, Button, Input, Modal, Select, Checkbox } from '../components/UI';
 import { PaymentMethod, CartItem, ComboPackage, Voucher, VoucherClaim, Customer, Stylist } from '../types';
 import { useCurrency } from '../components/CurrencyContext';
@@ -5275,6 +5275,50 @@ const Sales: React.FC<SalesProps> = ({
               }}
             >
               <Printer size={20} /> Print Receipt
+            </Button>
+          )}
+
+          {/* WhatsApp Share Button (Tailor Module Only) */}
+          {appId === 'workly-tailor' && lastCompletedSale && (
+            <Button
+              onClick={() => {
+                const sale = lastCompletedSale;
+                const rawInvoice = sale.invoices?.[0]?.invoiceNumber || sale.invoiceNumber || sale.saleNumber || 'N/A';
+                const invoiceNum = rawInvoice.replace(/^SALE-/, '');
+                
+                // Get customer phone
+                let phone = sale.customer?.phone || selectedCustomer?.phone || '';
+                phone = phone.replace(/\D/g, ''); // Remove non-numeric characters
+                
+                const customerName = sale.customer?.name || selectedCustomer?.name || 'Customer';
+                const totalAmount = formatPrice(sale.totalAmount || finalTotal);
+                
+                const message = `Hello ${customerName}, your tailor order bill is ready! Invoice: #${invoiceNum}. Total Amount: ${totalAmount}.`;
+                
+                const whatsappUrl = phone 
+                  ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+                  : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+                  
+                window.open(whatsappUrl, '_blank');
+              }}
+              style={{
+                marginTop: '1rem',
+                padding: '0.875rem 2rem',
+                fontSize: '1rem',
+                borderRadius: '1rem',
+                background: '#25D366',
+                color: 'white',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontWeight: 600
+              }}
+            >
+              <MessageCircle size={20} /> Share Bill via WhatsApp
             </Button>
           )}
 
