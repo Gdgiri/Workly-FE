@@ -821,26 +821,68 @@ const CreateTailorOrder: React.FC<CreateTailorOrderProps> = ({ customers }) => {
                 {appId !== 'workly-tailor' && (
                     <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-dark)', fontSize: '1.1rem' }}>Expected Delivery Date (Optional)</label>
-                        <input
-                            type="date"
-                            value={targetDeliveryDate}
-                            onChange={(e) => setTargetDeliveryDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1.1rem', background: 'var(--bg-body)', cursor: 'pointer', color: targetDeliveryDate ? 'var(--text-dark)' : 'var(--text-light)' }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <div style={{ 
+                                padding: '1rem', 
+                                borderRadius: '8px', 
+                                border: '1px solid var(--border)', 
+                                background: 'var(--bg-body)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '1.1rem'
+                            }}>
+                                <span style={{ color: targetDeliveryDate ? 'var(--text-dark)' : 'var(--text-light)' }}>
+                                    {targetDeliveryDate ? new Date(targetDeliveryDate).toLocaleDateString('en-GB') : 'dd-mm-yyyy'}
+                                </span>
+                                <Calendar size={20} color="var(--text-dark)" />
+                            </div>
+                            <input
+                                type="date"
+                                value={targetDeliveryDate}
+                                onChange={(e) => setTargetDeliveryDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                                style={{ 
+                                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                                    opacity: 0, cursor: 'pointer' 
+                                }}
+                            />
+                        </div>
                     </div>
                 )}
 
                 {appId === 'workly-tailor' ? (
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-dark)', fontSize: '1.1rem' }}>Preferred Delivery Date</label>
-                        <input
-                            type="date"
-                            value={targetDeliveryDate}
-                            onChange={(e) => setTargetDeliveryDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1.1rem', background: 'var(--bg-body)', cursor: 'pointer', color: targetDeliveryDate ? 'var(--text-dark)' : 'var(--text-light)' }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <div style={{ 
+                                padding: '1rem', 
+                                borderRadius: '8px', 
+                                border: '1px solid var(--border)', 
+                                background: 'var(--bg-body)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '1.1rem'
+                            }}>
+                                <span style={{ color: targetDeliveryDate ? 'var(--text-dark)' : 'var(--text-light)' }}>
+                                    {targetDeliveryDate ? new Date(targetDeliveryDate).toLocaleDateString('en-GB') : 'dd-mm-yyyy'}
+                                </span>
+                                <Calendar size={20} color="var(--text-dark)" />
+                            </div>
+                            <input
+                                type="date"
+                                value={targetDeliveryDate}
+                                onChange={(e) => setTargetDeliveryDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                                style={{ 
+                                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                                    opacity: 0, cursor: 'pointer' 
+                                }}
+                            />
+                        </div>
                     </div>
                 ) : (
                     <div>
