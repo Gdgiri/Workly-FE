@@ -805,7 +805,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         // Client-side Status Filter
         if (status !== 'ALL') {
             filtered = filtered.filter(p => {
-                const pStatus = p.isPendingSale ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') : (p.sale?.saleStatus || p.paymentStatus);
+                const pStatus = p.isPendingSale 
+                    ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') 
+                    : (p.sale?.saleStatus === 'CANCELLED' ? 'CANCELLED' : (p.sale?.paymentStatus || p.paymentStatus || p.sale?.saleStatus));
                 return pStatus === status;
             });
         }
@@ -1036,7 +1038,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             accessor: (row: Payment) => {
                 const displayStatus = row.isPendingSale 
                     ? (row.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') 
-                    : (row.sale?.saleStatus || row.paymentStatus);
+                    : (row.sale?.saleStatus === 'CANCELLED' ? 'CANCELLED' : (row.sale?.paymentStatus || row.paymentStatus || row.sale?.saleStatus));
                 return (
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider border ${getStatusColor(displayStatus)}`}>
                         {displayStatus}
