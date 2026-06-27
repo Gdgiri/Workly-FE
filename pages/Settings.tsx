@@ -28,13 +28,24 @@ interface WhatsAppConfig {
   phoneNumberId?: string;
   businessAccountId?: string;
   templates?: {
-    [key: string]: string | { name: string; language: string };
+    [key: string]: string | { name: string; language: string; label?: string };
   };
   // Custom specific
   secretKey?: string;
   requiresTemplate?: boolean;
   headers?: any;
 }
+
+const DEFAULT_TEMPLATE_KEYS = [
+  'appointmentConfirmation',
+  'appointmentReminder',
+  'paymentReminder',
+  'salesReceipt',
+  'packageUsage',
+  'voucherCode',
+  'voucherUsage'
+];
+
 
 const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMethods, setFraudProtection }) => {
   const { showToast } = useToast();
@@ -84,8 +95,19 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
     enabled: false,
     url: 'https://api.sapprow.com/send',
     apiKey: '',
+    templates: {
+      appointmentConfirmation: '',
+      appointmentReminder: '',
+      paymentReminder: '',
+      salesReceipt: '',
+      packageUsage: '',
+      voucherCode: '',
+      voucherUsage: ''
+    }
   });
   const [showWhatsappSecret, setShowWhatsappSecret] = useState(false);
+
+
 
   // Salon Information State
   const [salonInfo, setSalonInfo] = useState({
@@ -204,15 +226,15 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
             if (waConfig) {
               setWhatsappConfig({
                 ...waConfig,
-                // Ensure defaults for missing fields if switching providers
-                templates: waConfig.templates || {
+                templates: {
                   appointmentConfirmation: '',
                   appointmentReminder: '',
                   paymentReminder: '',
                   salesReceipt: '',
                   packageUsage: '',
                   voucherCode: '',
-                  voucherUsage: ''
+                  voucherUsage: '',
+                  ...(waConfig.templates || {})
                 }
               });
             }
@@ -662,6 +684,37 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
     } catch (err) {
       showToast('Failed to copy to clipboard', 'error');
     }
+  };
+
+  const handleAddTemplate = () => {
+    const key = `custom_${Date.now()}`;
+    setWhatsappConfig(prev => {
+      const currentTemplates = prev.templates || {};
+      return {
+        ...prev,
+        templates: {
+          ...currentTemplates,
+          [key]: {
+            name: '',
+            language: 'en',
+            label: ''
+          }
+        }
+      };
+    });
+    showToast('New template row added at the bottom. Remember to save WhatsApp settings to persist changes.', 'success');
+  };
+
+  const deleteCustomTemplate = (keyToDelete: string) => {
+    setWhatsappConfig(prev => {
+      const currentTemplates = { ...(prev.templates || {}) };
+      delete currentTemplates[keyToDelete];
+      return {
+        ...prev,
+        templates: currentTemplates
+      };
+    });
+    showToast('Template removed. Remember to save WhatsApp settings to persist changes.', 'success');
   };
 
   const saveWhatsappSettings = async () => {
@@ -1282,10 +1335,10 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                         placeholder="e.g. 104xxxxxxxxxxxxx"
                       />
                       <Input
-                        label="Business Account ID"
+                        label="WhatsApp Business Account ID (WABA ID)"
                         value={whatsappConfig.businessAccountId || ''}
                         onChange={(e) => setWhatsappConfig(prev => ({ ...prev, businessAccountId: e.target.value.replace(/\D/g, '') }))}
-                        placeholder="e.g. 101xxxxxxxxxxxxx"
+                        placeholder="WABA ID (not Meta Business Suite ID)"
                       />
                     </div>
 
@@ -1348,6 +1401,99 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                             </div>
                           );
                         })}
+
+                        {/* Custom Templates */}
+                        {Object.entries(whatsappConfig.templates || {})
+                          .filter(([key]) => !DEFAULT_TEMPLATE_KEYS.includes(key))
+                          .map(([key, value]) => {
+                            const name = typeof value === 'object' && value ? (value as any).name : (value || '');
+                            const language = typeof value === 'object' && value ? ((value as any).language || 'en') : 'en';
+                            const label = typeof value === 'object' && value && (value as any).label ? (value as any).label : '';
+
+                            return (
+                              <div key={key} className="flex flex-col gap-1 border-t border-gray-100 pt-3 mt-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Custom Template Configuration</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteCustomTemplate(key)}
+                                    className="text-red-500 hover:text-red-700 transition-colors p-1"
+                                    title="Delete Template"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                  <Input
+                                    label="Template Title (e.g. July Promo)"
+                                    value={label}
+                                    onChange={(e) => setWhatsappConfig(prev => ({
+                                      ...prev,
+                                      templates: {
+                                        ...prev.templates,
+                                        [key]: { name, language, label: e.target.value }
+                                      }
+                                    }))}
+                                    placeholder="Enter descriptive title"
+                                  />
+                                  <div className="flex gap-2 items-end">
+                                    <div style={{ flex: 1 }}>
+                                      <Input
+                                        label="Meta Template Name"
+                                        value={name}
+                                        onChange={(e) => setWhatsappConfig(prev => ({
+                                          ...prev,
+                                          templates: {
+                                            ...prev.templates,
+                                            [key]: { name: e.target.value, language, label }
+                                          }
+                                        }))}
+                                        placeholder="e.g. july_promo_v1"
+                                      />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <span className="input-label">Lang</span>
+                                      <select
+                                        value={language}
+                                        onChange={(e) => setWhatsappConfig(prev => ({
+                                          ...prev,
+                                          templates: {
+                                            ...prev.templates,
+                                            [key]: { name, language: e.target.value, label }
+                                          }
+                                        }))}
+                                        style={{
+                                          height: '42px',
+                                          padding: '0 0.5rem',
+                                          borderRadius: '0.5rem',
+                                          border: '1px solid var(--border)',
+                                          fontSize: '0.875rem',
+                                          background: 'white',
+                                          minWidth: '80px'
+                                        }}
+                                      >
+                                        <option value="en">en</option>
+                                        <option value="en_US">en_US</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                        {/* Add Template Button */}
+                        <div className="pt-2 mt-2">
+                          <Button
+                            type="button"
+                            onClick={handleAddTemplate}
+                            variant="outline"
+                            icon={<Plus size={16} />}
+                          >
+                            Add Template
+                          </Button>
+                        </div>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                           Enter the exact template names as created in your Meta Business Manager and select the language code.
                         </p>
@@ -1495,6 +1641,70 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                               }))}
                               placeholder="e.g. voucher_code_v1"
                             />
+                          </div>
+
+                          {/* Custom Templates */}
+                          {Object.entries(whatsappConfig.templates || {})
+                            .filter(([key]) => !DEFAULT_TEMPLATE_KEYS.includes(key))
+                            .map(([key, value]) => {
+                              const name = typeof value === 'object' && value ? (value as any).name : (value || '');
+                              const language = typeof value === 'object' && value ? ((value as any).language || 'en') : 'en';
+                              const label = typeof value === 'object' && value && (value as any).label ? (value as any).label : '';
+
+                              return (
+                                <div key={key} className="flex flex-col gap-1 border-t border-gray-100 pt-3 mt-3">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Custom Template Configuration</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteCustomTemplate(key)}
+                                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                                      title="Delete Template"
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                  <div className="grid md:grid-cols-2 gap-4">
+                                    <Input
+                                      label="Template Title (e.g. July Promo)"
+                                      value={label}
+                                      onChange={(e) => setWhatsappConfig(prev => ({
+                                        ...prev,
+                                        templates: {
+                                          ...prev.templates,
+                                          [key]: { name, language, label: e.target.value }
+                                        }
+                                      }))}
+                                      placeholder="Enter descriptive title"
+                                    />
+                                    <Input
+                                      label="Template Name"
+                                      value={name}
+                                      onChange={(e) => setWhatsappConfig(prev => ({
+                                        ...prev,
+                                        templates: {
+                                          ...prev.templates,
+                                          [key]: { name: e.target.value, language, label }
+                                        }
+                                      }))}
+                                      placeholder="e.g. july_promo_v1"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                          {/* Add Template Button */}
+                          <div className="pt-2 mt-2">
+                            <Button
+                              type="button"
+                              onClick={handleAddTemplate}
+                              variant="outline"
+                              icon={<Plus size={16} />}
+                            >
+                              Add Template
+                            </Button>
                           </div>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>
                             Enter the exact template names as created in your provider dashboard.

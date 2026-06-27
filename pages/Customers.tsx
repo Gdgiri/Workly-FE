@@ -101,6 +101,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
     const [acceptedTerms, setAcceptedTerms] = useState(true);
     const [termsError, setTermsError] = useState('');
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [isSaving, setIsSaving] = useState(false);
 
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -333,6 +334,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
 
         setFormErrors({});
         setError(null);
+        setIsSaving(true);
         const token = localStorage.getItem('accessToken');
 
         try {
@@ -368,7 +370,7 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
         } catch (err: any) {
             setError(err.response?.data?.error || err.message);
         } finally {
-
+            setIsSaving(false);
         }
     };
 
@@ -1253,8 +1255,8 @@ const Customers: React.FC<CustomersProps> = ({ fraudProtection = false }) => {
                     )}
 
                     <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <Button type="button" variant="ghost" onClick={() => { setIsModalOpen(false); setEditingCustomer(null); }}>Cancel</Button>
-                        <Button type="submit" disabled={customersLoading}>{editingCustomer ? 'Update' : 'Save'} Customer</Button>
+                        <Button type="button" variant="ghost" onClick={() => { setIsModalOpen(false); setEditingCustomer(null); }} disabled={isSaving}>Cancel</Button>
+                        <Button type="submit" disabled={isSaving || customersLoading} isLoading={isSaving}>{editingCustomer ? 'Update' : 'Save'} Customer</Button>
                     </div>
                 </form>
             </Modal>
