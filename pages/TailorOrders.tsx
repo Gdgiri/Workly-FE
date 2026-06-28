@@ -30,6 +30,8 @@ const GARMENT_STATUSES: GarmentStatus[] = [
     { id: 'PENDING',   label: 'Pending',   color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
     { id: 'READY',     label: 'Ready',     color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
     { id: 'DELIVERED', label: 'Delivered', color: '#1E3A5F', bg: '#DBEAFE', border: '#93C5FD' },
+    { id: 'COMPLETED', label: 'Completed', color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
+    { id: 'BILLED',    label: 'Billed',    color: '#1E3A8A', bg: '#DBEAFE', border: '#BFDBFE' },
     { id: 'CANCELLED', label: 'Cancelled', color: '#991B1B', bg: '#FEE2E2', border: '#FECACA' }
 ];
 
@@ -38,6 +40,8 @@ const ORDER_STATUSES = [
     { id: 'PENDING',     label: 'Pending',     color: '#92400E', bg: '#FEF3C7', border: '#FDE68A' },
     { id: 'READY',       label: 'Ready',       color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
     { id: 'DELIVERED',   label: 'Delivered',   color: '#1E3A5F', bg: '#DBEAFE', border: '#93C5FD' },
+    { id: 'COMPLETED',   label: 'Completed',   color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
+    { id: 'BILLED',      label: 'Billed',      color: '#1E3A8A', bg: '#DBEAFE', border: '#BFDBFE' },
     { id: 'CANCELLED',   label: 'Cancelled',   color: '#991B1B', bg: '#FEE2E2', border: '#FECACA' }
 ];
 
@@ -546,8 +550,30 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                         </div>
                         {/* Right side: Order status changer + garment pills */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
-                            {/* Order status quick-change dropdown */}
-                            {(() => {
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {order.status !== 'COMPLETED' && order.status !== 'BILLED' && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleOrderStatusChange(order.id, 'COMPLETED', true); }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '0 0.6rem',
+                                            height: '32px',
+                                            fontSize: '0.72rem',
+                                            fontWeight: 700,
+                                            borderRadius: '8px',
+                                            background: '#166534',
+                                            color: 'white',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                        }}
+                                    >
+                                        <Check size={12} style={{ marginRight: '4px' }}/> Complete
+                                    </button>
+                                )}
+                                {/* Order status quick-change dropdown */}
+                                {(() => {
                                 const osCfg = ORDER_STATUSES.find(s => s.id === order.status) || ORDER_STATUSES[0];
                                 return (
                                     <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
@@ -585,6 +611,7 @@ const TailorOrders: React.FC<TailorOrdersProps> = ({ customers }) => {
                                     </div>
                                 );
                             })()}
+                            </div>
                         </div>
                     </div>
                 </motion.div>
