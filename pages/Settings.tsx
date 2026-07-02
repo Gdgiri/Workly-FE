@@ -35,6 +35,12 @@ interface WhatsAppConfig {
   secretKey?: string;
   requiresTemplate?: boolean;
   headers?: any;
+  bulkTemplates?: {
+    id: string;
+    name: string;
+    language: string;
+    description?: string;
+  }[];
 }
 
 const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMethods, setFraudProtection }) => {
@@ -86,8 +92,14 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
     enabled: false,
     url: 'https://api.sapprow.com/send',
     apiKey: '',
+    bulkTemplates: [],
   });
   const [showWhatsappSecret, setShowWhatsappSecret] = useState(false);
+  const [newBulkTemplate, setNewBulkTemplate] = useState({
+    name: '',
+    language: 'en',
+    description: '',
+  });
 
   // Salon Information State
   const [salonInfo, setSalonInfo] = useState({
@@ -219,7 +231,8 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                   packageUsage: '',
                   voucherCode: '',
                   voucherUsage: ''
-                }
+                },
+                bulkTemplates: waConfig.bulkTemplates || []
               });
             }
           }
@@ -381,7 +394,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
     setSavingAPIConfig(true);
     try {
       const newIntegration = {
-        id: crypto.randomUUID(),
+        id: 'api_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         ...newAPIConfig
       };
 
@@ -1529,7 +1542,132 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                {/* Bulk Campaign Templates Manager */}
+                <div style={{ paddingTop: '1.5rem', borderTop: '1px dashed var(--border)', marginTop: '1.5rem' }}>
+                  <h5 className="font-semibold text-sm text-black mb-1">Bulk Campaign Templates</h5>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '1rem' }}>
+                    Configure templates specifically for bulk WhatsApp broadcast campaigns.
+                  </p>
+                  
+                  {/* Template List */}
+                  {(!whatsappConfig.bulkTemplates || whatsappConfig.bulkTemplates.length === 0) ? (
+                    <div style={{
+                      padding: '1.5rem', textAlign: 'center', background: '#f8fafc',
+                      borderRadius: '0.5rem', border: '1px dashed var(--border)', color: 'var(--text-light)',
+                      fontSize: '0.85rem', marginBottom: '1rem'
+                    }}>
+                      No bulk templates configured yet. Add one below.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mb-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                      {whatsappConfig.bulkTemplates.map((tpl: any, idx: number) => (
+                        <div key={tpl.id || idx} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '0.75rem 1rem', background: '#fff', borderRadius: '0.5rem',
+                          border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{tpl.name}</span>
+                              <span style={{
+                                fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px',
+                                background: '#e0e7ff', color: '#4338ca', fontWeight: 600
+                              }}>{tpl.language}</span>
+                            </div>
+                            {tpl.description && (
+                              <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                {tpl.description}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedTemplates = whatsappConfig.bulkTemplates?.filter((_, i) => i !== idx) || [];
+                              setWhatsappConfig(prev => ({ ...prev, bulkTemplates: updatedTemplates }));
+                            }}
+                            style={{
+                              border: 'none', background: 'none', color: '#ef4444',
+                              cursor: 'pointer', padding: '0.25rem', display: 'flex'
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add New Template Form */}
+                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                    <h6 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)' }}>
+                      Add Bulk Template
+                    </h6>
+                    <div className="space-y-3" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <Input
+                          label="Template Name"
+                          value={newBulkTemplate.name}
+                          onChange={(e) => setNewBulkTemplate(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="e.g. promo_june_2026"
+                        />
+                        <div>
+                          <label className="input-label">Language Code</label>
+                          <select
+                            value={newBulkTemplate.language}
+                            onChange={(e) => setNewBulkTemplate(prev => ({ ...prev, language: e.target.value }))}
+                            style={{
+                              width: '100%', padding: '0.75rem', borderRadius: '0.5rem',
+                              border: '1px solid var(--border)', fontSize: '0.875rem',
+                              outline: 'none', background: 'white', marginTop: '0.25rem',
+                              height: '42px'
+                            }}
+                          >
+                            <option value="en">en (English)</option>
+                            <option value="en_US">en_US (US English)</option>
+                            <option value="es">es (Spanish)</option>
+                            <option value="fr">fr (French)</option>
+                            <option value="ar">ar (Arabic)</option>
+                          </select>
+                        </div>
+                      </div>
+                      <Input
+                        label="Template Description / Notes"
+                        value={newBulkTemplate.description}
+                        onChange={(e) => setNewBulkTemplate(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Brief notes on template usage or copy description..."
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (!newBulkTemplate.name.trim()) {
+                              showToast('Please enter a template name', 'error');
+                              return;
+                            }
+                            const tpl = {
+                              id: 'tpl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                              name: newBulkTemplate.name.trim(),
+                              language: newBulkTemplate.language,
+                              description: newBulkTemplate.description.trim()
+                            };
+                            setWhatsappConfig(prev => ({
+                              ...prev,
+                              bulkTemplates: [...(prev.bulkTemplates || []), tpl]
+                            }));
+                            setNewBulkTemplate({ name: '', language: 'en', description: '' });
+                            showToast('Template added to settings. Don\'t forget to save!', 'info');
+                          }}
+                        >
+                          <Plus size={16} style={{ marginRight: '4px' }} /> Add Template
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1.5rem' }}>
                   <Button
                     onClick={saveWhatsappSettings}
                     disabled={savingWhatsapp || loading}
