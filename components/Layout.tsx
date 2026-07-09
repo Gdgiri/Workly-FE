@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Calendar, Briefcase, Users,
   UserCircle, BarChart2, Settings, LogOut, Bell, Search,
   Box, Package, ClipboardCheck, BadgeDollarSign, Ticket, Building2, Tags, Sparkles,
-  Sun, Moon, CreditCard, Menu, X, Power, ChevronLeft, ChevronRight, MessageSquare, ClipboardList, Clock, Scissors
+  Sun, Moon, CreditCard, Menu, X, Power, ChevronLeft, ChevronRight, MessageSquare, ClipboardList, Clock, Scissors,
+  MessageCircle, Phone
 } from 'lucide-react';
 
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -268,6 +269,16 @@ export const allMenuItems = [
     shortcutLabel: 'Alt+M'
   },
   {
+    id: 'personal-log',
+    label: 'Whatsapp Log',
+    icon: Phone,
+    roles: ['ADMIN', 'MANAGER'],
+    color: '#3B82F6', // Blue
+    gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+    shortcutKey: 'y',
+    shortcutLabel: 'Alt+Y'
+  },
+  {
     id: 'settings',
     label: 'Settings',
     icon: Settings,
@@ -284,6 +295,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
   const location = useLocation();
   // @ts-ignore
   const user = useSelector((state: RootState) => state.auth.user);
+  // @ts-ignore
+  const settings = useSelector((state: RootState) => state.settings.settings);
 
   // Hover state for temporary expansion when collapsed
   const [isHovering, setIsHovering] = React.useState(false);
@@ -319,6 +332,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
     // We no longer strictly hide modules based on .view permission here.
     // Instead we let them render, and gate access upon clicking (with an Ask Admin toast).
 
+    if (item.id === 'message-log') {
+      let isEnabled = false;
+      if (settings?.apiIntegrations) {
+        try {
+          const integrations = typeof settings.apiIntegrations === 'string'
+            ? JSON.parse(settings.apiIntegrations)
+            : settings.apiIntegrations;
+          if (Array.isArray(integrations)) {
+            const wa = integrations.find((i: any) => i.type === 'whatsapp');
+            if (wa && wa.enabled) {
+              isEnabled = true;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      if (!isEnabled) {
+        return false;
+      }
+    }
+
+    if (item.id === 'personal-log') {
+      let isEnabled = false;
+      if (settings?.apiIntegrations) {
+        try {
+          const integrations = typeof settings.apiIntegrations === 'string'
+            ? JSON.parse(settings.apiIntegrations)
+            : settings.apiIntegrations;
+          if (Array.isArray(integrations)) {
+            const wa = integrations.find((i: any) => i.type === 'whatsapp');
+            if (wa && wa.enabled && wa.provider === 'personal') {
+              isEnabled = true;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      if (!isEnabled) {
+        return false;
+      }
+    }
+
     if (item.id === 'checklist' && appId !== 'workly-service') {
       return false;
     }
@@ -333,15 +390,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
 
     if (appId === 'workly-project') {
       const allowedProjectModules = [
-        'workly-project/overview', 
-        'workly-project/tasks', 
-        'workly-project/attendance', 
+        'workly-project/overview',
+        'workly-project/tasks',
+        'workly-project/attendance',
         'workly-project/billing',
         'workly-project/services',
         'workly-project/categories',
-        'customers', 
-        'stylists', 
-        'settings', 
+        'customers',
+        'stylists',
+        'settings',
         'ask-ai'
       ];
       if (!allowedProjectModules.includes(item.id)) {
@@ -362,7 +419,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onLogout, isOpen = false, onCl
         'inventory',
         'category',
         'reports',
-        'settings'
+        'settings',
+        'message-log',
+        'personal-log'
       ];
       if (!allowedTailorModules.includes(item.id)) {
         return false;

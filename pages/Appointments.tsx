@@ -26,7 +26,7 @@ const dropdownStyles = `
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-`;const getTimezoneForCountry = (country: string | null): string => {
+`; const getTimezoneForCountry = (country: string | null): string => {
   if (!country) return 'Asia/Kolkata';
   const c = country.trim().toLowerCase();
   if (c === 'singapore') return 'Asia/Singapore';
@@ -43,28 +43,28 @@ const dropdownStyles = `
 const createDateTimeInTz = (dateStr: string, timeStr: string, timeZone: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = timeStr.split(':').map(Number);
-  
+
   // Create Date object assuming it is UTC
   const localUtc = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
-  
+
   // Format to find the offset in the target timezone
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     timeZoneName: 'longOffset'
   });
-  
+
   const parts = formatter.formatToParts(localUtc);
   const tzPart = parts.find(p => p.type === 'timeZoneName');
   if (!tzPart) return localUtc;
-  
+
   const val = tzPart.value; // e.g. "GMT+8" or "GMT+5:30"
   const match = val.match(/GMT([+-]\d+)(?::(\d+))?/);
   if (!match) return localUtc;
-  
+
   const hOffset = parseInt(match[1], 10);
   const mOffset = match[2] ? parseInt(match[2], 10) : 0;
   const totalOffsetMinutes = hOffset * 60 + (hOffset < 0 ? -mOffset : mOffset);
-  
+
   // UTC = local time - offset
   return new Date(localUtc.getTime() - totalOffsetMinutes * 60000);
 };
@@ -1076,8 +1076,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
               <>
                 <button
                   onClick={() => {
-                      if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
-                      handleEdit(row);
+                    if (!canEdit) { showToast("Ask Admin for permission", "error"); return; }
+                    handleEdit(row);
                   }}
                   style={{
                     color: '#475569',
@@ -1188,17 +1188,17 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
           <div style={{ flex: 1 }} />
 
           <div className="flex items-center" style={{ gap: '1.5rem' }}>
-              <Button
-                onClick={() => {
-                    if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
-                    handleCreateOpen();
-                }}
-                disabled={!canAdd}
-                title={!canAdd ? "Ask Admin for permission" : ""}
-                style={{ minWidth: '180px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
-              >
-                New Schedule
-              </Button>
+            <Button
+              onClick={() => {
+                if (!canAdd) { showToast("Ask Admin for permission", "error"); return; }
+                handleCreateOpen();
+              }}
+              disabled={!canAdd}
+              title={!canAdd ? "Ask Admin for permission" : ""}
+              style={{ minWidth: '180px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !canAdd ? 0.5 : 1, cursor: !canAdd ? 'not-allowed' : 'pointer' }}
+            >
+              New Schedule
+            </Button>
 
             <Button
               onClick={handleRefresh}
@@ -2313,7 +2313,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ fraudProtection = false }) 
               {/* Totals Summary */}
               {formData.serviceIds.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem', padding: '0.5rem 0.75rem', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 600 }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <Clock size={14} />
                     <span>Total Duration: {formData.serviceIds.reduce((acc, id) => acc + (services.find(s => s.id?.toString() === id.toString())?.duration || 0), 0)} mins</span>
                   </div>

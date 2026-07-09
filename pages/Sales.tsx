@@ -101,10 +101,10 @@ const Sales: React.FC<SalesProps> = ({
   }, [businessName, appId]);
 
   const isIndianBeautyArt = user?.businessName?.toLowerCase() === 'indianbeautyart' ||
-                            user?.businessName?.toLowerCase() === 'ibawoodlands' ||
-                            user?.id === '184a171d-504c-4bd1-b425-58ce8838ee8d' ||
-                            user?.adminId === '184a171d-504c-4bd1-b425-58ce8838ee8d' ||
-                            user?.authId === 'c8d368c3-7cf4-4c1d-abeb-e8cc3185c20f';
+    user?.businessName?.toLowerCase() === 'ibawoodlands' ||
+    user?.id === '184a171d-504c-4bd1-b425-58ce8838ee8d' ||
+    user?.adminId === '184a171d-504c-4bd1-b425-58ce8838ee8d' ||
+    user?.authId === 'c8d368c3-7cf4-4c1d-abeb-e8cc3185c20f';
   const shouldHideFeatures = isIndianBeautyArt && (isAdmin || isStaff);
   const [isQuotationMode, setIsQuotationMode] = useState(false);
   const location = useLocation();
@@ -394,11 +394,11 @@ const Sales: React.FC<SalesProps> = ({
     try {
       const response = await api.get(`/customers/${customerId}/packages/active`);
       const regularPackages = response.data || [];
-      
+
       // Also fetch sales to include combo purchases for redemption
       const salesRes = await api.get(`/sales?customerId=${customerId}`);
       const sales: any[] = salesRes.data?.sales || salesRes.data || [];
-      
+
       // Sort sales by date ASC for FIFO
       const sortedSales = [...sales].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
@@ -409,7 +409,7 @@ const Sales: React.FC<SalesProps> = ({
         .forEach((s: any) => {
           (s.items || []).filter((item: any) => item.type === 'combo').forEach((item: any) => {
             // De-duplicate: If already in regularPackages, skip
-            const isDup = regularPackages.some((rp: any) => 
+            const isDup = regularPackages.some((rp: any) =>
               (normalizeName(rp.package?.name) === normalizeName(item.name) || normalizeName(rp.packageName) === normalizeName(item.name)) &&
               rp.purchaseDate?.split('T')[0] === s.createdAt?.split('T')[0]
             );
@@ -419,7 +419,7 @@ const Sales: React.FC<SalesProps> = ({
             comboPool.push({
               id: `combo-${s.id}-${item.itemId || item.name}`,
               isCombo: true,
-              package: { 
+              package: {
                 name: item.name,
                 description: comboDef?.description
               },
@@ -450,7 +450,7 @@ const Sales: React.FC<SalesProps> = ({
 
       // Step C: Apply FIFO (Subtract demand from supply)
       redemptions.forEach(red => {
-        const targetCombo = comboPool.find(c => 
+        const targetCombo = comboPool.find(c =>
           new Date(c.purchaseDate) <= new Date(red.saleDate) &&
           c.usageDetails.some((i: any) => normalizeName(i.name) === normalizeName(red.name) && i.remainingQuantity > 0)
         );
@@ -784,7 +784,7 @@ const Sales: React.FC<SalesProps> = ({
       }];
     });
   };
-  
+
   const updateItemSpecialist = (id: string, specialistId: string | number, specialistName: string) => {
     setCart(prev => prev.map(item =>
       item.id === id ? { ...item, specialistId, specialistName } : item
@@ -1356,9 +1356,9 @@ const Sales: React.FC<SalesProps> = ({
     // Open payment modal
     setSplitPayments([]);
     setIsSplitPaymentMode(false);
-    
+
     const checkoutAmount = forcedAmount !== undefined ? forcedAmount : finalTotal;
-    
+
     setCurrentSplitAmount(checkoutAmount.toString());
     setCurrentSplitMethod('CASH');
 
@@ -1397,7 +1397,7 @@ const Sales: React.FC<SalesProps> = ({
         console.log(`POS: Locking in negotiated discount: ${negotiatedDiscount}`);
         setManualDiscount(negotiatedDiscount.toString());
         setShowManualDiscount(true);
-        
+
         // Calculate forced total immediately to avoid waiting for next render
         forcedTotal = Math.max(0, subtotal - negotiatedDiscount - depositAmount);
       }
@@ -1405,6 +1405,8 @@ const Sales: React.FC<SalesProps> = ({
 
     await executeCheckout(forcedTotal);
   };
+
+
 
   const executeCompleteOrder = async () => {
     try {
@@ -1425,6 +1427,9 @@ const Sales: React.FC<SalesProps> = ({
 
       // Show success modal
       const invoiceNumber = sale?.invoices?.[0]?.invoiceNumber || sale?.saleNumber || sale?.id;
+
+      // Auto-send WhatsApp template removed because backend auto-sends it natively
+
       setSuccessMessage(`Order completed successfully! All items redeemed from package.\nInvoice #${invoiceNumber}`);
       setLastCompletedSale(sale);
       setShowSuccessModal(true);
@@ -1568,6 +1573,9 @@ const Sales: React.FC<SalesProps> = ({
       if (sale) {
         const invoiceNumber = sale.invoices?.[0]?.invoiceNumber;
         const displayId = invoiceNumber || sale.invoiceNumber || sale.saleNumber || sale.id; // Prefer invoice number
+
+        // Auto-send WhatsApp template removed because backend auto-sends it natively
+
         setSuccessMessage(`Order completed successfully!\nInvoice #${displayId}`);
         setLastCompletedSale(sale);
         clearSalesSession(); // Clear persisted cart after successful sale
@@ -1615,10 +1623,10 @@ const Sales: React.FC<SalesProps> = ({
 
           finalPayments.push({
             amount: paymentValue,
-            paymentMethod: isVoucherRedemption 
-              ? 'VOUCHER' 
-              : isPackageRedemption 
-                ? 'PACKAGE' 
+            paymentMethod: isVoucherRedemption
+              ? 'VOUCHER'
+              : isPackageRedemption
+                ? 'PACKAGE'
                 : paymentModal.method,
             paymentStatus: 'COMPLETED', // Will be updated below if partial
             transactionId: `POS-${Date.now()}`
@@ -1643,8 +1651,8 @@ const Sales: React.FC<SalesProps> = ({
           quantity: item.quantity,
           price: item.price,
           // SUCCESSFUL FIX: Strip 'combo-' prefix as per Senior Dev Integration Guide
-          redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-') 
-            ? item.redeemedFromPackageId.split('-')[1] 
+          redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-')
+            ? item.redeemedFromPackageId.split('-')[1]
             : item.redeemedFromPackageId,
           redeemedItemId: item.redeemedItemId,
           redeemedQuantity: item.redeemedQuantity,
@@ -1660,9 +1668,9 @@ const Sales: React.FC<SalesProps> = ({
         totalAmount: actualTotal, // Correct total amount (not just what is being paid now)
         paymentMethod: finalPayments.length > 0
           ? (isSplitPaymentMode ? 'SPLIT' : finalPayments[0].paymentMethod)
-          : (appliedVouchers.length > 0 
-              ? 'VOUCHER' 
-              : (cart.some(item => item.redeemedFromPackageId || item.redeemedQuantity > 0) ? 'PACKAGE' : 'CASH')),
+          : (appliedVouchers.length > 0
+            ? 'VOUCHER'
+            : (cart.some(item => item.redeemedFromPackageId || item.redeemedQuantity > 0) ? 'PACKAGE' : 'CASH')),
         paymentStatus: status,
         voucherCode: null, // Legacy
         voucherDiscount: actualVoucherDeduction,
@@ -1690,7 +1698,7 @@ const Sales: React.FC<SalesProps> = ({
       // CHECK: Are we adding payment to an EXISTING sale?
       if (pendingSaleId) {
         let lastResponse;
-        
+
         // FIRST: Update the sale with the latest items and totals
         await api.put(`/sales/${pendingSaleId}`, saleData);
 
@@ -1839,8 +1847,8 @@ const Sales: React.FC<SalesProps> = ({
         quantity: item.quantity,
         price: item.price,
         // SUCCESSFUL FIX: Strip 'combo-' prefix as per Senior Dev Integration Guide
-        redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-') 
-          ? item.redeemedFromPackageId.split('-')[1] 
+        redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-')
+          ? item.redeemedFromPackageId.split('-')[1]
           : item.redeemedFromPackageId,
         redeemedItemId: item.redeemedItemId,
         redeemedQuantity: item.redeemedQuantity,
@@ -1927,7 +1935,7 @@ const Sales: React.FC<SalesProps> = ({
               amount: Number(paymentModal.amount), // Ensure number
               saleId: sale.id,
               appointmentId: appointmentId,
-          tailorOrderId: tailorOrderId,
+              tailorOrderId: tailorOrderId,
               // Pass deposit info again? Usually verify endpoint just records the razorpay transaction.
               // The sale should already have the deposit recorded from creation step.
             });
@@ -2017,8 +2025,8 @@ const Sales: React.FC<SalesProps> = ({
         quantity: item.quantity,
         price: item.price,
         // SUCCESSFUL FIX: Strip 'combo-' prefix as per Senior Dev Integration Guide
-        redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-') 
-          ? item.redeemedFromPackageId.split('-')[1] 
+        redeemedFromPackageId: item.redeemedFromPackageId?.startsWith('combo-')
+          ? item.redeemedFromPackageId.split('-')[1]
           : item.redeemedFromPackageId,
         redeemedItemId: item.redeemedItemId,
         redeemedQuantity: item.redeemedQuantity
@@ -2188,7 +2196,7 @@ const Sales: React.FC<SalesProps> = ({
           {/* SERVICE SEGMENT TOGGLE */}
           {appId.startsWith('workly-service') && (
             <div style={{ marginLeft: '1rem', borderLeft: '1px solid var(--border)', paddingLeft: '1rem', display: 'flex', alignItems: 'center' }}>
-              <Switch 
+              <Switch
                 isOn={isQuotationMode}
                 onToggle={() => setIsQuotationMode(!isQuotationMode)}
                 activeLabel="Quotes & Invoices"
@@ -2203,207 +2211,207 @@ const Sales: React.FC<SalesProps> = ({
       {/* CONTENT GRID */}
       {!isQuotationMode ? (
         <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 30rem',
-        gap: '1.5rem',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden'
-      }}>
-        {/* LEFT COLUMN: ITEM SELECTION */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
+          display: 'grid',
+          gridTemplateColumns: '1fr 30rem',
+          gap: '1.5rem',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}>
+          {/* LEFT COLUMN: ITEM SELECTION */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
 
-          {/* Search & Tabs */}
-          <div style={{ background: 'var(--bg-card)', padding: '0.55rem', borderRadius: '1rem', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', width: '100%' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)', width: 18 }} />
-                <input
-                  type="text"
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 1rem 0.65rem 2.75rem',
-                    borderRadius: '0.75rem',
-                    border: '1.5px solid var(--border)',
-                    outline: 'none',
-                    background: 'var(--bg-input)',
-                    color: 'var(--text-dark)',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--primary)';
-                    e.currentTarget.style.background = 'var(--bg-card)';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(35, 76, 106, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border)';
-                    e.currentTarget.style.background = 'var(--bg-input)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
-              </div>
-              <div style={{
-                display: 'flex',
-                background: 'var(--bg-hover)',
-                padding: '0.25rem',
-                borderRadius: '0.875rem',
-                border: '1px solid var(--border)',
-                boxShadow: 'var(--shadow-sm)',
-                gap: '0.25rem'
-              }}>
-                <button
-                  onClick={() => handleTabChange('services')}
-                  style={{
-                    padding: '0.45rem 1rem',
-                    borderRadius: '0.625rem',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    background: activeTab === 'services' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'services' ? 'var(--primary)' : 'var(--text-black)',
-                    boxShadow: activeTab === 'services' ? 'var(--shadow-md)' : 'none',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transform: activeTab === 'services' ? 'translateY(-1px)' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'services') {
-                      e.currentTarget.style.background = 'var(--bg-active)';
-                      e.currentTarget.style.color = 'var(--text-dark)';
-                      e.currentTarget.style.transform = 'translateY(-0.5px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'services') {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-black)';
-                      e.currentTarget.style.transform = 'none';
-                    }
-                  }}
-                >
-                  Services
-                </button>
-                <button
-                  onClick={() => handleTabChange('products')}
-                  style={{
-                    padding: '0.45rem 1rem',
-                    borderRadius: '0.625rem',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    background: activeTab === 'products' ? 'var(--bg-card)' : 'transparent',
-                    color: activeTab === 'products' ? 'var(--primary)' : 'var(--text-black)',
-                    boxShadow: activeTab === 'products' ? 'var(--shadow-md)' : 'none',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transform: activeTab === 'products' ? 'translateY(-1px)' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'products') {
-                      e.currentTarget.style.background = 'var(--bg-active)';
-                      e.currentTarget.style.color = 'var(--text-dark)';
-                      e.currentTarget.style.transform = 'translateY(-0.5px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'products') {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-black)';
-                      e.currentTarget.style.transform = 'none';
-                    }
-                  }}
-                >
-                  Products
-                </button>
-                {appId !== 'workly-tailor' && (
-                  <>
-                    <button
-                      onClick={() => handleTabChange('combos')}
-                      style={{
-                        padding: '0.45rem 1rem',
-                        borderRadius: '0.625rem',
-                        border: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                        cursor: 'pointer',
-                        background: activeTab === 'combos' ? 'var(--bg-card)' : 'transparent',
-                        color: activeTab === 'combos' ? 'var(--primary)' : 'var(--text-black)',
-                        boxShadow: activeTab === 'combos' ? 'var(--shadow-md)' : 'none',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        transform: activeTab === 'combos' ? 'translateY(-1px)' : 'none'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeTab !== 'combos') {
-                          e.currentTarget.style.background = 'var(--bg-active)';
-                          e.currentTarget.style.color = 'var(--text-dark)';
-                          e.currentTarget.style.transform = 'translateY(-0.5px)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeTab !== 'combos') {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = 'var(--text-black)';
-                          e.currentTarget.style.transform = 'none';
-                        }
-                      }}
-                    >
-                      Packages
-                    </button>
-                    <button
-                      onClick={() => handleTabChange('vouchers')}
-                      style={{
-                        padding: '0.45rem 1rem',
-                        borderRadius: '0.625rem',
-                        border: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                        cursor: 'pointer',
-                        background: activeTab === 'vouchers' ? 'var(--bg-card)' : 'transparent',
-                        color: activeTab === 'vouchers' ? 'var(--primary)' : 'var(--text-black)',
-                        boxShadow: activeTab === 'vouchers' ? 'var(--shadow-md)' : 'none',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        transform: activeTab === 'vouchers' ? 'translateY(-1px)' : 'none'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeTab !== 'vouchers') {
-                          e.currentTarget.style.background = 'var(--bg-active)';
-                          e.currentTarget.style.color = 'var(--text-dark)';
-                          e.currentTarget.style.transform = 'translateY(-0.5px)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeTab !== 'vouchers') {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = 'var(--text-black)';
-                          e.currentTarget.style.transform = 'none';
-                        }
-                      }}
-                    >
-                      Vouchers
-                    </button>
-                  </>
-                )}
-              </div>
+            {/* Search & Tabs */}
+            <div style={{ background: 'var(--bg-card)', padding: '0.55rem', borderRadius: '1rem', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', width: '100%' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)', width: 18 }} />
+                  <input
+                    type="text"
+                    placeholder="Search items..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 1rem 0.65rem 2.75rem',
+                      borderRadius: '0.75rem',
+                      border: '1.5px solid var(--border)',
+                      outline: 'none',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-dark)',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.background = 'var(--bg-card)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(35, 76, 106, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.background = 'var(--bg-input)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+                <div style={{
+                  display: 'flex',
+                  background: 'var(--bg-hover)',
+                  padding: '0.25rem',
+                  borderRadius: '0.875rem',
+                  border: '1px solid var(--border)',
+                  boxShadow: 'var(--shadow-sm)',
+                  gap: '0.25rem'
+                }}>
+                  <button
+                    onClick={() => handleTabChange('services')}
+                    style={{
+                      padding: '0.45rem 1rem',
+                      borderRadius: '0.625rem',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      background: activeTab === 'services' ? 'var(--bg-card)' : 'transparent',
+                      color: activeTab === 'services' ? 'var(--primary)' : 'var(--text-black)',
+                      boxShadow: activeTab === 'services' ? 'var(--shadow-md)' : 'none',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transform: activeTab === 'services' ? 'translateY(-1px)' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== 'services') {
+                        e.currentTarget.style.background = 'var(--bg-active)';
+                        e.currentTarget.style.color = 'var(--text-dark)';
+                        e.currentTarget.style.transform = 'translateY(-0.5px)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== 'services') {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-black)';
+                        e.currentTarget.style.transform = 'none';
+                      }
+                    }}
+                  >
+                    Services
+                  </button>
+                  <button
+                    onClick={() => handleTabChange('products')}
+                    style={{
+                      padding: '0.45rem 1rem',
+                      borderRadius: '0.625rem',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      background: activeTab === 'products' ? 'var(--bg-card)' : 'transparent',
+                      color: activeTab === 'products' ? 'var(--primary)' : 'var(--text-black)',
+                      boxShadow: activeTab === 'products' ? 'var(--shadow-md)' : 'none',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transform: activeTab === 'products' ? 'translateY(-1px)' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== 'products') {
+                        e.currentTarget.style.background = 'var(--bg-active)';
+                        e.currentTarget.style.color = 'var(--text-dark)';
+                        e.currentTarget.style.transform = 'translateY(-0.5px)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== 'products') {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-black)';
+                        e.currentTarget.style.transform = 'none';
+                      }
+                    }}
+                  >
+                    Products
+                  </button>
+                  {appId !== 'workly-tailor' && (
+                    <>
+                      <button
+                        onClick={() => handleTabChange('combos')}
+                        style={{
+                          padding: '0.45rem 1rem',
+                          borderRadius: '0.625rem',
+                          border: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          cursor: 'pointer',
+                          background: activeTab === 'combos' ? 'var(--bg-card)' : 'transparent',
+                          color: activeTab === 'combos' ? 'var(--primary)' : 'var(--text-black)',
+                          boxShadow: activeTab === 'combos' ? 'var(--shadow-md)' : 'none',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transform: activeTab === 'combos' ? 'translateY(-1px)' : 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (activeTab !== 'combos') {
+                            e.currentTarget.style.background = 'var(--bg-active)';
+                            e.currentTarget.style.color = 'var(--text-dark)';
+                            e.currentTarget.style.transform = 'translateY(-0.5px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (activeTab !== 'combos') {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = 'var(--text-black)';
+                            e.currentTarget.style.transform = 'none';
+                          }
+                        }}
+                      >
+                        Packages
+                      </button>
+                      <button
+                        onClick={() => handleTabChange('vouchers')}
+                        style={{
+                          padding: '0.45rem 1rem',
+                          borderRadius: '0.625rem',
+                          border: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          cursor: 'pointer',
+                          background: activeTab === 'vouchers' ? 'var(--bg-card)' : 'transparent',
+                          color: activeTab === 'vouchers' ? 'var(--primary)' : 'var(--text-black)',
+                          boxShadow: activeTab === 'vouchers' ? 'var(--shadow-md)' : 'none',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transform: activeTab === 'vouchers' ? 'translateY(-1px)' : 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (activeTab !== 'vouchers') {
+                            e.currentTarget.style.background = 'var(--bg-active)';
+                            e.currentTarget.style.color = 'var(--text-dark)';
+                            e.currentTarget.style.transform = 'translateY(-0.5px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (activeTab !== 'vouchers') {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = 'var(--text-black)';
+                            e.currentTarget.style.transform = 'none';
+                          }
+                        }}
+                      >
+                        Vouchers
+                      </button>
+                    </>
+                  )}
+                </div>
 
-              {/* Show Inactive Toggle commented out as requested */}
-              {/* {(activeTab === 'services' || activeTab === 'combos') && (
+                {/* Show Inactive Toggle commented out as requested */}
+                {/* {(activeTab === 'services' || activeTab === 'combos') && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginLeft: 'auto', paddingRight: '0.5rem' }}>
                   <input
                     type="checkbox"
@@ -2415,939 +2423,939 @@ const Sales: React.FC<SalesProps> = ({
                 </label>
               )} */}
 
+              </div>
+
+              {/* Category Filters */}
+              {(activeTab === 'services' || activeTab === 'products') && (
+                <div style={{
+                  display: 'flex',
+                  gap: '0.4rem',
+                  paddingBottom: '0.2rem',
+                  width: '100%',
+                  flexWrap: 'wrap', // Wrap to next line
+                }}>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} width="80px" height="1.8rem" style={{ borderRadius: '2rem' }} />
+                    ))
+                  ) : categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      style={{
+                        padding: '0.3rem 0.75rem',
+                        borderRadius: '2rem',
+                        border: selectedCategory === cat ? '1px solid var(--primary)' : '1px solid var(--border)',
+                        background: selectedCategory === cat ? 'var(--primary)' : 'var(--bg-body)',
+                        color: selectedCategory === cat ? '#fff' : 'var(--text-dark)',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s',
+                        boxShadow: selectedCategory === cat ? '0 4px 12px rgba(35, 76, 106, 0.2)' : 'none',
+                        flexShrink: 0
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+
             </div>
 
-            {/* Category Filters */}
-            {(activeTab === 'services' || activeTab === 'products') && (
-              <div style={{
-                display: 'flex',
-                gap: '0.4rem',
-                paddingBottom: '0.2rem',
-                width: '100%',
-                flexWrap: 'wrap', // Wrap to next line
-              }}>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} width="80px" height="1.8rem" style={{ borderRadius: '2rem' }} />
-                  ))
-                ) : categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    style={{
-                      padding: '0.3rem 0.75rem',
-                      borderRadius: '2rem',
-                      border: selectedCategory === cat ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      background: selectedCategory === cat ? 'var(--primary)' : 'var(--bg-body)',
-                      color: selectedCategory === cat ? '#fff' : 'var(--text-dark)',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s',
-                      boxShadow: selectedCategory === cat ? '0 4px 12px rgba(35, 76, 106, 0.2)' : 'none',
-                      flexShrink: 0
-                    }}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            )}
-
-          </div>
 
 
-
-          {/* Item Grid */}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridAutoRows: 'max-content', gap: '0.55rem', paddingBottom: '0.8rem' }}>
-            {loading ? (
-              // Loading Skeletons
-              Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={`skeleton-${i}`}
-                  style={{
-                    background: 'var(--bg-card)',
-                    borderRadius: '1rem',
-                    padding: '0.6rem',
-                    border: '1px solid var(--border)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                    height: '110px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Skeleton width="70%" height="1.2rem" />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
-                    <Skeleton width="32px" height="32px" variant="rectangular" style={{ borderRadius: '0.5rem' }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                      <Skeleton width="40px" height="0.8rem" />
-                      <Skeleton width="60px" height="1.1rem" />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : filteredItems.length > 0 ? (
-              filteredItems.map(item => {
-                // NEW: Aggregate logic to show total available redemptions across all packages
-                const allMatchingUsageItems = customerPackages.flatMap(pkg => {
-                  // NEW: Skip expired packages/combos for redemption visibility
-                  if (pkg.expiryDate && new Date(pkg.expiryDate) < new Date()) {
-                    return [];
-                  }
-
-                  const items = pkg.usageDetails?.filter((u: any) =>
-                    (u.itemId === item.id || u.name === item.name) && u.remainingQuantity > 0
-                  ) || [];
-                  return items.map((u: any) => ({ ...u, packageId: pkg.id }));
-                });
-
-                const totalRemaining = allMatchingUsageItems.reduce((sum, u) => sum + u.remainingQuantity, 0);
-
-                // For card display, we still need ONE package to target when clicking "Redeem"
-                // We'll pick the first one with balance
-                const usageItem = allMatchingUsageItems.length > 0 ? allMatchingUsageItems[0] : null;
-                const matchingPkg = usageItem ? customerPackages.find(p => p.id === usageItem.packageId) : null;
-
-                return (
-                  <motion.div
-                    key={item.id}
-                    className="dark:bg-slate-900 dark:border-slate-700"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.06)' }}
-                    transition={{ duration: 0.2 }}
-                    onClick={() => {
-                      if (matchingPkg && usageItem) {
-                        // REDEMPTION LOGIC - Works for all tabs (Services, Products, Combos)
-                        const itemToAdd = {
-                          id: usageItem.itemId || item.id || 'temp-' + Math.random(),
-                          name: usageItem.name || item.name,
-                          price: 0,
-                        };
-                        addToCart(itemToAdd, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : 'service', {
-                          packageId: matchingPkg.id,
-                          itemId: usageItem.itemId || usageItem.name
-                        });
-                        // Toast removed - notification is handled in updateQuantity when exceeding free limit
-                      } else {
-                        // NORMAL PURCHASE LOGIC - No package match
-                        addToCart(item, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : activeTab === 'vouchers' ? 'voucher' : 'combo');
-                      }
-                    }}
+            {/* Item Grid */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridAutoRows: 'max-content', gap: '0.55rem', paddingBottom: '0.8rem' }}>
+              {loading ? (
+                // Loading Skeletons
+                Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={`skeleton-${i}`}
                     style={{
                       background: 'var(--bg-card)',
                       borderRadius: '1rem',
                       padding: '0.6rem',
                       border: '1px solid var(--border)',
-                      cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      height: '100%',
+                      gap: '0.5rem',
+                      height: '110px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'visible' // Ensure badge can still be seen if slightly offset
                     }}
                   >
-
-                    {/* Badge UI - Show when item can be redeemed from package */}
-                    {matchingPkg && usageItem && (
-                      <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 10 }}>
-                        <div
-                          style={{
-                            background: 'rgba(16, 185, 129, 0.2)',
-                            color: 'var(--success)',
-                            borderRadius: '2rem',
-                            padding: '0.25rem 0.6rem',
-                            fontSize: '0.65rem',
-                            fontWeight: 800,
-                            border: '1px solid rgba(16, 185, 129, 0.3)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1)',
-                          }}
-                        >
-                          Redeem ({totalRemaining})
-                        </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Skeleton width="70%" height="1.2rem" />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
+                      <Skeleton width="32px" height="32px" variant="rectangular" style={{ borderRadius: '0.5rem' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                        <Skeleton width="40px" height="0.8rem" />
+                        <Skeleton width="60px" height="1.1rem" />
                       </div>
-                    )}
+                    </div>
+                  </div>
+                ))
+              ) : filteredItems.length > 0 ? (
+                filteredItems.map(item => {
+                  // NEW: Aggregate logic to show total available redemptions across all packages
+                  const allMatchingUsageItems = customerPackages.flatMap(pkg => {
+                    // NEW: Skip expired packages/combos for redemption visibility
+                    if (pkg.expiryDate && new Date(pkg.expiryDate) < new Date()) {
+                      return [];
+                    }
 
+                    const items = pkg.usageDetails?.filter((u: any) =>
+                      (u.itemId === item.id || u.name === item.name) && u.remainingQuantity > 0
+                    ) || [];
+                    return items.map((u: any) => ({ ...u, packageId: pkg.id }));
+                  });
 
+                  const totalRemaining = allMatchingUsageItems.reduce((sum, u) => sum + u.remainingQuantity, 0);
 
-                    {/* Card Content - Horizontal Layout: Top: Name | Duration, Bottom: Image | Amount */}
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.5rem' }}>
-                      {/* Top Row: Name only */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <h4 className="text-black dark:text-black" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.3, flex: 1, textAlign: 'left' }}>
-                          {item.name}
-                        </h4>
-                      </div>
+                  // For card display, we still need ONE package to target when clicking "Redeem"
+                  // We'll pick the first one with balance
+                  const usageItem = allMatchingUsageItems.length > 0 ? allMatchingUsageItems[0] : null;
+                  const matchingPkg = usageItem ? customerPackages.find(p => p.id === usageItem.packageId) : null;
 
-                      {/* Bottom Row: Image (left) | Duration & Amount (right) */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-                          <ServiceAvatar
-                            name={item.name}
-                            imgUrl={(item as any).imgUrl}
-                            size={32}
-                            shape="rectangle"
-                          />
+                  return (
+                    <motion.div
+                      key={item.id}
+                      className="dark:bg-slate-900 dark:border-slate-700"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.06)' }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => {
+                        if (matchingPkg && usageItem) {
+                          // REDEMPTION LOGIC - Works for all tabs (Services, Products, Combos)
+                          const itemToAdd = {
+                            id: usageItem.itemId || item.id || 'temp-' + Math.random(),
+                            name: usageItem.name || item.name,
+                            price: 0,
+                          };
+                          addToCart(itemToAdd, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : 'service', {
+                            packageId: matchingPkg.id,
+                            itemId: usageItem.itemId || usageItem.name
+                          });
+                          // Toast removed - notification is handled in updateQuantity when exceeding free limit
+                        } else {
+                          // NORMAL PURCHASE LOGIC - No package match
+                          addToCart(item, activeTab === 'services' ? 'service' : activeTab === 'products' ? 'product' : activeTab === 'vouchers' ? 'voucher' : 'combo');
+                        }
+                      }}
+                      style={{
+                        background: 'var(--bg-card)',
+                        borderRadius: '1rem',
+                        padding: '0.6rem',
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        height: '100%',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'visible' // Ensure badge can still be seen if slightly offset
+                      }}
+                    >
+
+                      {/* Badge UI - Show when item can be redeemed from package */}
+                      {matchingPkg && usageItem && (
+                        <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 10 }}>
+                          <div
+                            style={{
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              color: 'var(--success)',
+                              borderRadius: '2rem',
+                              padding: '0.25rem 0.6rem',
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1)',
+                            }}
+                          >
+                            Redeem ({totalRemaining})
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                          <p className="text-black dark:text-black" style={{ margin: 0, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                            {activeTab === 'services'
-                              ? `${(item as any).duration} mins`
-                              : activeTab === 'products'
-                                ? `${(item as any).stock} in stock`
-                                : activeTab === 'vouchers'
-                                  ? (
-                                    <>
-                                      {/* Expiry: {new Date((item as any).expiryDate).toLocaleDateString()}
+                      )}
+
+
+
+                      {/* Card Content - Horizontal Layout: Top: Name | Duration, Bottom: Image | Amount */}
+                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.5rem' }}>
+                        {/* Top Row: Name only */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                          <h4 className="text-black dark:text-black" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, lineHeight: 1.3, flex: 1, textAlign: 'left' }}>
+                            {item.name}
+                          </h4>
+                        </div>
+
+                        {/* Bottom Row: Image (left) | Duration & Amount (right) */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flex: 1 }}>
+                          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                            <ServiceAvatar
+                              name={item.name}
+                              imgUrl={(item as any).imgUrl}
+                              size={32}
+                              shape="rectangle"
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                            <p className="text-black dark:text-black" style={{ margin: 0, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                              {activeTab === 'services'
+                                ? `${(item as any).duration} mins`
+                                : activeTab === 'products'
+                                  ? `${(item as any).stock} in stock`
+                                  : activeTab === 'vouchers'
+                                    ? (
+                                      <>
+                                        {/* Expiry: {new Date((item as any).expiryDate).toLocaleDateString()}
                                     <br /> */}
-                                      Value: {formatPrice((item as any).value)}
-                                    </>
-                                  )
-                                  : `${(item as any).items.length} items`
-                            }
-                          </p>
-                          <div className="text-black dark:text-white" style={{ fontWeight: 800, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
-                            {formatPrice(activeTab === 'vouchers' ? (item as any).sellingPrice : item.price)}
+                                        Value: {formatPrice((item as any).value)}
+                                      </>
+                                    )
+                                    : `${(item as any).items.length} items`
+                              }
+                            </p>
+                            <div className="text-black dark:text-white" style={{ fontWeight: 800, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
+                              {formatPrice(activeTab === 'vouchers' ? (item as any).sellingPrice : item.price)}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })
-            ) : (
-              <div style={{
-                gridColumn: '1 / -1',
-                padding: '3rem',
-                textAlign: 'center',
-                background: 'var(--bg-card)',
-                borderRadius: '1rem',
-                border: '1px solid var(--border)',
-                color: 'var(--text-black)'
-              }}>
-                <ShoppingBag size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                <p style={{ fontWeight: 600 }}>No items found</p>
-                <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Try changing your category or search term</p>
-              </div>
-            )}
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <div style={{
+                  gridColumn: '1 / -1',
+                  padding: '3rem',
+                  textAlign: 'center',
+                  background: 'var(--bg-card)',
+                  borderRadius: '1rem',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-black)'
+                }}>
+                  <ShoppingBag size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                  <p style={{ fontWeight: 600 }}>No items found</p>
+                  <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Try changing your category or search term</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* RIGHT COLUMN: CART */}
-        <Card
-          className="h-full"
-          contentClassName="flex flex-col h-full"
-          contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
-          style={{
-            padding: 0,
-            overflow: 'hidden',
-            border: '1px solid var(--border)',
-            // borderRadius: 0,
-            boxShadow: 'var(--shadow-xl)',
-            background: 'var(--bg-card)',
-            height: '100%',
-            color: 'var(--text-dark)'
-          }}>
-          {/* Customer Header */}
-          <div style={{
-            padding: '0.75rem',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--bg-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.1rem'
-          }}>
+          {/* RIGHT COLUMN: CART */}
+          <Card
+            className="h-full"
+            contentClassName="flex flex-col h-full"
+            contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+            style={{
+              padding: 0,
+              overflow: 'hidden',
+              border: '1px solid var(--border)',
+              // borderRadius: 0,
+              boxShadow: 'var(--shadow-xl)',
+              background: 'var(--bg-card)',
+              height: '100%',
+              color: 'var(--text-dark)'
+            }}>
+            {/* Customer Header */}
+            <div style={{
+              padding: '0.75rem',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--bg-subtle)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.1rem'
+            }}>
 
-            {customersLoading ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'var(--bg-hover)',
-                padding: '0.65rem 0.875rem',
-                borderRadius: '1rem',
-                border: '1px solid var(--border)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                  <Skeleton width="32px" height="32px" style={{ borderRadius: '10px' }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <Skeleton width="120px" height="1rem" />
-                    <Skeleton width="80px" height="0.75rem" />
-                  </div>
-                </div>
-              </div>
-            ) : selectedCustomer ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'var(--bg-hover)',
-                padding: '0.65rem 0.875rem',
-                borderRadius: '1rem',
-                border: '1px solid var(--border)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                  <div style={{
-                    background: 'var(--bg-input)',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                  }}>
-                    <User size={20} style={{ color: selectedCustomerId === 'WALK_IN' ? 'var(--text-black)' : 'var(--primary)' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                    <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>{selectedCustomer?.name}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)', fontWeight: 500 }}>
-                        {(isStaff && fraudProtection) ? maskPhone(selectedCustomer?.phone) : selectedCustomer?.phone}
-                      </p>
-                      {selectedSpecialistName && (
-                        <>
-                          <span style={{ color: 'var(--border)', fontSize: '0.75rem', opacity: 0.5 }}>|</span>
-                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                            {selectedSpecialistName}
-                          </p>
-                        </>
-                      )}
+              {customersLoading ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'var(--bg-hover)',
+                  padding: '0.65rem 0.875rem',
+                  borderRadius: '1rem',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                    <Skeleton width="32px" height="32px" style={{ borderRadius: '10px' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <Skeleton width="120px" height="1rem" />
+                      <Skeleton width="80px" height="0.75rem" />
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <button
-                    onClick={() => setIsSpecialistModalOpen(true)}
-                    title={selectedSpecialistName ? "Change Specialist" : "Select Specialist"}
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
+              ) : selectedCustomer ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'var(--bg-hover)',
+                  padding: '0.65rem 0.875rem',
+                  borderRadius: '1rem',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                    <div style={{
+                      background: 'var(--bg-input)',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: 'var(--bg-card)',
                       border: '1px solid var(--border)',
-                      color: selectedSpecialistName ? 'var(--primary)' : 'var(--text-black)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: selectedSpecialistName ? '0 2px 4px rgba(79, 70, 229, 0.1)' : 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = 'var(--primary)';
-                      e.currentTarget.style.borderColor = 'var(--primary)';
-                      e.currentTarget.style.background = 'var(--bg-hover)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = selectedSpecialistName ? 'var(--primary)' : 'var(--text-black)';
-                      e.currentTarget.style.borderColor = 'var(--border)';
-                      e.currentTarget.style.background = 'var(--bg-card)';
-                    }}
-                  >
-                    <UserCog size={16} />
-                  </button>
-                  <button
-                    onClick={handleClearCustomer}
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'var(--bg-card)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-black)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = 'var(--danger)';
-                      e.currentTarget.style.borderColor = 'var(--danger)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = 'var(--text-black)';
-                      e.currentTarget.style.borderColor = 'var(--border)';
-                    }}
-                  >
-                    <X size={14} strokeWidth={2.5} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ position: 'relative' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  {/* Search Input */}
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', opacity: 0.5, pointerEvents: 'none' }} />
-                    <input
-                      type="text"
-                      placeholder="Search Customer..."
-                      value={customerSearchTerm}
-                      onChange={(e) => {
-                        setCustomerSearchTerm(e.target.value);
-                        setIsCustomerDropdownOpen(true);
-                      }}
-                      onFocus={() => setIsCustomerDropdownOpen(true)}
-                      style={{
-                        width: '100%',
-                        height: '2.5rem',
-                        padding: '0 2.5rem 0 2.75rem',
-                        fontSize: '0.875rem',
-                        border: '1px solid var(--border)',
-                        borderRadius: '1rem',
-                        outline: 'none',
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        background: 'var(--bg-input)',
-                        color: 'var(--text-dark)',
-                        fontWeight: 500
-                      }}
-                      onFocusCapture={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--primary)';
-                        e.currentTarget.style.background = 'white';
-                        e.currentTarget.style.boxShadow = '0 0 0 4px rgba(79, 70, 229, 0.08)';
-                      }}
-                      onBlurCapture={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                        e.currentTarget.style.background = 'var(--bg-body)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsCustomerDropdownOpen(!isCustomerDropdownOpen);
-                      }}
-                      style={{
-                        position: 'absolute',
-                        right: '0.75rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-black)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0.25rem',
-                        borderRadius: '0.5rem',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                    >
-                      <ChevronDown size={18} style={{
-                        transform: isCustomerDropdownOpen ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                      }} />
-                    </button>
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                    }}>
+                      <User size={20} style={{ color: selectedCustomerId === 'WALK_IN' ? 'var(--text-black)' : 'var(--primary)' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                      <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>{selectedCustomer?.name}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)', fontWeight: 500 }}>
+                          {(isStaff && fraudProtection) ? maskPhone(selectedCustomer?.phone) : selectedCustomer?.phone}
+                        </p>
+                        {selectedSpecialistName && (
+                          <>
+                            <span style={{ color: 'var(--border)', fontSize: '0.75rem', opacity: 0.5 }}>|</span>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                              {selectedSpecialistName}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Action Group */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <button
-                      onClick={() => setIsAddCustomerModalOpen(true)}
+                      onClick={() => setIsSpecialistModalOpen(true)}
+                      title={selectedSpecialistName ? "Change Specialist" : "Select Specialist"}
                       style={{
-                        height: '2.5rem',
-                        width: '2.5rem',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
-                        border: 'none',
-                        borderRadius: '1rem',
-                        color: 'white',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        color: selectedSpecialistName ? 'var(--primary)' : 'var(--text-black)',
                         cursor: 'pointer',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)'
+                        transition: 'all 0.2s',
+                        boxShadow: selectedSpecialistName ? '0 2px 4px rgba(79, 70, 229, 0.1)' : 'none'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(79, 70, 229, 0.3)';
+                        e.currentTarget.style.color = 'var(--primary)';
+                        e.currentTarget.style.borderColor = 'var(--primary)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.2)';
+                        e.currentTarget.style.color = selectedSpecialistName ? 'var(--primary)' : 'var(--text-black)';
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.background = 'var(--bg-card)';
                       }}
                     >
-                      <UserPlus size={20} strokeWidth={2.5} />
+                      <UserCog size={16} />
                     </button>
-
-                    {!shouldHideFeatures && (
-                      <button
-                        onClick={() => {
-                          setSelectedCustomerId('WALK_IN');
-                          setCustomerSearchTerm('Walk-in Customer');
-                          setIsCustomerDropdownOpen(false);
+                    <button
+                      onClick={handleClearCustomer}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-black)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--danger)';
+                        e.currentTarget.style.borderColor = 'var(--danger)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--text-black)';
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                      }}
+                    >
+                      <X size={14} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    {/* Search Input */}
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)', opacity: 0.5, pointerEvents: 'none' }} />
+                      <input
+                        type="text"
+                        placeholder="Search Customer..."
+                        value={customerSearchTerm}
+                        onChange={(e) => {
+                          setCustomerSearchTerm(e.target.value);
+                          setIsCustomerDropdownOpen(true);
                         }}
-                        title="Walk-in Customer"
+                        onFocus={() => setIsCustomerDropdownOpen(true)}
+                        style={{
+                          width: '100%',
+                          height: '2.5rem',
+                          padding: '0 2.5rem 0 2.75rem',
+                          fontSize: '0.875rem',
+                          border: '1px solid var(--border)',
+                          borderRadius: '1rem',
+                          outline: 'none',
+                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                          background: 'var(--bg-input)',
+                          color: 'var(--text-dark)',
+                          fontWeight: 500
+                        }}
+                        onFocusCapture={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--primary)';
+                          e.currentTarget.style.background = 'white';
+                          e.currentTarget.style.boxShadow = '0 0 0 4px rgba(79, 70, 229, 0.08)';
+                        }}
+                        onBlurCapture={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                          e.currentTarget.style.background = 'var(--bg-body)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsCustomerDropdownOpen(!isCustomerDropdownOpen);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-black)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.25rem',
+                          borderRadius: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        <ChevronDown size={18} style={{
+                          transform: isCustomerDropdownOpen ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }} />
+                      </button>
+                    </div>
+
+                    {/* Action Group */}
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => setIsAddCustomerModalOpen(true)}
                         style={{
                           height: '2.5rem',
                           width: '2.5rem',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // Emerald gradient
+                          background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
                           border: 'none',
                           borderRadius: '1rem',
                           color: 'white',
                           cursor: 'pointer',
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                          boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.3)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(79, 70, 229, 0.3)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.2)';
                         }}
                       >
-                        <div style={{ transform: 'scaleX(-1)' }}>
-                          <FaWalking size={20} />
-                        </div>
+                        <UserPlus size={20} strokeWidth={2.5} />
                       </button>
-                    )}
 
-                    <button
-                      onClick={() => setIsSpecialistModalOpen(true)}
-                      title="Select Specialist"
-                      style={{
-                        height: '2.5rem',
-                        width: '2.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', // Amber gradient
-                        border: 'none',
-                        borderRadius: '1rem',
-                        color: 'white',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
-                      }}
-                    >
-                      <UserCog size={20} />
-                    </button>
-                  </div>
-                </div>
-
-
-
-                {/* Customer Dropdown */}
-                {isCustomerDropdownOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      marginTop: '0.5rem',
-                      background: 'white',
-                      borderRadius: '1rem',
-                      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-                      border: '1px solid var(--border-light)',
-                      zIndex: 100,
-                      maxHeight: '400px',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Persistent Search Box Inside Dropdown */}
-                    <div style={{
-                      padding: '0.75rem',
-                      borderBottom: '1px solid var(--border-light)',
-                      background: 'var(--bg-body)',
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 10
-                    }}>
-                      <div style={{ position: 'relative' }}>
-                        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)' }} />
-                        <input
-                          type="text"
-                          placeholder="Type to filter..."
-                          autoFocus
-                          value={customerSearchTerm}
-                          onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                          style={{
-                            width: '100%',
-                            height: '2.25rem',
-                            padding: '0 0.75rem 0 2.25rem',
-                            fontSize: '0.85rem',
-                            border: '1px solid var(--border-light)',
-                            borderRadius: '0.75rem',
-                            outline: 'none',
-                            background: 'white',
-                            color: 'var(--text-dark)'
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ overflowY: 'auto', padding: '0.5rem', flex: 1 }}>
-                      {/* Customer List */}
-                      {filteredCustomers.length > 0 && (
-                        <>
-                          <div style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: 'var(--text-light)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            padding: '0.5rem 1rem 0.25rem'
-                          }}>
-                            Customers
-                          </div>
-                          {filteredCustomers.map(c => (
-                            <div
-                              key={c.id}
-                              onClick={() => handleSelectCustomer(c)}
-                              style={{
-                                padding: '0.75rem 1rem',
-                                borderRadius: '0.75rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                transition: 'all 0.15s ease',
-                                marginBottom: '0.25rem'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--bg-hover)';
-                                const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
-                                if (icon) icon.style.opacity = '1';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
-                                if (icon) icon.style.opacity = '0';
-                              }}
-                            >
-                              <div>
-                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{c.name}</p>
-                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)' }}>
-                                  {(isStaff && fraudProtection) ? maskPhone(c.phone) : c.phone}
-                                </p>
-                              </div>
-                              <CheckCircle className="check-icon" size={16} style={{ color: 'var(--primary)', opacity: 0, transition: 'opacity 0.2s' }} />
-                            </div>
-                          ))}
-                        </>
-                      )}
-
-                      {/* No Customers Found Message */}
-                      {filteredCustomers.length === 0 && (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
-                          <p style={{ margin: 0, fontSize: '0.85rem', marginBottom: '0.5rem' }}>No matching customers.</p>
-                          <button
-                            onClick={() => {
-                                if (!canAddCustomer) { showToast("Ask Admin for permission", "error"); return; }
-                                setIsAddCustomerModalOpen(true);
-                            }}
-                            disabled={!canAddCustomer}
-                            title={!canAddCustomer ? "Ask Admin for permission" : ""}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--primary)',
-                              fontSize: '0.85rem',
-                              fontWeight: 600,
-                              cursor: !canAddCustomer ? 'not-allowed' : 'pointer',
-                              textDecoration: 'underline',
-                              opacity: !canAddCustomer ? 0.5 : 1
-                            }}
-                          >
-                            Add new customer?
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Quick Walk-in Option - Always at Bottom */}
                       {!shouldHideFeatures && (
-                        <div
+                        <button
                           onClick={() => {
                             setSelectedCustomerId('WALK_IN');
                             setCustomerSearchTerm('Walk-in Customer');
                             setIsCustomerDropdownOpen(false);
                           }}
+                          title="Walk-in Customer"
                           style={{
-                            padding: '0.75rem 1rem',
-                            borderRadius: '0.75rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            transition: 'all 0.15s ease',
-                            marginTop: filteredCustomers.length > 0 ? '0.5rem' : '0',
-                            background: 'var(--bg-hover)',
-                            border: '1px dashed var(--border)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--primary-light)';
-                            e.currentTarget.style.borderColor = 'var(--primary)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-hover)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                          }}
-                        >
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '8px',
-                            background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
+                            height: '2.5rem',
+                            width: '2.5rem',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: 'white'
-                          }}>
-                            <User size={16} strokeWidth={2.5} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Quick Walk-in</p>
-                            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)' }}>No customer details needed</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {/* Overlay to close dropdown */}
-                {isCustomerDropdownOpen && (
-                  <div className="fixed inset-0 z-10" onClick={() => setIsCustomerDropdownOpen(false)}></div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Cart Items */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.65rem', minHeight: '400px' }}>
-            {cart.length === 0 ? (
-              <div style={{ height: '350px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{
-                  background: 'var(--bg-subtle)',
-                  padding: '2.5rem',
-                  borderRadius: '2.5rem',
-                  marginBottom: '1.75rem',
-                  border: '1px solid var(--border)',
-                  boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    background: 'radial-gradient(circle at center, var(--primary-light) 0%, transparent 70%)',
-                    opacity: 0.3
-                  }} />
-                  <ShoppingBag size={56} strokeWidth={1} style={{ color: 'var(--primary)', position: 'relative', zIndex: 1 }} />
-                </div>
-                <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.75rem', letterSpacing: '-0.025em' }}>Your cart is empty</p>
-                <p style={{ fontSize: '0.9375rem', color: 'var(--text-black)', textAlign: 'center', maxWidth: '260px', lineHeight: 1.6, fontWeight: 500 }}>
-                  Select services or products from the catalogue to get started.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <AnimatePresence>
-                  {cart.map(item => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      style={{
-                        background: '#EBF5F9',
-                        border: '1px solid #C5DDE9',
-                        borderLeft: item.type === 'combo'
-                          ? '3px solid #f59e0b'
-                          : item.type === 'voucher'
-                            ? '3px solid #10b981'
-                            : '3px solid #234C6A',
-                        borderRadius: '0.75rem',
-                        padding: '0.45rem 0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(35,76,106,0.12)';
-                        e.currentTarget.style.background = '#D7EEF7';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.background = '#EBF5F9';
-                      }}
-                    >
-                      {/* Item Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {item.type === 'combo' && (
-                          <span style={{
-                            display: 'inline-block',
-                            fontSize: '0.6rem',
-                            fontWeight: 800,
-                            padding: '0.1rem 0.4rem',
-                            background: '#FFF7ED',
-                            color: '#EA580C',
-                            borderRadius: '2rem',
-                            border: '1px solid #FFEDD5',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            marginBottom: '0.2rem'
-                          }}>
-                            Package
-                          </span>
-                        )}
-                        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#1A3A52', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.name}
-                        </p>
-                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#234C6A', fontWeight: 600, opacity: 0.8 }}>
-                          {item.redeemedQuantity === item.quantity ? 'Package Redemption' : formatPrice(item.price)}
-                        </p>
-                      </div>
-
-                      {/* Specialist Selection */}
-                      <div style={{ marginRight: '0.25rem' }}>
-                        <select
-                          value={item.specialistId || ''}
-                          onChange={(e) => {
-                            const sId = e.target.value;
-                            const sName = stylists.find(s => s.id.toString() === sId.toString())?.name || '';
-                            updateItemSpecialist(item.id, sId, sName);
-                          }}
-                          style={{
-                            fontSize: '0.65rem',
-                            padding: '0.15rem 0.6rem',
-                            borderRadius: '2rem',
-                            border: item.specialistId ? '1.5px solid var(--primary)' : '1.5px dashed var(--text-light)',
-                            background: item.specialistId ? 'var(--primary-light)' : 'white',
-                            color: item.specialistId ? 'var(--primary)' : 'var(--text-light)',
-                            fontWeight: 800,
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // Emerald gradient
+                            border: 'none',
+                            borderRadius: '1rem',
+                            color: 'white',
                             cursor: 'pointer',
-                            maxWidth: '85px',
-                            outline: 'none',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--primary)';
-                            e.currentTarget.style.color = 'var(--primary)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.3)';
                           }}
                           onMouseLeave={(e) => {
-                            if (!item.specialistId) {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+                          }}
+                        >
+                          <div style={{ transform: 'scaleX(-1)' }}>
+                            <FaWalking size={20} />
+                          </div>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => setIsSpecialistModalOpen(true)}
+                        title="Select Specialist"
+                        style={{
+                          height: '2.5rem',
+                          width: '2.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', // Amber gradient
+                          border: 'none',
+                          borderRadius: '1rem',
+                          color: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
+                        }}
+                      >
+                        <UserCog size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+
+
+                  {/* Customer Dropdown */}
+                  {isCustomerDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: '0.5rem',
+                        background: 'white',
+                        borderRadius: '1rem',
+                        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+                        border: '1px solid var(--border-light)',
+                        zIndex: 100,
+                        maxHeight: '400px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Persistent Search Box Inside Dropdown */}
+                      <div style={{
+                        padding: '0.75rem',
+                        borderBottom: '1px solid var(--border-light)',
+                        background: 'var(--bg-body)',
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 10
+                      }}>
+                        <div style={{ position: 'relative' }}>
+                          <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-black)' }} />
+                          <input
+                            type="text"
+                            placeholder="Type to filter..."
+                            autoFocus
+                            value={customerSearchTerm}
+                            onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                            style={{
+                              width: '100%',
+                              height: '2.25rem',
+                              padding: '0 0.75rem 0 2.25rem',
+                              fontSize: '0.85rem',
+                              border: '1px solid var(--border-light)',
+                              borderRadius: '0.75rem',
+                              outline: 'none',
+                              background: 'white',
+                              color: 'var(--text-dark)'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ overflowY: 'auto', padding: '0.5rem', flex: 1 }}>
+                        {/* Customer List */}
+                        {filteredCustomers.length > 0 && (
+                          <>
+                            <div style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              color: 'var(--text-light)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              padding: '0.5rem 1rem 0.25rem'
+                            }}>
+                              Customers
+                            </div>
+                            {filteredCustomers.map(c => (
+                              <div
+                                key={c.id}
+                                onClick={() => handleSelectCustomer(c)}
+                                style={{
+                                  padding: '0.75rem 1rem',
+                                  borderRadius: '0.75rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  transition: 'all 0.15s ease',
+                                  marginBottom: '0.25rem'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'var(--bg-hover)';
+                                  const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
+                                  if (icon) icon.style.opacity = '1';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'transparent';
+                                  const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement;
+                                  if (icon) icon.style.opacity = '0';
+                                }}
+                              >
+                                <div>
+                                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{c.name}</p>
+                                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)' }}>
+                                    {(isStaff && fraudProtection) ? maskPhone(c.phone) : c.phone}
+                                  </p>
+                                </div>
+                                <CheckCircle className="check-icon" size={16} style={{ color: 'var(--primary)', opacity: 0, transition: 'opacity 0.2s' }} />
+                              </div>
+                            ))}
+                          </>
+                        )}
+
+                        {/* No Customers Found Message */}
+                        {filteredCustomers.length === 0 && (
+                          <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8' }}>
+                            <p style={{ margin: 0, fontSize: '0.85rem', marginBottom: '0.5rem' }}>No matching customers.</p>
+                            <button
+                              onClick={() => {
+                                if (!canAddCustomer) { showToast("Ask Admin for permission", "error"); return; }
+                                setIsAddCustomerModalOpen(true);
+                              }}
+                              disabled={!canAddCustomer}
+                              title={!canAddCustomer ? "Ask Admin for permission" : ""}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--primary)',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                cursor: !canAddCustomer ? 'not-allowed' : 'pointer',
+                                textDecoration: 'underline',
+                                opacity: !canAddCustomer ? 0.5 : 1
+                              }}
+                            >
+                              Add new customer?
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Quick Walk-in Option - Always at Bottom */}
+                        {!shouldHideFeatures && (
+                          <div
+                            onClick={() => {
+                              setSelectedCustomerId('WALK_IN');
+                              setCustomerSearchTerm('Walk-in Customer');
+                              setIsCustomerDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              borderRadius: '0.75rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              transition: 'all 0.15s ease',
+                              marginTop: filteredCustomers.length > 0 ? '0.5rem' : '0',
+                              background: 'var(--bg-hover)',
+                              border: '1px dashed var(--border)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--primary-light)';
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'var(--bg-hover)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                            }}
+                          >
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white'
+                            }}>
+                              <User size={16} strokeWidth={2.5} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Quick Walk-in</p>
+                              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-black)' }}>No customer details needed</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Overlay to close dropdown */}
+                  {isCustomerDropdownOpen && (
+                    <div className="fixed inset-0 z-10" onClick={() => setIsCustomerDropdownOpen(false)}></div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Cart Items */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.65rem', minHeight: '400px' }}>
+              {cart.length === 0 ? (
+                <div style={{ height: '350px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{
+                    background: 'var(--bg-subtle)',
+                    padding: '2.5rem',
+                    borderRadius: '2.5rem',
+                    marginBottom: '1.75rem',
+                    border: '1px solid var(--border)',
+                    boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      width: '100%',
+                      height: '100%',
+                      background: 'radial-gradient(circle at center, var(--primary-light) 0%, transparent 70%)',
+                      opacity: 0.3
+                    }} />
+                    <ShoppingBag size={56} strokeWidth={1} style={{ color: 'var(--primary)', position: 'relative', zIndex: 1 }} />
+                  </div>
+                  <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.75rem', letterSpacing: '-0.025em' }}>Your cart is empty</p>
+                  <p style={{ fontSize: '0.9375rem', color: 'var(--text-black)', textAlign: 'center', maxWidth: '260px', lineHeight: 1.6, fontWeight: 500 }}>
+                    Select services or products from the catalogue to get started.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <AnimatePresence>
+                    {cart.map(item => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        style={{
+                          background: '#EBF5F9',
+                          border: '1px solid #C5DDE9',
+                          borderLeft: item.type === 'combo'
+                            ? '3px solid #f59e0b'
+                            : item.type === 'voucher'
+                              ? '3px solid #10b981'
+                              : '3px solid #234C6A',
+                          borderRadius: '0.75rem',
+                          padding: '0.45rem 0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(35,76,106,0.12)';
+                          e.currentTarget.style.background = '#D7EEF7';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.background = '#EBF5F9';
+                        }}
+                      >
+                        {/* Item Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {item.type === 'combo' && (
+                            <span style={{
+                              display: 'inline-block',
+                              fontSize: '0.6rem',
+                              fontWeight: 800,
+                              padding: '0.1rem 0.4rem',
+                              background: '#FFF7ED',
+                              color: '#EA580C',
+                              borderRadius: '2rem',
+                              border: '1px solid #FFEDD5',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              marginBottom: '0.2rem'
+                            }}>
+                              Package
+                            </span>
+                          )}
+                          <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#1A3A52', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {item.name}
+                          </p>
+                          <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#234C6A', fontWeight: 600, opacity: 0.8 }}>
+                            {item.redeemedQuantity === item.quantity ? 'Package Redemption' : formatPrice(item.price)}
+                          </p>
+                        </div>
+
+                        {/* Specialist Selection */}
+                        <div style={{ marginRight: '0.25rem' }}>
+                          <select
+                            value={item.specialistId || ''}
+                            onChange={(e) => {
+                              const sId = e.target.value;
+                              const sName = stylists.find(s => s.id.toString() === sId.toString())?.name || '';
+                              updateItemSpecialist(item.id, sId, sName);
+                            }}
+                            style={{
+                              fontSize: '0.65rem',
+                              padding: '0.15rem 0.6rem',
+                              borderRadius: '2rem',
+                              border: item.specialistId ? '1.5px solid var(--primary)' : '1.5px dashed var(--text-light)',
+                              background: item.specialistId ? 'var(--primary-light)' : 'white',
+                              color: item.specialistId ? 'var(--primary)' : 'var(--text-light)',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              maxWidth: '85px',
+                              outline: 'none',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.02em',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                              e.currentTarget.style.color = 'var(--primary)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!item.specialistId) {
                                 e.currentTarget.style.borderColor = 'var(--text-light)';
                                 e.currentTarget.style.color = 'var(--text-light)';
-                            }
-                          }}
-                        >
-                          <option value="">+ Staff</option>
-                          {stylists.filter(s => s.isAvailable !== false).map(s => (
-                            <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>
-                          ))}
-                        </select>
-                      </div>
+                              }
+                            }}
+                          >
+                            <option value="">+ Staff</option>
+                            {stylists.filter(s => s.isAvailable !== false).map(s => (
+                              <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                      {/* Quantity Controls */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0',
-                        background: 'white',
-                        borderRadius: '2rem',
-                        border: '1.5px solid #234C6A',
-                        overflow: 'hidden'
-                      }}>
-                        <button
-                          onClick={() => updateQuantity(item.id, -1)}
-                          style={{
-                            width: 28, height: 28,
-                            border: 'none',
-                            background: 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: '#234C6A',
-                            transition: 'all 0.15s'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#234C6A'; e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <Minus size={12} strokeWidth={3} />
-                        </button>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: '1.5rem', textAlign: 'center', color: '#1A3A52' }}>
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(item.id, 1)}
-                          style={{
-                            width: 28, height: 28,
-                            border: 'none',
-                            background: 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: '#234C6A',
-                            transition: 'all 0.15s'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = '#234C6A'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#234C6A'; e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <Plus size={12} strokeWidth={3} />
-                        </button>
-                      </div>
+                        {/* Quantity Controls */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0',
+                          background: 'white',
+                          borderRadius: '2rem',
+                          border: '1.5px solid #234C6A',
+                          overflow: 'hidden'
+                        }}>
+                          <button
+                            onClick={() => updateQuantity(item.id, -1)}
+                            style={{
+                              width: 28, height: 28,
+                              border: 'none',
+                              background: 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: '#234C6A',
+                              transition: 'all 0.15s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = '#234C6A'; e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <Minus size={12} strokeWidth={3} />
+                          </button>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, minWidth: '1.5rem', textAlign: 'center', color: '#1A3A52' }}>
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            style={{
+                              width: 28, height: 28,
+                              border: 'none',
+                              background: 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: '#234C6A',
+                              transition: 'all 0.15s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = '#234C6A'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = '#234C6A'; e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <Plus size={12} strokeWidth={3} />
+                          </button>
+                        </div>
 
-                      {/* Item Total */}
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#1A3A52', minWidth: '5rem', textAlign: 'right', letterSpacing: '-0.02em' }}>
-                        {formatPrice(item.price * (item.redeemedQuantity ? (item.quantity - item.redeemedQuantity) : item.quantity))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
+                        {/* Item Total */}
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#1A3A52', minWidth: '5rem', textAlign: 'right', letterSpacing: '-0.02em' }}>
+                          {formatPrice(item.price * (item.redeemedQuantity ? (item.quantity - item.redeemedQuantity) : item.quantity))}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
 
-          {/* Totals Section */}
-          <div style={{
-            padding: '0.75rem',
-            background: 'var(--bg-subtle)',
-            borderTop: '1px solid var(--border)',
-            backdropFilter: 'blur(12px)',
-            position: 'relative',
-            zIndex: 10,
-            flexShrink: 0,
-            marginTop: 'auto'
-          }}>
-            <div className="space-y-2 mb-2">
-              {/* <div style={{ marginBottom: '0.2rem', position: 'relative' }}>
+            {/* Totals Section */}
+            <div style={{
+              padding: '0.75rem',
+              background: 'var(--bg-subtle)',
+              borderTop: '1px solid var(--border)',
+              backdropFilter: 'blur(12px)',
+              position: 'relative',
+              zIndex: 10,
+              flexShrink: 0,
+              marginTop: 'auto'
+            }}>
+              <div className="space-y-2 mb-2">
+                {/* <div style={{ marginBottom: '0.2rem', position: 'relative' }}>
                 <button
                   onClick={() => setIsSpecialistDropdownOpen(!isSpecialistDropdownOpen)}
                   style={{
@@ -3498,409 +3506,409 @@ const Sales: React.FC<SalesProps> = ({
                   )}
                 </AnimatePresence>
               </div> */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', color: 'var(--text-black)' }}>
-                <span style={{ fontWeight: 500 }}>Subtotal</span>
-                <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(subtotal)}</span>
-              </div>
-
-              {depositAmount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', color: 'var(--primary)', fontWeight: 600 }}>
-                  <span>Paid Amount</span>
-                  <span>-{formatPrice(depositAmount)}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', color: 'var(--text-black)' }}>
+                  <span style={{ fontWeight: 500 }}>Subtotal</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(subtotal)}</span>
                 </div>
-              )}
 
-              {/* Attachments & Voucher Row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                {/* Attachments Button */}
-                <button
-                  onClick={() => setIsAttachmentsModalOpen(true)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.4rem',
-                    fontSize: '0.78rem', fontWeight: 700,
-                    color: 'var(--primary)',
-                    background: 'var(--primary-light)',
-                    padding: '0.4rem 0.7rem',
-                    borderRadius: '0.6rem',
-                    border: '1px solid rgba(var(--primary-rgb, 79,70,229),0.18)',
-                    cursor: 'pointer',
-                    transition: 'all 0.18s',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.93)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.filter = 'none'; }}
-                >
-                  <Paperclip size={14} />
-                  {attachments.filter(att => att.url).length > 0 ? `${attachments.filter(att => att.url).length} File(s)` : 'Add Attachments'}
-                </button>
+                {depositAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', color: 'var(--primary)', fontWeight: 600 }}>
+                    <span>Paid Amount</span>
+                    <span>-{formatPrice(depositAmount)}</span>
+                  </div>
+                )}
 
-                {/* Voucher Toggle Button */}
-                {selectedCustomerId && selectedCustomerId !== 'WALK_IN' && !cart.some(item => item.type === 'voucher') && (
+                {/* Attachments & Voucher Row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {/* Attachments Button */}
                   <button
-                    onClick={() => setShowVoucherCartInput(v => !v)}
+                    onClick={() => setIsAttachmentsModalOpen(true)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.4rem',
                       fontSize: '0.78rem', fontWeight: 700,
-                      color: showVoucherCartInput ? '#fff' : '#10B981',
-                      background: showVoucherCartInput
-                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                        : 'rgba(16,185,129,0.1)',
+                      color: 'var(--primary)',
+                      background: 'var(--primary-light)',
                       padding: '0.4rem 0.7rem',
                       borderRadius: '0.6rem',
-                      border: showVoucherCartInput ? 'none' : '1px solid rgba(16,185,129,0.25)',
+                      border: '1px solid rgba(var(--primary-rgb, 79,70,229),0.18)',
                       cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: showVoucherCartInput ? '0 3px 12px rgba(16,185,129,0.3)' : 'none',
+                      transition: 'all 0.18s',
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
                     }}
+                    onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.93)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.filter = 'none'; }}
                   >
-                    <Ticket size={14} />
-                    Voucher
-                    {/* Checkmark indicator */}
-                    {showVoucherCartInput && (
-                      <span style={{
-                        width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 2
-                      }}>
-                        <X size={8} strokeWidth={3} />
-                      </span>
-                    )}
+                    <Paperclip size={14} />
+                    {attachments.filter(att => att.url).length > 0 ? `${attachments.filter(att => att.url).length} File(s)` : 'Add Attachments'}
                   </button>
-                )}
-              </div>
 
-              {/* Voucher Panel */}
-              {showVoucherCartInput && !cart.some(item => item.type === 'voucher') && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  style={{
-                    background: 'rgba(16,185,129,0.04)',
-                    border: '1px solid rgba(16,185,129,0.18)',
-                    borderRadius: '0.875rem',
-                    padding: '0.65rem 0.75rem',
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  {(() => {
-                    const availableClaims = voucherClaims?.filter(c =>
-                      c.customerId && selectedCustomerId &&
-                      c.customerId.toString() === selectedCustomerId.toString() &&
-                      (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
-                      c.balance > 0
-                    ) || [];
-
-                    if (availableClaims.length > 0) {
-                      return (
-                        <div style={{
-                          display: 'flex', flexDirection: 'column', gap: '0.4rem',
-                          background: 'rgba(16,185,129,0.08)',
-                          padding: '0.75rem',
-                          borderRadius: '0.6rem',
-                          border: '1px solid rgba(16,185,129,0.3)',
-                          boxShadow: '0 2px 8px rgba(16,185,129,0.1)',
-                        }}>
-                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
-                            Select Available Voucher
-                          </span>
-                          <div style={{
-                            display: 'flex', gap: '0.4rem', flexWrap: 'wrap',
-                          }}>
-                            {availableClaims.map(v => {
-                              const isExpired = (v.expiryDate && new Date(v.expiryDate) < new Date()) || 
-                                               (v.voucher?.expiryDate && new Date(v.voucher.expiryDate) < new Date()) ||
-                                               (v.voucher?.status === 'expired');
-                              
-                              const isSelected = cartVoucherCode.split(',').map(c => c.trim()).includes(v.voucherCode);
-
-                              return (
-                                <button
-                                  key={v.id}
-                                  onClick={() => !isExpired && handleVoucherClick(v.voucherCode)}
-                                  title={isExpired ? `Voucher expired` : `Code: ${v.voucherCode} — Click to select`}
-                                  style={{
-                                    fontSize: '0.72rem', fontWeight: 700,
-                                    padding: '0.25rem 0.65rem',
-                                    background: isExpired 
-                                      ? 'rgba(239, 68, 68, 0.08)' 
-                                      : isSelected
-                                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                        : 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)',
-                                    color: isExpired ? '#ef4444' : (isSelected ? '#fff' : '#059669'),
-                                    border: isExpired 
-                                      ? '1px solid rgba(239, 68, 68, 0.3)' 
-                                      : '1px solid rgba(16,185,129,0.28)',
-                                    borderRadius: '0.6rem',
-                                    cursor: isExpired ? 'not-allowed' : 'pointer',
-                                    opacity: 0.9,
-                                    transition: 'all 0.2s',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.35rem',
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: isSelected ? '0 2px 6px rgba(16,185,129,0.3)' : 'none',
-                                  }}
-                                >
-                                  <Ticket size={11} />
-                                  {v.voucher?.name || v.voucherCode}
-                                  <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
-                                  {isExpired && <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.9 }}>(Expired)</span>}
-                                  {isSelected && (
-                                    <div
-                                      style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        background: 'rgba(255,255,255,0.2)',
-                                        borderRadius: '50%',
-                                        padding: '2px'
-                                      }}
-                                    >
-                                      <X size={10} strokeWidth={3} />
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-
-                  {/* Code Input + Apply */}
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                      <Ticket size={14} style={{
-                        position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)',
-                        color: '#10B981', pointerEvents: 'none'
-                      }} />
-                      <input
-                        type="text"
-                        placeholder={(() => {
-                          const hasClaims = voucherClaims?.some(c =>
-                            c.customerId && selectedCustomerId &&
-                            c.customerId.toString() === selectedCustomerId.toString() &&
-                            (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
-                            c.balance > 0
-                          );
-                          return hasClaims ? "Select voucher from above" : "Voucher Code";
-                        })()}
-                        value={cartVoucherCode}
-                        onChange={(e) => { setCartVoucherCode(e.target.value); setVoucherError(''); }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleApplyVoucher(cartVoucherCode); }}
-                        disabled={(() => {
-                          const hasClaims = voucherClaims?.some(c =>
-                            c.customerId && selectedCustomerId &&
-                            c.customerId.toString() === selectedCustomerId.toString() &&
-                            (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
-                            c.balance > 0
-                          );
-                          return !!hasClaims;
-                        })()}
-                        style={{
-                          width: '100%',
-                          paddingLeft: '2rem', paddingRight: '2rem',
-                          paddingTop: '0.42rem', paddingBottom: '0.42rem',
-                          borderRadius: '0.6rem',
-                          border: voucherError ? '1.5px solid var(--danger)' : '1.5px solid rgba(16,185,129,0.35)',
-                          fontSize: '0.82rem', fontWeight: 700,
-                          outline: 'none',
-                          background: (() => {
-                            const hasClaims = voucherClaims?.some(c =>
-                              c.customerId && selectedCustomerId &&
-                              c.customerId.toString() === selectedCustomerId.toString() &&
-                              (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
-                              c.balance > 0
-                            );
-                            return hasClaims ? 'rgba(0,0,0,0.03)' : 'rgba(16,185,129,0.06)';
-                          })(),
-                          color: '#065F46',
-                          transition: 'border-color 0.15s, box-shadow 0.15s',
-                          boxSizing: 'border-box',
-                          cursor: (() => {
-                            const hasClaims = voucherClaims?.some(c =>
-                              c.customerId && selectedCustomerId &&
-                              c.customerId.toString() === selectedCustomerId.toString() &&
-                              (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
-                              c.balance > 0
-                            );
-                            return hasClaims ? 'not-allowed' : 'text';
-                          })(),
-                        }}
-                        onFocus={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
-                        onBlur={e => { e.currentTarget.style.borderColor = voucherError ? 'var(--danger)' : 'rgba(16,185,129,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
-                      />
-                      {cartVoucherCode && (
-                        <button
-                          onClick={() => { setCartVoucherCode(''); setVoucherError(''); }}
-                          style={{
-                            position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
-                            background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%',
-                            width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', color: '#666', zIndex: 5
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
-                        >
-                          <X size={12} />
-                        </button>
-                      )}
-                    </div>
+                  {/* Voucher Toggle Button */}
+                  {selectedCustomerId && selectedCustomerId !== 'WALK_IN' && !cart.some(item => item.type === 'voucher') && (
                     <button
-                      onClick={handleBulkApply}
-                      disabled={!cartVoucherCode}
+                      onClick={() => setShowVoucherCartInput(v => !v)}
                       style={{
-                        padding: '0.42rem 0.9rem',
-                        borderRadius: '0.6rem',
-                        border: 'none',
-                        background: cartVoucherCode
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        fontSize: '0.78rem', fontWeight: 700,
+                        color: showVoucherCartInput ? '#fff' : '#10B981',
+                        background: showVoucherCartInput
                           ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                          : 'linear-gradient(135deg, rgba(16,185,129,0.45) 0%, rgba(5,150,105,0.45) 100%)',
-                        color: 'white',
-                        fontSize: '0.82rem', fontWeight: 700,
-                        cursor: cartVoucherCode ? 'pointer' : 'not-allowed',
-                        transition: 'all 0.18s',
-                        boxShadow: cartVoucherCode ? '0 3px 10px rgba(16,185,129,0.28)' : 'none',
+                          : 'rgba(16,185,129,0.1)',
+                        padding: '0.4rem 0.7rem',
+                        borderRadius: '0.6rem',
+                        border: showVoucherCartInput ? 'none' : '1px solid rgba(16,185,129,0.25)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: showVoucherCartInput ? '0 3px 12px rgba(16,185,129,0.3)' : 'none',
                         whiteSpace: 'nowrap',
                         flexShrink: 0,
-                        opacity: cartVoucherCode ? 1 : 0.75,
                       }}
                     >
-                      Apply
-                    </button>
-                  </div>
-
-                  {/* Error Message */}
-                  {voucherError && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      style={{ fontSize: '0.73rem', color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                    >
-                      <AlertTriangle size={11} /> {voucherError}
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* Applied Voucher Badges */}
-              {appliedVouchers.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                  {appliedVouchers.map(v => {
-                    const claim = voucherClaims?.find(c =>
-                      c.voucherCode === v.code &&
-                      c.customerId?.toString() === selectedCustomerId
-                    );
-                    const displayAmount = claim ? claim.balance : v.value;
-                    return (
-                      <motion.div
-                        key={v.code}
-                        initial={{ opacity: 0, scale: 0.88 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.88 }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.07) 100%)',
-                          padding: '0.25rem 0.4rem 0.25rem 0.5rem',
-                          borderRadius: '2rem',
-                          border: '1px solid rgba(16,185,129,0.25)',
-                          fontSize: '0.72rem',
-                          color: '#059669',
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(239,68,68,0.25)'; (e.currentTarget as HTMLDivElement).style.color = '#dc2626'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.07) 100%)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(16,185,129,0.25)'; (e.currentTarget as HTMLDivElement).style.color = '#059669'; }}
-                        onClick={() => removeVoucher(v.code)}
-                      >
-                        <Ticket size={11} />
-                        <span>{v.code}</span>
-                        <span style={{ opacity: 0.7 }}>({formatPrice(displayAmount)})</span>
+                      <Ticket size={14} />
+                      Voucher
+                      {/* Checkmark indicator */}
+                      {showVoucherCartInput && (
                         <span style={{
-                          width: 14, height: 14, borderRadius: '50%',
-                          background: 'rgba(239,68,68,0.12)',
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 2
+                          width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,0.25)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 2
                         }}>
-                          <X size={8} strokeWidth={3} style={{ color: '#ef4444' }} />
+                          <X size={8} strokeWidth={3} />
                         </span>
-                      </motion.div>
-                    );
-                  })}
+                      )}
+                    </button>
+                  )}
                 </div>
-              )}
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingTop: '0.75rem',
-                marginTop: '0.25rem',
-                borderTop: '1px solid var(--border)'
-              }}>
-                <div>
-                  <p style={{ margin: '0 0 0.125rem 0', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-black)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {depositAmount > 0 ? 'Balance Due' : 'Total Amount'}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                    <p style={{ margin: 0, fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-dark)', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                      {formatPrice(finalTotal)}
-                    </p>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-black)' }}>
-                      ({totalItems} items)
-                    </span>
+                {/* Voucher Panel */}
+                {showVoucherCartInput && !cart.some(item => item.type === 'voucher') && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    style={{
+                      background: 'rgba(16,185,129,0.04)',
+                      border: '1px solid rgba(16,185,129,0.18)',
+                      borderRadius: '0.875rem',
+                      padding: '0.65rem 0.75rem',
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {(() => {
+                      const availableClaims = voucherClaims?.filter(c =>
+                        c.customerId && selectedCustomerId &&
+                        c.customerId.toString() === selectedCustomerId.toString() &&
+                        (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
+                        c.balance > 0
+                      ) || [];
+
+                      if (availableClaims.length > 0) {
+                        return (
+                          <div style={{
+                            display: 'flex', flexDirection: 'column', gap: '0.4rem',
+                            background: 'rgba(16,185,129,0.08)',
+                            padding: '0.75rem',
+                            borderRadius: '0.6rem',
+                            border: '1px solid rgba(16,185,129,0.3)',
+                            boxShadow: '0 2px 8px rgba(16,185,129,0.1)',
+                          }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+                              Select Available Voucher
+                            </span>
+                            <div style={{
+                              display: 'flex', gap: '0.4rem', flexWrap: 'wrap',
+                            }}>
+                              {availableClaims.map(v => {
+                                const isExpired = (v.expiryDate && new Date(v.expiryDate) < new Date()) ||
+                                  (v.voucher?.expiryDate && new Date(v.voucher.expiryDate) < new Date()) ||
+                                  (v.voucher?.status === 'expired');
+
+                                const isSelected = cartVoucherCode.split(',').map(c => c.trim()).includes(v.voucherCode);
+
+                                return (
+                                  <button
+                                    key={v.id}
+                                    onClick={() => !isExpired && handleVoucherClick(v.voucherCode)}
+                                    title={isExpired ? `Voucher expired` : `Code: ${v.voucherCode} — Click to select`}
+                                    style={{
+                                      fontSize: '0.72rem', fontWeight: 700,
+                                      padding: '0.25rem 0.65rem',
+                                      background: isExpired
+                                        ? 'rgba(239, 68, 68, 0.08)'
+                                        : isSelected
+                                          ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                          : 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(5,150,105,0.08) 100%)',
+                                      color: isExpired ? '#ef4444' : (isSelected ? '#fff' : '#059669'),
+                                      border: isExpired
+                                        ? '1px solid rgba(239, 68, 68, 0.3)'
+                                        : '1px solid rgba(16,185,129,0.28)',
+                                      borderRadius: '0.6rem',
+                                      cursor: isExpired ? 'not-allowed' : 'pointer',
+                                      opacity: 0.9,
+                                      transition: 'all 0.2s',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                      whiteSpace: 'nowrap',
+                                      boxShadow: isSelected ? '0 2px 6px rgba(16,185,129,0.3)' : 'none',
+                                    }}
+                                  >
+                                    <Ticket size={11} />
+                                    {v.voucher?.name || v.voucherCode}
+                                    <span style={{ opacity: 0.75 }}>({formatPrice(v.balance)})</span>
+                                    {isExpired && <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.9 }}>(Expired)</span>}
+                                    {isSelected && (
+                                      <div
+                                        style={{
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          background: 'rgba(255,255,255,0.2)',
+                                          borderRadius: '50%',
+                                          padding: '2px'
+                                        }}
+                                      >
+                                        <X size={10} strokeWidth={3} />
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Code Input + Apply */}
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <Ticket size={14} style={{
+                          position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)',
+                          color: '#10B981', pointerEvents: 'none'
+                        }} />
+                        <input
+                          type="text"
+                          placeholder={(() => {
+                            const hasClaims = voucherClaims?.some(c =>
+                              c.customerId && selectedCustomerId &&
+                              c.customerId.toString() === selectedCustomerId.toString() &&
+                              (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
+                              c.balance > 0
+                            );
+                            return hasClaims ? "Select voucher from above" : "Voucher Code";
+                          })()}
+                          value={cartVoucherCode}
+                          onChange={(e) => { setCartVoucherCode(e.target.value); setVoucherError(''); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleApplyVoucher(cartVoucherCode); }}
+                          disabled={(() => {
+                            const hasClaims = voucherClaims?.some(c =>
+                              c.customerId && selectedCustomerId &&
+                              c.customerId.toString() === selectedCustomerId.toString() &&
+                              (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
+                              c.balance > 0
+                            );
+                            return !!hasClaims;
+                          })()}
+                          style={{
+                            width: '100%',
+                            paddingLeft: '2rem', paddingRight: '2rem',
+                            paddingTop: '0.42rem', paddingBottom: '0.42rem',
+                            borderRadius: '0.6rem',
+                            border: voucherError ? '1.5px solid var(--danger)' : '1.5px solid rgba(16,185,129,0.35)',
+                            fontSize: '0.82rem', fontWeight: 700,
+                            outline: 'none',
+                            background: (() => {
+                              const hasClaims = voucherClaims?.some(c =>
+                                c.customerId && selectedCustomerId &&
+                                c.customerId.toString() === selectedCustomerId.toString() &&
+                                (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
+                                c.balance > 0
+                              );
+                              return hasClaims ? 'rgba(0,0,0,0.03)' : 'rgba(16,185,129,0.06)';
+                            })(),
+                            color: '#065F46',
+                            transition: 'border-color 0.15s, box-shadow 0.15s',
+                            boxSizing: 'border-box',
+                            cursor: (() => {
+                              const hasClaims = voucherClaims?.some(c =>
+                                c.customerId && selectedCustomerId &&
+                                c.customerId.toString() === selectedCustomerId.toString() &&
+                                (c.status === 'claimed' || c.status === 'active' || c.status === 'partially_redeemed') &&
+                                c.balance > 0
+                              );
+                              return hasClaims ? 'not-allowed' : 'text';
+                            })(),
+                          }}
+                          onFocus={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = voucherError ? 'var(--danger)' : 'rgba(16,185,129,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        />
+                        {cartVoucherCode && (
+                          <button
+                            onClick={() => { setCartVoucherCode(''); setVoucherError(''); }}
+                            style={{
+                              position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+                              background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%',
+                              width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', color: '#666', zIndex: 5
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleBulkApply}
+                        disabled={!cartVoucherCode}
+                        style={{
+                          padding: '0.42rem 0.9rem',
+                          borderRadius: '0.6rem',
+                          border: 'none',
+                          background: cartVoucherCode
+                            ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                            : 'linear-gradient(135deg, rgba(16,185,129,0.45) 0%, rgba(5,150,105,0.45) 100%)',
+                          color: 'white',
+                          fontSize: '0.82rem', fontWeight: 700,
+                          cursor: cartVoucherCode ? 'pointer' : 'not-allowed',
+                          transition: 'all 0.18s',
+                          boxShadow: cartVoucherCode ? '0 3px 10px rgba(16,185,129,0.28)' : 'none',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          opacity: cartVoucherCode ? 1 : 0.75,
+                        }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+
+                    {/* Error Message */}
+                    {voucherError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{ fontSize: '0.73rem', color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                      >
+                        <AlertTriangle size={11} /> {voucherError}
+                      </motion.div>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* Applied Voucher Badges */}
+                {appliedVouchers.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                    {appliedVouchers.map(v => {
+                      const claim = voucherClaims?.find(c =>
+                        c.voucherCode === v.code &&
+                        c.customerId?.toString() === selectedCustomerId
+                      );
+                      const displayAmount = claim ? claim.balance : v.value;
+                      return (
+                        <motion.div
+                          key={v.code}
+                          initial={{ opacity: 0, scale: 0.88 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.88 }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.07) 100%)',
+                            padding: '0.25rem 0.4rem 0.25rem 0.5rem',
+                            borderRadius: '2rem',
+                            border: '1px solid rgba(16,185,129,0.25)',
+                            fontSize: '0.72rem',
+                            color: '#059669',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(239,68,68,0.25)'; (e.currentTarget as HTMLDivElement).style.color = '#dc2626'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.07) 100%)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(16,185,129,0.25)'; (e.currentTarget as HTMLDivElement).style.color = '#059669'; }}
+                          onClick={() => removeVoucher(v.code)}
+                        >
+                          <Ticket size={11} />
+                          <span>{v.code}</span>
+                          <span style={{ opacity: 0.7 }}>({formatPrice(displayAmount)})</span>
+                          <span style={{
+                            width: 14, height: 14, borderRadius: '50%',
+                            background: 'rgba(239,68,68,0.12)',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 2
+                          }}>
+                            <X size={8} strokeWidth={3} style={{ color: '#ef4444' }} />
+                          </span>
+                        </motion.div>
+                      );
+                    })}
                   </div>
-                </div>
-                <Button
-                  style={{
-                    height: '3rem',
-                    padding: '0 1.5rem',
-                    fontSize: '0.9375rem',
-                    fontWeight: 700,
-                    borderRadius: '1rem',
-                    background: finalTotal === 0
-                      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                      : 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
-                    boxShadow: finalTotal === 0
-                      ? '0 6px 20px rgba(16, 185, 129, 0.25)'
-                      : '0 6px 20px rgba(79, 70, 229, 0.25)',
-                    border: 'none',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem'
-                  }}
-                  disabled={cart.length === 0 || !selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || isVerifyingOTP || !canAddSale}
-                  title={!canAddSale ? "Ask Admin for permission" : ""}
-                  onClick={() => {
+                )}
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingTop: '0.75rem',
+                  marginTop: '0.25rem',
+                  borderTop: '1px solid var(--border)'
+                }}>
+                  <div>
+                    <p style={{ margin: '0 0 0.125rem 0', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-black)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {depositAmount > 0 ? 'Balance Due' : 'Total Amount'}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <p style={{ margin: 0, fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-dark)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                        {formatPrice(finalTotal)}
+                      </p>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-black)' }}>
+                        ({totalItems} items)
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    style={{
+                      height: '3rem',
+                      padding: '0 1.5rem',
+                      fontSize: '0.9375rem',
+                      fontWeight: 700,
+                      borderRadius: '1rem',
+                      background: finalTotal === 0
+                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                        : 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
+                      boxShadow: finalTotal === 0
+                        ? '0 6px 20px rgba(16, 185, 129, 0.25)'
+                        : '0 6px 20px rgba(79, 70, 229, 0.25)',
+                      border: 'none',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}
+                    disabled={cart.length === 0 || !selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || isVerifyingOTP || !canAddSale}
+                    title={!canAddSale ? "Ask Admin for permission" : ""}
+                    onClick={() => {
                       if (!canAddSale) { showToast("Ask Admin for permission", "error"); return; }
                       handleCheckoutClick();
-                  }}
-                  icon={finalTotal === 0 ? <CheckCircle size={20} strokeWidth={2.5} /> : <CreditCard size={20} strokeWidth={2.5} />}
-                  whileHover={(!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : {
-                    scale: 1.02,
-                    boxShadow: finalTotal === 0
-                      ? '0 10px 25px rgba(16, 185, 129, 0.35)'
-                      : '0 10px 25px rgba(79, 70, 229, 0.35)'
-                  }}
-                  whileTap={(!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : { scale: 0.98 }}
-                >
-                  {isVerifyingOTP ? 'Sending OTP...' : (((!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN')) && cart.length > 0) ? 'Select Customer' : (finalTotal === 0 ? 'Complete Order' : (!canAddSale ? 'Locked' : 'Checkout')))}
-                </Button>
+                    }}
+                    icon={finalTotal === 0 ? <CheckCircle size={20} strokeWidth={2.5} /> : <CreditCard size={20} strokeWidth={2.5} />}
+                    whileHover={(!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : {
+                      scale: 1.02,
+                      boxShadow: finalTotal === 0
+                        ? '0 10px 25px rgba(16, 185, 129, 0.35)'
+                        : '0 10px 25px rgba(79, 70, 229, 0.35)'
+                    }}
+                    whileTap={(!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN') || cart.length === 0 || isVerifyingOTP || !canAddSale) ? {} : { scale: 0.98 }}
+                  >
+                    {isVerifyingOTP ? 'Sending OTP...' : (((!selectedCustomerId || (shouldHideFeatures && selectedCustomerId === 'WALK_IN')) && cart.length > 0) ? 'Select Customer' : (finalTotal === 0 ? 'Complete Order' : (!canAddSale ? 'Locked' : 'Checkout')))}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </Card >
+          </Card >
         </div>
       ) : (
         <QuotationSystem />
@@ -5279,26 +5287,26 @@ const Sales: React.FC<SalesProps> = ({
           )}
 
           {/* WhatsApp Share Button (Tailor Module Only) */}
-          {appId === 'workly-tailor' && lastCompletedSale && (
+          {/* {appId === 'workly-tailor' && lastCompletedSale && (
             <Button
               onClick={() => {
                 const sale = lastCompletedSale;
                 const rawInvoice = sale.invoices?.[0]?.invoiceNumber || sale.invoiceNumber || sale.saleNumber || 'N/A';
                 const invoiceNum = rawInvoice.replace(/^SALE-/, '');
-                
+
                 // Get customer phone
                 let phone = sale.customer?.phone || selectedCustomer?.phone || '';
                 phone = phone.replace(/\D/g, ''); // Remove non-numeric characters
-                
+
                 const customerName = sale.customer?.name || selectedCustomer?.name || 'Customer';
                 const totalAmount = formatPrice(sale.totalAmount || finalTotal);
-                
+
                 const message = `Hello ${customerName}, your tailor order bill is ready! Invoice: #${invoiceNum}. Total Amount: ${totalAmount}.`;
-                
-                const whatsappUrl = phone 
+
+                const whatsappUrl = phone
                   ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
                   : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-                  
+
                 window.open(whatsappUrl, '_blank');
               }}
               style={{
@@ -5320,7 +5328,7 @@ const Sales: React.FC<SalesProps> = ({
             >
               <MessageCircle size={20} /> Share Bill via WhatsApp
             </Button>
-          )}
+          )} */}
 
         </div>
       </Modal>

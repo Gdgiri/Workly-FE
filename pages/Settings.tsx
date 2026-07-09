@@ -692,7 +692,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
       showToast('Please enter a name for the integration', 'error');
       return;
     }
-    if (!whatsappConfig.url) {
+    if (whatsappConfig.provider !== 'personal' && !whatsappConfig.url) {
       showToast('API URL is required', 'error');
       return;
     }
@@ -1030,7 +1030,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                           </span>
                         </div>
                         <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-black)', fontFamily: 'monospace' }}>
-                          Key: {integration.apiKey.substring(0, 8)}...
+                          Key: {integration.apiKey?.substring(0, 8) || 'N/A'}...
                         </p>
                       </div>
 
@@ -1184,6 +1184,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                     <option value="sapprow">Sapprow WhatsApp</option>
                     <option value="meta">Meta Official WhatsApp</option>
                     <option value="custom">Custom Provider</option>
+                    <option value="personal">WA-Personal</option>
                   </select>
                 </div>
 
@@ -1216,17 +1217,19 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
               {/* Common Fields */}
               <div className="grid md:grid-cols-2 gap-4">
                 <Input
-                  label="Integration Name"
+                  label="Integration Name *"
                   value={whatsappConfig.name}
                   onChange={(e) => setWhatsappConfig(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g. Sapprow WhatsApp"
                 />
-                <Input
-                  label="API URL"
-                  value={whatsappConfig.url}
-                  onChange={(e) => setWhatsappConfig(prev => ({ ...prev, url: e.target.value }))}
-                  placeholder="https://api..."
-                />
+                {whatsappConfig.provider !== 'personal' && (
+                  <Input
+                    label="API URL *"
+                    value={whatsappConfig.url}
+                    onChange={(e) => setWhatsappConfig(prev => ({ ...prev, url: e.target.value }))}
+                    placeholder="https://api..."
+                  />
+                )}
                 {/* API Path Field with Dynamic Placeholder Support */}
                 {/* <div>
                   <label className="input-label">API Path <span style={{ fontSize: '0.75rem', color: 'var(--text-black)', fontWeight: 'normal' }}>(Optional - supports placeholders)</span></label>
@@ -1548,7 +1551,7 @@ const Settings: React.FC<SettingsProps> = ({ paymentMethods = [], setPaymentMeth
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '1rem' }}>
                     Configure templates specifically for bulk WhatsApp broadcast campaigns.
                   </p>
-                  
+
                   {/* Template List */}
                   {(!whatsappConfig.bulkTemplates || whatsappConfig.bulkTemplates.length === 0) ? (
                     <div style={{

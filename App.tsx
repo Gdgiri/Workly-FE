@@ -29,6 +29,7 @@ import Category from './pages/Category';
 import Payments from './pages/Payments';
 import { AskAI } from './pages/AskAI';
 import MessageLog from './pages/MessageLog';
+import PersonalLog from './pages/PersonalLog';
 import ChecklistList from './pages/ChecklistList';
 import ChecklistBuilder from './pages/ChecklistBuilder';
 import WorklyProject from './pages/WorklyProject';
@@ -450,6 +451,8 @@ const AppContent: React.FC = () => {
                 return "Approve new business registrations";
               case 'message-log':
                 return "Track and manage customer communications";
+              case 'personal-log':
+                return "Track and manage personal WhatsApp communications";
               case 'checklist':
                 return "Manage your standard operating procedures and tasks";
               case 'checklist-builder':
@@ -504,6 +507,7 @@ const AppContent: React.FC = () => {
               <Route path="/:appId/:businessName/expenses" element={<ExpenseList />} />
               <Route path="/:appId/:businessName/business-approvals" element={<BusinessApprovals />} />
               <Route path="/:appId/:businessName/message-log" element={<MessageLog />} />
+              <Route path="/:appId/:businessName/personal-log" element={<PersonalLog />} />
               <Route path="/:appId/:businessName/checklist" element={<ChecklistList />} />
               <Route path="/:appId/:businessName/checklist-builder" element={<ChecklistBuilder />} />
               <Route path="/:appId/:businessName/workly-project/*" element={<WorklyProject />} />

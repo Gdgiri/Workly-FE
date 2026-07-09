@@ -131,22 +131,22 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
     const getLabel = (m: string) => {
         if (!m) return 'N/A';
         const clean = m.toUpperCase().trim();
-        
-        let matched = paymentMethods.find(pm => 
-            pm.id.toUpperCase() === clean || 
+
+        let matched = paymentMethods.find(pm =>
+            pm.id.toUpperCase() === clean ||
             pm.name.toUpperCase().trim() === clean
         );
-        
+
         if (!matched && settings) {
             const activeMethods = settings.paymentMethods || [];
-            matched = activeMethods.find((pm: any) => 
-                pm.id?.toUpperCase() === clean || 
+            matched = activeMethods.find((pm: any) =>
+                pm.id?.toUpperCase() === clean ||
                 pm.name?.toUpperCase().trim() === clean
             );
         }
-        
+
         if (matched) return matched.name;
-        
+
         if (clean === 'GOOGLEPAY' || clean === 'GPAY') return 'GPay';
         if (clean === 'PHONEPE' || clean === 'PHONEPA') return 'PhonePe';
         if (clean === 'PAYTM') return 'Paytm';
@@ -156,7 +156,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         if (clean === 'RAZORPAY') return 'Razorpay';
         if (clean === 'VOUCHER') return 'Voucher';
         if (clean === 'PACKAGE') return 'Package';
-        
+
         return m;
     };
 
@@ -178,8 +178,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 const isRed = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
                 let origPrice = item.price || 0;
                 if (isRed && origPrice === 0) {
-                    const foundService = services.find((s: any) => 
-                        (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                    const foundService = services.find((s: any) =>
+                        (item.serviceId && String(s.id) === String(item.serviceId)) ||
                         (item.itemId && String(s.id) === String(item.itemId)) ||
                         (item.id && String(s.id) === String(item.id)) ||
                         (s.name && s.name.toLowerCase() === item.name.toLowerCase())
@@ -187,7 +187,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     if (foundService) {
                         origPrice = foundService.price || 0;
                     } else {
-                        const foundProduct = products.find((p: any) => 
+                        const foundProduct = products.find((p: any) =>
                             (item.productId && String(p.id) === String(item.productId)) ||
                             (item.itemId && String(p.id) === String(item.itemId)) ||
                             (item.id && String(p.id) === String(item.id)) ||
@@ -380,8 +380,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         const rows = filteredPayments.map(p => {
             const phone = p.appointment?.customer?.mobile || (p.sale as any)?.customer?.mobile || '';
             const details = getSaleSettlementDetails(p);
-            const methodLabel = details.isSplit 
-                ? `Split (${details.allMethods.map(m => getLabel(m)).join(' + ')})` 
+            const methodLabel = details.isSplit
+                ? `Split (${details.allMethods.map(m => getLabel(m)).join(' + ')})`
                 : getLabel(p.paymentMethod);
             return [
                 new Date(p.createdAt).toLocaleDateString(),
@@ -478,7 +478,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         const isSplit = details.isSplit;
 
         const paymentsList: Array<{ paymentMethod: string; amount: number }> = [];
-        
+
         details.actualPayments.forEach((p: any) => {
             if (p.amount > 0 || details.actualPayments.length === 1) {
                 paymentsList.push({
@@ -487,14 +487,14 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 });
             }
         });
-        
+
         if (totalRedemptionValue > 0) {
             paymentsList.push({
                 paymentMethod: 'Package Redemption',
                 amount: totalRedemptionValue
             });
         }
-        
+
         if (effectiveDisc > 0) {
             paymentsList.push({
                 paymentMethod: 'Voucher / Discount',
@@ -502,13 +502,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
             });
         }
 
-        const formattedItems = selectedPayment.sale?.items 
+        const formattedItems = selectedPayment.sale?.items
             ? selectedPayment.sale.items.map((item: any) => {
                 const isRed = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
                 let origPrice = item.price || 0;
                 if (isRed && origPrice === 0) {
-                    const foundService = services.find((s: any) => 
-                        (item.serviceId && String(s.id) === String(item.serviceId)) || 
+                    const foundService = services.find((s: any) =>
+                        (item.serviceId && String(s.id) === String(item.serviceId)) ||
                         (item.itemId && String(s.id) === String(item.itemId)) ||
                         (item.id && String(s.id) === String(item.id)) ||
                         (s.name && s.name.toLowerCase() === item.name.toLowerCase())
@@ -516,7 +516,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     if (foundService) {
                         origPrice = foundService.price || 0;
                     } else {
-                        const foundProduct = products.find((p: any) => 
+                        const foundProduct = products.find((p: any) =>
                             (item.productId && String(p.id) === String(item.productId)) ||
                             (item.itemId && String(p.id) === String(item.itemId)) ||
                             (item.id && String(p.id) === String(item.id)) ||
@@ -572,13 +572,13 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         };
         if (dateRange.start) params.startDate = dateRange.start;
         if (dateRange.end) params.endDate = dateRange.end;
-        
+
         // Only send paymentMethod to backend if it's a real stored method
         // PACKAGE and VOUCHER are system-calculated client-side from zero-amount sales
         if (paymentMethod !== 'ALL' && paymentMethod !== 'PACKAGE' && paymentMethod !== 'VOUCHER') {
             params.paymentMethod = paymentMethod;
         }
-        
+
         if (status !== 'ALL') params.status = status;
         if (selectedSpecialist !== 'ALL') params.specialist = selectedSpecialist;
         if (debouncedSearch) {
@@ -694,7 +694,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
 
             // Broad check for redemptions
             const isRedemption = method === 'VOUCHER' || method === 'PACKAGE' || method === 'REDEEM';
-            
+
             // If it's a redemption payment, it shouldn't show a cash impact in this list (consistent with Sales History)
             if (isRedemption && p.amount !== 0) {
                 return { ...p, amount: 0, originalAmount: p.amount };
@@ -741,7 +741,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         // 3. De-duplicate list by saleId (if present) to group split payment rows client-side
         const seenSaleIds = new Set<string>();
         const deDuplicatedList: Payment[] = [];
-        
+
         for (const p of list) {
             const saleId = p.sale?.id || p.saleId;
             if (saleId) {
@@ -779,7 +779,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 return d.getTime() <= endObj.getTime();
             });
         }
-        
+
         // Client-side Method Filter
         if (paymentMethod !== 'ALL') {
             filtered = filtered.filter(p => {
@@ -805,8 +805,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         // Client-side Status Filter
         if (status !== 'ALL') {
             filtered = filtered.filter(p => {
-                const pStatus = p.isPendingSale 
-                    ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') 
+                const pStatus = p.isPendingSale
+                    ? (p.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING')
                     : (p.sale?.saleStatus === 'CANCELLED' ? 'CANCELLED' : (p.sale?.paymentStatus || p.paymentStatus || p.sale?.saleStatus));
                 return pStatus === status;
             });
@@ -905,9 +905,9 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                 const itemSpecialists = row.sale?.items
                     ?.map((item: any) => item.specialistName)
                     .filter((name: string | undefined): name is string => !!name) || [];
-                
+
                 const uniqueSpecialists = [...new Set(itemSpecialists)];
-                
+
                 if (uniqueSpecialists.length > 0) {
                     return (
                         <div className="text-sm text-black dark:text-black font-medium">
@@ -976,7 +976,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     row.amount === 0 &&
                     !row.isPendingSale &&
                     (row.sale?.saleStatus === 'COMPLETED' || row.paymentStatus === 'COMPLETED')) {
-                    
+
                     // Distinguish between Package and Voucher
                     const isPackageRedemption = row.sale?.items?.some((item: any) => item.redeemedFromPackageId);
                     if (isPackageRedemption) {
@@ -1036,8 +1036,8 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
         {
             header: 'Status',
             accessor: (row: Payment) => {
-                const displayStatus = row.isPendingSale 
-                    ? (row.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING') 
+                const displayStatus = row.isPendingSale
+                    ? (row.appointment?.status?.toUpperCase() === 'CANCELLED' ? 'CANCELLED' : 'PENDING')
                     : (row.sale?.saleStatus === 'CANCELLED' ? 'CANCELLED' : (row.sale?.paymentStatus || row.paymentStatus || row.sale?.saleStatus));
                 return (
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider border ${getStatusColor(displayStatus)}`}>
@@ -1113,36 +1113,36 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     >
                         View
                     </Button>
-                    {row.sale?.saleStatus !== 'CANCELLED' && 
-                     row.appointment?.status?.toUpperCase() !== 'CANCELLED' && 
-                     row.sale?.saleStatus !== 'COMPLETED' && 
-                     row.paymentStatus !== 'COMPLETED' && (
-                        <Button
-                            variant="ghost"
-                            icon={<XCircle size={16} />}
-                            style={{
-                                backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                                color: '#ef4444',
-                                border: '1px solid rgba(239, 68, 68, 0.2)',
-                                padding: '0.4rem 0.75rem',
-                                borderRadius: '0.625rem',
-                                transition: 'all 0.2s',
-                                opacity: !canCancel ? 0.5 : 1,
-                                cursor: !canCancel ? 'not-allowed' : 'pointer'
-                            }}
-                            className="hover:bg-red-100"
-                            disabled={!canCancel}
-                            title={!canCancel ? "Ask Admin for permission" : ""}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (!canCancel) { showToast("Ask Admin for permission", "error"); return; }
-                                setSelectedPayment(row);
-                                setIsCancelModalOpen(true);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                    )}
+                    {row.sale?.saleStatus !== 'CANCELLED' &&
+                        row.appointment?.status?.toUpperCase() !== 'CANCELLED' &&
+                        row.sale?.saleStatus !== 'COMPLETED' &&
+                        row.paymentStatus !== 'COMPLETED' && (
+                            <Button
+                                variant="ghost"
+                                icon={<XCircle size={16} />}
+                                style={{
+                                    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                                    color: '#ef4444',
+                                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                                    padding: '0.4rem 0.75rem',
+                                    borderRadius: '0.625rem',
+                                    transition: 'all 0.2s',
+                                    opacity: !canCancel ? 0.5 : 1,
+                                    cursor: !canCancel ? 'not-allowed' : 'pointer'
+                                }}
+                                className="hover:bg-red-100"
+                                disabled={!canCancel}
+                                title={!canCancel ? "Ask Admin for permission" : ""}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!canCancel) { showToast("Ask Admin for permission", "error"); return; }
+                                    setSelectedPayment(row);
+                                    setIsCancelModalOpen(true);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                        )}
                 </div >
             )
         }
@@ -1451,121 +1451,121 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                     return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-                        {/* Info Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div style={{
-                                padding: '0.5rem',
-                                borderRadius: 'var(--radius-xl)',
-                                backgroundColor: 'var(--bg-card)',
-                                border: '1px solid var(--border)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.2rem'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
-                                    <FileText size={14} />
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>IDENTIFIERS</span>
+                            {/* Info Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{
+                                    padding: '0.5rem',
+                                    borderRadius: 'var(--radius-xl)',
+                                    backgroundColor: 'var(--bg-card)',
+                                    border: '1px solid var(--border)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.2rem'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
+                                        <FileText size={14} />
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>IDENTIFIERS</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {/* Helper to find appointment info */}
+                                        {(() => {
+                                            const saleAppointment = (selectedPayment.sale as any)?.appointment;
+                                            const directAppointment = selectedPayment.appointment;
+                                            const appointment = directAppointment || saleAppointment;
+                                            const apptId = selectedPayment.appointmentId || saleAppointment?.id;
+
+                                            return (
+                                                <>
+                                                    {/* Row 1: Transaction ID | Booking Time */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                        <div>
+                                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Transaction ID</p>
+                                                            <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', wordBreak: 'break-all', margin: 0 }}>
+                                                                {(selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Booking Time</p>
+                                                            <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
+                                                                {appointment?.startTime ? new Date(appointment.startTime).toLocaleString(undefined, {
+                                                                    timeStyle: 'short',
+                                                                    dateStyle: 'medium'
+                                                                }) : 'Direct Sale'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Row 2: Invoice Number | Transaction Date & Time */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                        <div>
+                                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Invoice Number</p>
+                                                            <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)', fontSize: '0.75rem', margin: 0 }}>
+                                                                {selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.invoiceNumber || 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Trans. Date & Time</p>
+                                                            <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
+                                                                {new Date(selectedPayment.createdAt).toLocaleString(undefined, {
+                                                                    dateStyle: 'medium',
+                                                                    timeStyle: 'short'
+                                                                })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Row 3: Customer | Appointment ID */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                        <div>
+                                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Customer</p>
+                                                            <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}>
+                                                                {appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in'}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Appointment ID</p>
+                                                            <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.65rem', wordBreak: 'break-all', margin: 0 }}>
+                                                                {apptId || 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {/* Helper to find appointment info */}
-                                    {(() => {
-                                        const saleAppointment = (selectedPayment.sale as any)?.appointment;
-                                        const directAppointment = selectedPayment.appointment;
-                                        const appointment = directAppointment || saleAppointment;
-                                        const apptId = selectedPayment.appointmentId || saleAppointment?.id;
 
-                                        return (
-                                            <>
-                                                {/* Row 1: Transaction ID | Booking Time */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Transaction ID</p>
-                                                        <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', wordBreak: 'break-all', margin: 0 }}>
-                                                            {(selectedPayment.sale as any)?.saleNumber || selectedPayment.transactionId || selectedPayment.id}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Booking Time</p>
-                                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
-                                                            {appointment?.startTime ? new Date(appointment.startTime).toLocaleString(undefined, {
-                                                                timeStyle: 'short',
-                                                                dateStyle: 'medium'
-                                                            }) : 'Direct Sale'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Row 2: Invoice Number | Transaction Date & Time */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Invoice Number</p>
-                                                        <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)', fontSize: '0.75rem', margin: 0 }}>
-                                                            {selectedPayment.invoiceNumber || (selectedPayment.sale as any)?.invoiceNumber || 'N/A'}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Trans. Date & Time</p>
-                                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.75rem', margin: 0 }}>
-                                                            {new Date(selectedPayment.createdAt).toLocaleString(undefined, {
-                                                                dateStyle: 'medium',
-                                                                timeStyle: 'short'
-                                                            })}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Row 3: Customer | Appointment ID */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Customer</p>
-                                                        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}>
-                                                            {appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name || 'Walk-in'}
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Appointment ID</p>
-                                                        <p style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.65rem', wordBreak: 'break-all', margin: 0 }}>
-                                                            {apptId || 'N/A'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
+                                <div style={{
+                                    padding: '0.5rem',
+                                    borderRadius: 'var(--radius-xl)',
+                                    backgroundColor: 'var(--bg-card)',
+                                    border: '1px solid var(--border)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.1rem'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
+                                        <CreditCard size={14} />
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 800, uppercase: 'true', letterSpacing: '0.1em' }}>PAYMENT INFO</span>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Method</p>
+                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
+                                            {details.isSplit
+                                                ? `Split (${details.allMethods.map(m => getLabel(m)).join(' + ')})`
+                                                : getLabel(selectedPayment.paymentMethod)
+                                            }
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Collection Type</p>
+                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentType}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div style={{
-                                padding: '0.5rem',
-                                borderRadius: 'var(--radius-xl)',
-                                backgroundColor: 'var(--bg-card)',
-                                border: '1px solid var(--border)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.1rem'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
-                                    <CreditCard size={14} />
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, uppercase: 'true', letterSpacing: '0.1em' }}>PAYMENT INFO</span>
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Method</p>
-                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
-                                        {details.isSplit 
-                                            ? `Split (${details.allMethods.map(m => getLabel(m)).join(' + ')})` 
-                                            : getLabel(selectedPayment.paymentMethod)
-                                        }
-                                    </p>
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-black)', marginBottom: '0.15rem' }}>Collection Type</p>
-                                    <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{selectedPayment.paymentType}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Customer & Cashier */}
-                        {/* <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            {/* Customer & Cashier */}
+                            {/* <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div style={{
                                 padding: '1rem',
                                 borderRadius: 'var(--radius-xl)',
@@ -1609,92 +1609,92 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                             </div>
                         </div> */}
 
-                        {/* Attachments */}
-                        {selectedPayment.sale && selectedPayment.sale.attachments && selectedPayment.sale.attachments.length > 0 && (
-                            <div style={{
-                                borderRadius: 'var(--radius-xl)',
-                                border: '1px solid var(--border)',
-                                overflow: 'hidden',
-                                backgroundColor: 'var(--bg-card)'
-                            }}>
+                            {/* Attachments */}
+                            {selectedPayment.sale && selectedPayment.sale.attachments && selectedPayment.sale.attachments.length > 0 && (
                                 <div style={{
-                                    padding: '0.75rem 1.25rem',
-                                    backgroundColor: 'var(--bg-hover)',
-                                    borderBottom: '1px solid var(--border)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
+                                    borderRadius: 'var(--radius-xl)',
+                                    border: '1px solid var(--border)',
+                                    overflow: 'hidden',
+                                    backgroundColor: 'var(--bg-card)'
                                 }}>
-                                    <Paperclip size={14} className="text-black" />
-                                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Attachments</p>
-                                </div>
-                                <div style={{
-                                    padding: '1.25rem',
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '1rem'
-                                }}>
-                                    {selectedPayment.sale.attachments.map((att: any, idx: number) => {
-                                        const isImage = att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ||
-                                            att.url?.toLowerCase().includes('image/upload');
+                                    <div style={{
+                                        padding: '0.75rem 1.25rem',
+                                        backgroundColor: 'var(--bg-hover)',
+                                        borderBottom: '1px solid var(--border)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}>
+                                        <Paperclip size={14} className="text-black" />
+                                        <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Attachments</p>
+                                    </div>
+                                    <div style={{
+                                        padding: '1.25rem',
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '1rem'
+                                    }}>
+                                        {selectedPayment.sale.attachments.map((att: any, idx: number) => {
+                                            const isImage = att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ||
+                                                att.url?.toLowerCase().includes('image/upload');
 
-                                        return (
-                                            <div key={idx} style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '0.5rem',
-                                                width: isImage ? '120px' : '100%'
-                                            }}>
-                                                {isImage && (
-                                                    <div
-                                                        onClick={() => setPreviewAttachment(att)}
-                                                        style={{
-                                                            width: '120px',
-                                                            height: '100px',
-                                                            borderRadius: 'var(--radius-lg)',
-                                                            overflow: 'hidden',
-                                                            border: '1px solid var(--border)',
-                                                            cursor: 'pointer',
-                                                            backgroundColor: 'var(--bg-hover)',
-                                                            position: 'relative',
-                                                            transition: 'transform 0.2s'
-                                                        }}
-                                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                                    >
-                                                        <img
-                                                            src={att.url}
-                                                            alt={att.name}
-                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                        />
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            backgroundColor: 'rgba(0,0,0,0.1)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            opacity: 0,
-                                                            transition: 'opacity 0.2s'
-                                                        }}
-                                                            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                                                            onMouseOut={(e) => e.currentTarget.style.opacity = '0'}
+                                            return (
+                                                <div key={idx} style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '0.5rem',
+                                                    width: isImage ? '120px' : '100%'
+                                                }}>
+                                                    {isImage && (
+                                                        <div
+                                                            onClick={() => setPreviewAttachment(att)}
+                                                            style={{
+                                                                width: '120px',
+                                                                height: '100px',
+                                                                borderRadius: 'var(--radius-lg)',
+                                                                overflow: 'hidden',
+                                                                border: '1px solid var(--border)',
+                                                                cursor: 'pointer',
+                                                                backgroundColor: 'var(--bg-hover)',
+                                                                position: 'relative',
+                                                                transition: 'transform 0.2s'
+                                                            }}
+                                                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                                         >
-                                                            <Eye size={24} color="white" />
+                                                            <img
+                                                                src={att.url}
+                                                                alt={att.name}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                            />
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                opacity: 0,
+                                                                transition: 'opacity 0.2s'
+                                                            }}
+                                                                onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                                                onMouseOut={(e) => e.currentTarget.style.opacity = '0'}
+                                                            >
+                                                                <Eye size={24} color="white" />
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                                                    <a
-                                                        href={att.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 hover:underline flex items-center gap-1 text-xs font-medium truncate"
-                                                        style={{ textDecoration: 'none', maxWidth: isImage ? '80px' : 'none' }}
-                                                    >
-                                                        {att.name || `Attachment ${idx + 1}`} <ExternalLink size={10} />
-                                                    </a>
-                                                    {/* <button
+                                                    )}
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                                        <a
+                                                            href={att.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 hover:underline flex items-center gap-1 text-xs font-medium truncate"
+                                                            style={{ textDecoration: 'none', maxWidth: isImage ? '80px' : 'none' }}
+                                                        >
+                                                            {att.name || `Attachment ${idx + 1}`} <ExternalLink size={10} />
+                                                        </a>
+                                                        {/* <button
                                                         onClick={() => setPreviewAttachment(att)}
                                                         style={{
                                                             background: 'var(--primary-light)',
@@ -1713,363 +1713,480 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                                     >
                                                         <Eye size={14} />
                                                     </button> */}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Order Summary */}
-                        <div style={{
-                            borderRadius: 'var(--radius-xl)',
-                            border: '1px solid var(--border)',
-                            overflow: 'hidden',
-                            backgroundColor: 'var(--bg-card)'
-                        }}>
-                            <div style={{
-                                padding: '0.75rem 1.25rem',
-                                backgroundColor: 'var(--bg-hover)',
-                                borderBottom: '1px solid var(--border)'
-                            }}>
-                                <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Order Summary</p>
-                            </div>
-
-                            <div style={{ padding: '1.25rem', maxHeight: '200px', overflowY: 'auto' }}>
-                                {selectedPayment.sale ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        {(selectedPayment.sale.items || []).map((item: any, idx: number) => {
-                                            const isRedemption = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
-                                            
-                                            // Find catalog/original price for redeemed item
-                                            let originalPrice = item.price || 0;
-                                            if (isRedemption && originalPrice === 0) {
-                                                const foundService = services.find((s: any) => 
-                                                    (item.serviceId && String(s.id) === String(item.serviceId)) || 
-                                                    (item.itemId && String(s.id) === String(item.itemId)) ||
-                                                    (item.id && String(s.id) === String(item.id)) ||
-                                                    (s.name && s.name.toLowerCase() === item.name.toLowerCase())
-                                                );
-                                                
-                                                if (foundService) {
-                                                    originalPrice = foundService.price || 0;
-                                                } else {
-                                                    const foundProduct = products.find((p: any) => 
-                                                        (item.productId && String(p.id) === String(item.productId)) ||
-                                                        (item.itemId && String(p.id) === String(item.itemId)) ||
-                                                        (item.id && String(p.id) === String(item.id)) ||
-                                                        (p.name && p.name.toLowerCase() === item.name.toLowerCase())
-                                                    );
-                                                    if (foundProduct) {
-                                                        originalPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
-                                                    }
-                                                }
-                                            }
-
-                                            return (
-                                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderBottom: idx === (selectedPayment.sale.items || []).length - 1 ? 'none' : '1px dashed var(--border-light)', paddingBottom: idx === (selectedPayment.sale.items || []).length - 1 ? '0' : '0.5rem', marginBottom: idx === (selectedPayment.sale.items || []).length - 1 ? '0' : '0.5rem' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{item.name}</p>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>Qty: {item.quantity}</span>
-                                                                {item.specialistName && (
-                                                                    <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>• {item.specialistName}</span>
-                                                                )}
-                                                                {item.type === 'combo' && (
-                                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ffedd5', color: '#ea580c', textTransform: 'uppercase' }}>Combo</span>
-                                                                )}
-                                                                {isRedemption && (
-                                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ecfdf5', color: '#059669', textTransform: 'uppercase' }}>Redeemed</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
-                                                            {formatPrice(originalPrice * item.quantity)}
-                                                        </p>
                                                     </div>
-                                                    {isRedemption && originalPrice > 0 && (
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#059669', paddingLeft: '0.5rem', marginTop: '0.1rem' }}>
-                                                            <span style={{ fontStyle: 'italic', fontWeight: 500 }}>Package Redemption</span>
-                                                            <span style={{ fontWeight: 700 }}>-{formatPrice(originalPrice * item.quantity)}</span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                ) : selectedPayment.appointment ? (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{selectedPayment.appointment.service?.name}</p>
-                                            {selectedPayment.appointment.stylist?.name && (
-                                                <p style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, margin: 0 }}>Stylist: {selectedPayment.appointment.stylist.name}</p>
-                                            )}
-                                        </div>
-                                        <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{formatPrice(selectedPayment.amount)}</p>
-                                    </div>
-                                ) : (
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-black)', fontStyle: 'italic', margin: 0 }}>No items found</p>
-                                )}
-                            </div>
+                                </div>
+                            )}
 
+                            {/* Order Summary */}
                             <div style={{
-                                padding: '1.25rem',
-                                backgroundColor: 'var(--bg-hover)',
-                                borderTop: '1px solid var(--border)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem'
+                                borderRadius: 'var(--radius-xl)',
+                                border: '1px solid var(--border)',
+                                overflow: 'hidden',
+                                backgroundColor: 'var(--bg-card)'
                             }}>
-                                {selectedPayment.sale && (
-                                    <>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                            <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
-                                            <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
-                                                {formatPrice(originalSubtotal)}
-                                            </span>
-                                        </div>
-                                        {totalRedemptionValue > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#059669' }}>
-                                                <span style={{ fontWeight: 500 }}>Package Redemption</span>
-                                                <span style={{ fontWeight: 700 }}>-{formatPrice(totalRedemptionValue)}</span>
-                                            </div>
-                                        )}
-                                        {effectiveDisc > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                <span style={{ color: 'var(--text-black)' }}>Discount</span>
-                                                <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
-                                            </div>
-                                        )}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
-                                            <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
-                                            <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
-                                                {formatPrice(balance)}
-                                            </span>
-                                        </div>
-                                    </>
-                                )}
                                 <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    paddingTop: '0.75rem',
-                                    marginTop: '0.25rem',
-                                    borderTop: '1px solid var(--border)'
+                                    padding: '0.75rem 1.25rem',
+                                    backgroundColor: 'var(--bg-hover)',
+                                    borderBottom: '1px solid var(--border)'
                                 }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            Net Amount
-                                        </span>
-                                    </div>
-                                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>{formatPrice(getRowDisplayAmount(selectedPayment))}</span>
+                                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Order Summary</p>
                                 </div>
 
-                                {/* Settlement Breakdown (including Payments, Package Redemptions, and Vouchers/Discounts) */}
-                                {(() => {
-                                    if (!details.isSplit) return null;
+                                <div style={{ padding: '1.25rem', maxHeight: '200px', overflowY: 'auto' }}>
+                                    {selectedPayment.sale ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            {(selectedPayment.sale.items || []).map((item: any, idx: number) => {
+                                                const isRedemption = item.price === 0 || item.redeemedQuantity > 0 || item.redeemedFromPackageId;
 
-                                    return (
-                                        <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
-                                            <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Settlement Breakdown</p>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {/* 1. Actual Payments */}
-                                                {details.actualPayments.map((p: any, idx: number) => (
-                                                    <div key={`pay-${idx}`} style={{
-                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                        padding: '0.5rem', background: p.id === selectedPayment.id ? 'var(--bg-hover)' : 'transparent',
-                                                        borderRadius: '0.5rem', border: p.id === selectedPayment.id ? '1px solid var(--border)' : 'none'
-                                                    }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)' }}>{getLabel(p.method)}</span>
-                                                            {p.id === selectedPayment.id && <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 700 }}>CURRENT</span>}
+                                                // Find catalog/original price for redeemed item
+                                                let originalPrice = item.price || 0;
+                                                if (isRedemption && originalPrice === 0) {
+                                                    const foundService = services.find((s: any) =>
+                                                        (item.serviceId && String(s.id) === String(item.serviceId)) ||
+                                                        (item.itemId && String(s.id) === String(item.itemId)) ||
+                                                        (item.id && String(s.id) === String(item.id)) ||
+                                                        (s.name && s.name.toLowerCase() === item.name.toLowerCase())
+                                                    );
+
+                                                    if (foundService) {
+                                                        originalPrice = foundService.price || 0;
+                                                    } else {
+                                                        const foundProduct = products.find((p: any) =>
+                                                            (item.productId && String(p.id) === String(item.productId)) ||
+                                                            (item.itemId && String(p.id) === String(item.itemId)) ||
+                                                            (item.id && String(p.id) === String(item.id)) ||
+                                                            (p.name && p.name.toLowerCase() === item.name.toLowerCase())
+                                                        );
+                                                        if (foundProduct) {
+                                                            originalPrice = foundProduct.sellingPrice || foundProduct.price || foundProduct.retailPrice || 0;
+                                                        }
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderBottom: idx === (selectedPayment.sale.items || []).length - 1 ? 'none' : '1px dashed var(--border-light)', paddingBottom: idx === (selectedPayment.sale.items || []).length - 1 ? '0' : '0.5rem', marginBottom: idx === (selectedPayment.sale.items || []).length - 1 ? '0' : '0.5rem' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{item.name}</p>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-black)' }}>Qty: {item.quantity}</span>
+                                                                    {item.specialistName && (
+                                                                        <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>• {item.specialistName}</span>
+                                                                    )}
+                                                                    {item.type === 'combo' && (
+                                                                        <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ffedd5', color: '#ea580c', textTransform: 'uppercase' }}>Combo</span>
+                                                                    )}
+                                                                    {isRedemption && (
+                                                                        <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#ecfdf5', color: '#059669', textTransform: 'uppercase' }}>Redeemed</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>
+                                                                {formatPrice(originalPrice * item.quantity)}
+                                                            </p>
                                                         </div>
-                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(p.amount)}</span>
+                                                        {isRedemption && originalPrice > 0 && (
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#059669', paddingLeft: '0.5rem', marginTop: '0.1rem' }}>
+                                                                <span style={{ fontStyle: 'italic', fontWeight: 500 }}>Package Redemption</span>
+                                                                <span style={{ fontWeight: 700 }}>-{formatPrice(originalPrice * item.quantity)}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ))}
-
-                                                {/* 2. Package Redemptions */}
-                                                {totalRedemptionValue > 0 && (
-                                                    <div style={{
-                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                        padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(254, 243, 199, 0.3)', border: '1px dashed #fde68a'
-                                                    }}>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#92400e' }}>Package Redemption</span>
-                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e' }}>{formatPrice(totalRedemptionValue)}</span>
-                                                    </div>
-                                                )}
-
-                                                {/* 3. Voucher / Discount */}
-                                                {effectiveDisc > 0 && (
-                                                    <div style={{
-                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                        padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(252, 231, 243, 0.3)', border: '1px dashed #fbcfe8'
-                                                    }}>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#be185d' }}>Voucher / Discount</span>
-                                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#be185d' }}>{formatPrice(effectiveDisc)}</span>
-                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : selectedPayment.appointment ? (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{selectedPayment.appointment.service?.name}</p>
+                                                {selectedPayment.appointment.stylist?.name && (
+                                                    <p style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, margin: 0 }}>Stylist: {selectedPayment.appointment.stylist.name}</p>
                                                 )}
                                             </div>
+                                            <p style={{ fontWeight: 700, color: 'var(--text-dark)', fontSize: '0.85rem', margin: 0 }}>{formatPrice(selectedPayment.amount)}</p>
                                         </div>
-                                    );
-                                })()}
+                                    ) : (
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-black)', fontStyle: 'italic', margin: 0 }}>No items found</p>
+                                    )}
+                                </div>
+
+                                <div style={{
+                                    padding: '1.25rem',
+                                    backgroundColor: 'var(--bg-hover)',
+                                    borderTop: '1px solid var(--border)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.5rem'
+                                }}>
+                                    {selectedPayment.sale && (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                <span style={{ color: 'var(--text-black)' }}>Subtotal</span>
+                                                <span style={{ fontWeight: 700, color: 'var(--text-dark)' }}>
+                                                    {formatPrice(originalSubtotal)}
+                                                </span>
+                                            </div>
+                                            {totalRedemptionValue > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#059669' }}>
+                                                    <span style={{ fontWeight: 500 }}>Package Redemption</span>
+                                                    <span style={{ fontWeight: 700 }}>-{formatPrice(totalRedemptionValue)}</span>
+                                                </div>
+                                            )}
+                                            {effectiveDisc > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                    <span style={{ color: 'var(--text-black)' }}>Discount</span>
+                                                    <span style={{ fontWeight: 700, color: 'var(--success)' }}>-{formatPrice(effectiveDisc)}</span>
+                                                </div>
+                                            )}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.25rem', paddingTop: '0.25rem', borderTop: '1px dashed var(--border)' }}>
+                                                <span style={{ color: 'var(--text-black)', fontWeight: 600 }}>Balance Due</span>
+                                                <span style={{ fontWeight: 700, color: (selectedPayment.sale as any).paymentStatus === 'COMPLETED' ? 'var(--success)' : '#ef4444' }}>
+                                                    {formatPrice(balance)}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        paddingTop: '0.75rem',
+                                        marginTop: '0.25rem',
+                                        borderTop: '1px solid var(--border)'
+                                    }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                Net Amount
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>{formatPrice(getRowDisplayAmount(selectedPayment))}</span>
+                                    </div>
+
+                                    {/* Settlement Breakdown (including Payments, Package Redemptions, and Vouchers/Discounts) */}
+                                    {(() => {
+                                        if (!details.isSplit) return null;
+
+                                        return (
+                                            <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+                                                <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Settlement Breakdown</p>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    {/* 1. Actual Payments */}
+                                                    {details.actualPayments.map((p: any, idx: number) => (
+                                                        <div key={`pay-${idx}`} style={{
+                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                            padding: '0.5rem', background: p.id === selectedPayment.id ? 'var(--bg-hover)' : 'transparent',
+                                                            borderRadius: '0.5rem', border: p.id === selectedPayment.id ? '1px solid var(--border)' : 'none'
+                                                        }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)' }}>{getLabel(p.method)}</span>
+                                                                {p.id === selectedPayment.id && <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 700 }}>CURRENT</span>}
+                                                            </div>
+                                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)' }}>{formatPrice(p.amount)}</span>
+                                                        </div>
+                                                    ))}
+
+                                                    {/* 2. Package Redemptions */}
+                                                    {totalRedemptionValue > 0 && (
+                                                        <div style={{
+                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                            padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(254, 243, 199, 0.3)', border: '1px dashed #fde68a'
+                                                        }}>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#92400e' }}>Package Redemption</span>
+                                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e' }}>{formatPrice(totalRedemptionValue)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* 3. Voucher / Discount */}
+                                                    {effectiveDisc > 0 && (
+                                                        <div style={{
+                                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                            padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(252, 231, 243, 0.3)', border: '1px dashed #fbcfe8'
+                                                        }}>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#be185d' }}>Voucher / Discount</span>
+                                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#be185d' }}>{formatPrice(effectiveDisc)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
-                        </div>
 
 
 
-                        {/* Actions */}
-                        <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                style={{ height: '3rem', borderRadius: 'var(--radius-xl)' }}
-                                icon={<Printer size={18} />}
-                                onClick={handlePrintReceipt}
-                            >
-                                Receipt
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                style={{
-                                    height: '3rem',
-                                    borderRadius: 'var(--radius-xl)',
-                                    borderColor: 'var(--primary)',
-                                    color: 'var(--primary)',
-                                    backgroundColor: 'rgba(35, 76, 106, 0.05)'
-                                }}
-                                icon={<FileText size={18} />}
-                                onClick={handleDownloadPDF}
-                            >
-                                Invoice PDF
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                style={{
-                                    height: '3rem',
-                                    borderRadius: 'var(--radius-xl)',
-                                    borderColor: '#25D366',
-                                    color: '#25D366',
-                                    backgroundColor: 'rgba(37, 211, 102, 0.05)'
-                                }}
-                                icon={<MessageCircle size={18} />}
-                                onClick={async () => {
-                                    if (!selectedPayment) return;
-                                    if (isStaff && fraudProtection) {
-                                        showToast('WhatsApp messaging is disabled during Fraud Protection.', 'info');
-                                        return;
-                                    }
-                                    const customer = selectedPayment.appointment?.customer || (selectedPayment.sale as any)?.customer;
-                                    const customerName = customer?.name || 'Customer';
-
-                                    // Check both phone (Prisma default for Customer) and mobile (Prisma default for User/Stylist)
-                                    let mobile = customer?.phone || customer?.mobile;
-
-                                    // If no mobile found (e.g. Walk-In), prompt the user to enter one
-                                    if (!mobile) {
-                                        const manualMobile = window.prompt("No mobile number found for this customer. Please enter mobile number to send WhatsApp:");
-                                        if (manualMobile) {
-                                            mobile = manualMobile;
-                                        } else {
-                                            return; // User cancelled
-                                        }
-                                    }
-
-                                    try {
-                                        showToast('Preparing invoice link and opening WhatsApp...', 'info');
-
-                                        const appId = (user as any)?.app_id || 'salon';
-                                        const businessName = (user as any)?.businessName || 'admin';
-                                        const saleId = (selectedPayment.sale as any)?.id || selectedPayment.transactionId;
-                                        const invoiceNum = (selectedPayment.sale as any)?.saleNumber || selectedPayment.invoiceNumber || 'Invoice';
-                                        
-                                        const invoiceUrl = `${window.location.origin}/${appId}/${businessName}/invoice/${saleId}`;
-
-                                        // 3. Construct message with link
-                                        const message = `Hi ${customerName}, thank you for visiting ${settings?.salonName || 'our salon'}! 🌸\n\n` +
-                                            `Your invoice *${invoiceNum}* for *${formatPrice(selectedPayment.amount)}* is ready.\n\n` +
-                                            `📥 *View and download your invoice here:*\n${invoiceUrl}\n\n` +
-                                            `We look forward to seeing you again! ✨`;
-
-                                        const encodedMessage = encodeURIComponent(message);
-                                        window.open(`https://web.whatsapp.com/send?phone=${mobile}&text=${encodedMessage}`, '_blank');
-                                    } catch (error: any) {
-                                        console.error('WhatsApp Error:', error);
-                                        showToast(error.message || 'Failed to prepare invoice PDF', 'error');
-                                    }
-                                }}
-                            >
-                                WhatsApp
-                            </Button>
-                            {selectedPayment.sale && (selectedPayment.sale as any).balanceAmount > 0 && (
-                                <Button
-                                    variant="primary"
-                                    className="flex-1"
-                                    style={{ height: '3rem', borderRadius: 'var(--radius-xl)', backgroundColor: '#4f46e5' }}
-                                    icon={<Play size={18} />}
-                                    onClick={() => {
-                                        const subtotalAmount = (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-                                        const totalPayable = (selectedPayment.sale as any)?.totalAmount || selectedPayment.amount || 0;
-                                        const explicitDiscount = (selectedPayment.sale as any)?.discount || 0;
-                                        // Fail-safe: if explicit discount is 0 but total < subtotal, infer the discount
-                                        const effectiveDiscount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotalAmount - totalPayable);
-
-                                        const partialData = {
-                                            customerId: selectedPayment.appointment?.customer?.id || (selectedPayment.sale as any)?.customer?.id,
-                                            customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name,
-                                            customerPhone: selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile,
-                                            paidAmount: (selectedPayment.sale as any)?.paidAmount || 0,
-                                            items: (selectedPayment.sale as any)?.items || [],
-                                            discount: effectiveDiscount,
-                                            transactionId: selectedPayment.transactionId || selectedPayment.id,
-                                            saleId: selectedPayment.sale?.id,
-                                            saleNumber: (selectedPayment.sale as any)?.saleNumber,
-                                            autoCheckout: true
-                                        };
-                                        const appId = (user as any)?.app_id || 'salon';
-                                        const businessName = (user as any)?.businessName || 'admin';
-                                        navigate(`/${appId}/${businessName}/sales`, { state: { partialPaymentData: partialData } });
-                                    }}
-                                >
-                                    Continue
-                                </Button>
-                            )}
-                            <Button
-                                variant="primary"
-                                className="flex-1"
-                                style={{ height: '3rem', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-colored)' }}
-                                onClick={() => setIsModalOpen(false)}
-                            >
-                                Close
-                            </Button>
-                        </div>
-
-                        {/* Cancel Bill Button Section - Restricted to Admin/Manager or anyone with payment edit permission */}
-                        {(isAdmin || isManager || canCancel) && ((selectedPayment.isPendingSale && selectedPayment.appointment?.status?.toUpperCase() !== 'CANCELLED') || (selectedPayment.sale?.saleStatus !== 'CANCELLED')) && (
-                            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
+                            {/* Actions */}
+                            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
                                 <Button
                                     variant="outline"
-                                    className="w-full"
+                                    className="flex-1"
+                                    style={{ height: '3rem', borderRadius: 'var(--radius-xl)' }}
+                                    icon={<Printer size={18} />}
+                                    onClick={handlePrintReceipt}
+                                >
+                                    Receipt
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
                                     style={{
                                         height: '3rem',
                                         borderRadius: 'var(--radius-xl)',
-                                        borderColor: '#ef4444',
-                                        color: '#ef4444',
-                                        backgroundColor: 'rgba(239, 68, 68, 0.05)'
+                                        borderColor: 'var(--primary)',
+                                        color: 'var(--primary)',
+                                        backgroundColor: 'rgba(35, 76, 106, 0.05)'
                                     }}
-                                    icon={<XCircle size={18} />}
-                                    onClick={() => setIsCancelModalOpen(true)}
+                                    icon={<FileText size={18} />}
+                                    onClick={handleDownloadPDF}
                                 >
-                                    Cancel Bill
+                                    Invoice PDF
                                 </Button>
-                                <p style={{ fontSize: '0.65rem', color: 'var(--text-black)', textAlign: 'center', marginTop: '0.5rem' }}>
-                                    Cancelling will revert all stock, voucher balances, and package redemptions.
-                                </p>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    style={{
+                                        height: '3rem',
+                                        borderRadius: 'var(--radius-xl)',
+                                        borderColor: '#25D366',
+                                        color: '#25D366',
+                                        backgroundColor: 'rgba(37, 211, 102, 0.05)'
+                                    }}
+                                    icon={<MessageCircle size={18} />}
+                                    onClick={async () => {
+                                        if (!selectedPayment) return;
+                                        if (isStaff && fraudProtection) {
+                                            showToast('WhatsApp messaging is disabled during Fraud Protection.', 'info');
+                                            return;
+                                        }
+                                        const customer = selectedPayment.appointment?.customer || (selectedPayment.sale as any)?.customer;
+                                        const customerName = customer?.name || 'Customer';
+
+                                        // Check both phone (Prisma default for Customer) and mobile (Prisma default for User/Stylist)
+                                        let mobile = customer?.phone || customer?.mobile;
+
+                                        // If no mobile found (e.g. Walk-In), prompt the user to enter one
+                                        if (!mobile) {
+                                            const manualMobile = window.prompt("No mobile number found for this customer. Please enter mobile number to send WhatsApp:");
+                                            if (manualMobile) {
+                                                mobile = manualMobile;
+                                            } else {
+                                                return; // User cancelled
+                                            }
+                                        }
+
+                                        const digitsCount = mobile.replace(/\D/g, '').length;
+                                        if (digitsCount < 8 || digitsCount > 15) {
+                                            showToast('Invalid phone number format. Please ensure it includes the country code.', 'error');
+                                            return;
+                                        }
+
+                                        try {
+                                            showToast('Preparing invoice link and opening WhatsApp...', 'info');
+
+                                            const appId = (user as any)?.app_id || 'salon';
+                                            const businessName = (user as any)?.businessName || 'admin';
+                                            const saleId = (selectedPayment.sale as any)?.id || selectedPayment.transactionId;
+                                            const invoiceNum = (selectedPayment.sale as any)?.saleNumber || selectedPayment.invoiceNumber || 'Invoice';
+
+                                            const invoiceUrl = `${window.location.origin}/${appId}/${businessName}/invoice/${saleId}`;
+
+                                            const now = new Date();
+                                            const dateStr = now.toLocaleDateString(undefined, { dateStyle: 'medium' });
+
+                                            let message = '';
+                                            if (appId === 'workly-tailor' || appId === 'tailor') {
+                                                message = `Dear *${customerName}*, Thank you for choosing *${settings?.salonName || 'Our Studio'}*. Your payment of *${formatPrice(selectedPayment.amount)}* for your recent order (*${invoiceNum}*) has been successfully received. We are thrilled to begin crafting your bespoke garment. Our team will keep you updated on the progress of your order. Your estimated fitting/delivery date is *${dateStr}*. If you have any questions in the meantime, please do not hesitate to contact us.\n\n📥 *View your invoice here:*\n${invoiceUrl}`;
+                                            } else {
+                                                message = `Hi *${customerName}*, thank you for visiting *${settings?.salonName || 'our salon'}*! 🌸\n\n` +
+                                                    `Your invoice *${invoiceNum}* for *${formatPrice(selectedPayment.amount)}* is ready.\n\n` +
+                                                    `📥 *View and download your invoice here:*\n${invoiceUrl}\n\n` +
+                                                    `We look forward to seeing you again! ✨`;
+                                            }
+
+                                            const encodedMessage = encodeURIComponent(message);
+                                            window.open(`https://web.whatsapp.com/send?phone=${mobile}&text=${encodedMessage}`, '_blank');
+                                        } catch (error: any) {
+                                            console.error('WhatsApp Error:', error);
+                                            showToast(error.message || 'Failed to prepare invoice PDF', 'error');
+                                        }
+                                    }}
+                                >
+                                    WhatsApp
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    style={{
+                                        height: '3rem',
+                                        borderRadius: 'var(--radius-xl)',
+                                        borderColor: '#128C7E',
+                                        color: '#128C7E',
+                                        backgroundColor: 'rgba(18, 140, 126, 0.05)'
+                                    }}
+                                    icon={<MessageCircle size={18} />}
+                                    onClick={async () => {
+                                        if (!selectedPayment) return;
+                                        if (isStaff && fraudProtection) {
+                                            showToast('WhatsApp messaging is disabled during Fraud Protection.', 'info');
+                                            return;
+                                        }
+                                        const customer = selectedPayment.appointment?.customer || (selectedPayment.sale as any)?.customer;
+                                        const customerName = customer?.name || 'Customer';
+
+                                        let mobile = customer?.phone || customer?.mobile;
+
+                                        if (!mobile) {
+                                            const manualMobile = window.prompt("No mobile number found for this customer. Please enter mobile number to send WhatsApp:");
+                                            if (manualMobile) {
+                                                mobile = manualMobile;
+                                            } else {
+                                                return; // User cancelled
+                                            }
+                                        }
+
+                                        const digitsCount = mobile.replace(/\D/g, '').length;
+                                        if (digitsCount < 8 || digitsCount > 15) {
+                                            showToast('Invalid phone number format. Please ensure it includes the country code.', 'error');
+                                            return;
+                                        }
+
+                                        try {
+                                            showToast('Queuing direct WhatsApp message...', 'info');
+
+                                            const appId = (user as any)?.app_id || 'salon';
+                                            const businessName = (user as any)?.businessName || 'admin';
+                                            const saleId = (selectedPayment.sale as any)?.id || selectedPayment.transactionId;
+                                            const invoiceNum = (selectedPayment.sale as any)?.saleNumber || selectedPayment.invoiceNumber || 'Invoice';
+
+                                            const invoiceUrl = `${window.location.origin}/${appId}/${businessName}/invoice/${saleId}`;
+
+                                            const now = new Date();
+                                            const dateStr = now.toLocaleDateString(undefined, { dateStyle: 'medium' });
+
+                                            let message = '';
+                                            let templateType = 'Transaction Receipt';
+
+                                            if (appId === 'workly-tailor' || appId === 'tailor') {
+                                                message = `Dear *${customerName}*, Thank you for choosing *${settings?.salonName || 'Our Studio'}*. Your payment of *${formatPrice(selectedPayment.amount)}* for your recent order (*${invoiceNum}*) has been successfully received. We are thrilled to begin crafting your bespoke garment. Our team will keep you updated on the progress of your order. Your estimated fitting/delivery date is *${dateStr}*. If you have any questions in the meantime, please do not hesitate to contact us.\n\n📥 *View your invoice here:*\n${invoiceUrl}`;
+                                                templateType = 'Sales Completed Message';
+                                            } else {
+                                                message = `Hi *${customerName}*, thank you for visiting *${settings?.salonName || 'our salon'}*! 🌸\n\n` +
+                                                    `Your invoice *${invoiceNum}* for *${formatPrice(selectedPayment.amount)}* is ready.\n\n` +
+                                                    `📥 *View and download your invoice here:*\n${invoiceUrl}\n\n` +
+                                                    `We look forward to seeing you again! ✨`;
+                                                templateType = 'Sales Completed';
+                                            }
+
+                                            await api.post('/message-logs', {
+                                                customerPhone: mobile,
+                                                customerName: customerName,
+                                                orderId: invoiceNum,
+                                                type: 'Invoice',
+                                                status: 'QUEUED',
+                                                content: message, // Fallback content if template is not used
+                                                metadata: {
+                                                    templateType: templateType,
+                                                    fallbackTemplateType: 'Transaction Receipt',
+                                                    variables: {
+                                                        'Customer Name': customerName,
+                                                        'Amount': formatPrice(selectedPayment.amount),
+                                                        'Order/Invoice Number': invoiceNum,
+                                                        'Invoice Number': invoiceNum,
+                                                        'Studio Name': settings?.salonName || 'Our Studio',
+                                                        'Shop Name': settings?.salonName || 'our salon',
+                                                        'Date': dateStr,
+                                                        'Phone Number': settings?.salonPhone || (user as any)?.businessPhone || (user as any)?.phone || '',
+                                                        'Email Address': (user as any)?.businessEmail || (user as any)?.email || '',
+                                                        // Also add lowercase versions just in case user configures them differently
+                                                        'customer_name': customerName,
+                                                        'amount': formatPrice(selectedPayment.amount),
+                                                        'invoice_number': invoiceNum,
+                                                        'shop_name': settings?.salonName || 'our salon',
+                                                        'phone_number': settings?.salonPhone || (user as any)?.businessPhone || (user as any)?.phone || '',
+                                                        'email_address': (user as any)?.businessEmail || (user as any)?.email || ''
+                                                    }
+                                                }
+                                            });
+
+                                            showToast('Direct WhatsApp message queued!', 'success');
+                                        } catch (error: any) {
+                                            console.error('Direct WhatsApp Error:', error);
+                                            showToast(error.message || 'Failed to queue message', 'error');
+                                        }
+                                    }}
+                                >
+                                    Direct WA
+                                </Button>
+                                {selectedPayment.sale && (selectedPayment.sale as any).balanceAmount > 0 && (
+                                    <Button
+                                        variant="primary"
+                                        className="flex-1"
+                                        style={{ height: '3rem', borderRadius: 'var(--radius-xl)', backgroundColor: '#4f46e5' }}
+                                        icon={<Play size={18} />}
+                                        onClick={() => {
+                                            const subtotalAmount = (selectedPayment.sale as any)?.subtotal || (selectedPayment.sale?.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+                                            const totalPayable = (selectedPayment.sale as any)?.totalAmount || selectedPayment.amount || 0;
+                                            const explicitDiscount = (selectedPayment.sale as any)?.discount || 0;
+                                            // Fail-safe: if explicit discount is 0 but total < subtotal, infer the discount
+                                            const effectiveDiscount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotalAmount - totalPayable);
+
+                                            const partialData = {
+                                                customerId: selectedPayment.appointment?.customer?.id || (selectedPayment.sale as any)?.customer?.id,
+                                                customerName: selectedPayment.appointment?.customer?.name || (selectedPayment.sale as any)?.customer?.name,
+                                                customerPhone: selectedPayment.appointment?.customer?.mobile || (selectedPayment.sale as any)?.customer?.mobile,
+                                                paidAmount: (selectedPayment.sale as any)?.paidAmount || 0,
+                                                items: (selectedPayment.sale as any)?.items || [],
+                                                discount: effectiveDiscount,
+                                                transactionId: selectedPayment.transactionId || selectedPayment.id,
+                                                saleId: selectedPayment.sale?.id,
+                                                saleNumber: (selectedPayment.sale as any)?.saleNumber,
+                                                autoCheckout: true
+                                            };
+                                            const appId = (user as any)?.app_id || 'salon';
+                                            const businessName = (user as any)?.businessName || 'admin';
+                                            navigate(`/${appId}/${businessName}/sales`, { state: { partialPaymentData: partialData } });
+                                        }}
+                                    >
+                                        Continue
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="primary"
+                                    className="flex-1"
+                                    style={{ height: '3rem', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-colored)' }}
+                                    onClick={() => setIsModalOpen(false)}
+                                >
+                                    Close
+                                </Button>
                             </div>
-                        )}
+
+                            {/* Cancel Bill Button Section - Restricted to Admin/Manager or anyone with payment edit permission */}
+                            {(isAdmin || isManager || canCancel) && ((selectedPayment.isPendingSale && selectedPayment.appointment?.status?.toUpperCase() !== 'CANCELLED') || (selectedPayment.sale?.saleStatus !== 'CANCELLED')) && (
+                                <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full"
+                                        style={{
+                                            height: '3rem',
+                                            borderRadius: 'var(--radius-xl)',
+                                            borderColor: '#ef4444',
+                                            color: '#ef4444',
+                                            backgroundColor: 'rgba(239, 68, 68, 0.05)'
+                                        }}
+                                        icon={<XCircle size={18} />}
+                                        onClick={() => setIsCancelModalOpen(true)}
+                                    >
+                                        Cancel Bill
+                                    </Button>
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-black)', textAlign: 'center', marginTop: '0.5rem' }}>
+                                        Cancelling will revert all stock, voucher balances, and package redemptions.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     );
                 })()}
@@ -2212,7 +2329,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
                                     if (!selectedPayment) return;
                                     const isPending = selectedPayment.isPendingSale;
                                     const id = isPending ? selectedPayment.appointmentId : selectedPayment.sale?.id;
-                                    
+
                                     if (!id) {
                                         showToast('No valid ID found for cancellation', 'error');
                                         return;
@@ -2220,7 +2337,7 @@ const Payments: React.FC<PaymentsProps> = ({ paymentMethods = [], fraudProtectio
 
                                     try {
                                         setIsCancelling(true);
-                                        
+
                                         if (isPending) {
                                             // Handle cancellation for synthesized pending checkouts (Appointments)
                                             await dispatch(cancelAppointment({
