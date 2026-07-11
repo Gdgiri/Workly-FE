@@ -564,7 +564,8 @@ const Stylists: React.FC = () => {
       dispatch(fetchStylists(true)); // Refresh list
     } catch (error) {
       console.error('Error adding stylist:', error);
-      showToast('Error adding stylist', 'error');
+      const errMsg = (error as any).response?.data?.error || (error as any).response?.data?.message || 'Error adding stylist';
+      showToast(errMsg, 'error');
     } finally {
       setIsSubmitting(false);
       submittingRef.current = false;

@@ -40,11 +40,20 @@ const PersonalLog: React.FC = () => {
     const [isLinking, setIsLinking] = useState(false);
     const [backendStatus, setBackendStatus] = useState<string>('DISCONNECTED');
     const [isSavingConfig, setIsSavingConfig] = useState(false);
+    const [isCheckingStatus, setIsCheckingStatus] = useState(true);
     const hasLinkedRef = React.useRef(false);
 
     // Polling logic for WhatsApp Status
     useEffect(() => {
-        if (activeConfigTab !== 'device' || isDeviceLinked) return;
+        if (activeConfigTab !== 'device' || isDeviceLinked) {
+            // If we are already connected, we don't need to show checking status loader anymore
+            if (isDeviceLinked) {
+                setIsCheckingStatus(false);
+            }
+            return;
+        }
+
+        setIsCheckingStatus(true);
 
         const checkStatus = async () => {
             try {
@@ -77,7 +86,9 @@ const PersonalLog: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Error checking WhatsApp status', err);
-            } 
+            } finally {
+                setIsCheckingStatus(false);
+            }
         };
 
         // Check immediately
@@ -296,8 +307,13 @@ const PersonalLog: React.FC = () => {
                     {activeConfigTab === 'device' ? (
                         <div className="max-w-md mx-auto">
                             <h5 className="font-medium text-sm text-gray-700">Link your WhatsApp Device</h5>
-                            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col p-6">
-                                {isDeviceLinked ? (
+                            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col p-6" style={{ minHeight: '380px', justifyContent: 'center' }}>
+                                {isCheckingStatus ? (
+                                    <div className="flex flex-col items-center justify-center py-12">
+                                        <RefreshCw size={40} className="animate-spin text-[#1a56db] mb-4" />
+                                        <p className="text-gray-500 text-sm font-medium">Checking WhatsApp connection status...</p>
+                                    </div>
+                                ) : isDeviceLinked ? (
                                     <div className="flex flex-col items-center justify-center py-6">
                                         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-5 shadow-sm">
                                             <CheckCircle2 size={40} />
