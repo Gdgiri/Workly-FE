@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../components/UI';
 import { useCurrency } from '../components/CurrencyContext';
 import api from '../utils/api';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../redux/store';
+import { fetchSettings } from '../redux/slices/settingSlice';
 import { 
   Download, Search, ArrowUpDown, ChevronUp, ChevronDown, 
   ChevronLeft, ChevronRight, Filter, Calendar, DollarSign, 
@@ -16,19 +19,34 @@ interface ColumnConfig {
   sortKey?: string;
 }
 
-const getPaymentMethod = (row: any) => {
+const getPaymentMethod = (row: any, paymentMethods: any[] = []) => {
   const methods: string[] = [];
+
+  const mapMethodName = (mName: string) => {
+    const upper = mName.toUpperCase().trim();
+    if (upper === 'CDC_VOUCHER') return 'CDC';
+    if (upper === 'CASH') return 'Cash';
+    if (upper === 'VOUCHER') return 'Voucher';
+    if (upper === 'PACKAGE') return 'Package';
+    
+    // Look up in dynamic payment methods from settings
+    if (paymentMethods && paymentMethods.length > 0) {
+      const found = paymentMethods.find((pm: any) => pm.id === upper || pm.name.toUpperCase() === upper);
+      if (found) return found.name;
+    }
+    return mName.charAt(0).toUpperCase() + mName.slice(1).toLowerCase();
+  };
 
   // 1. Check direct paymentMethod property
   if (row.paymentMethod && row.paymentMethod !== 'N/A') {
-    methods.push(row.paymentMethod);
+    methods.push(mapMethodName(row.paymentMethod));
   }
 
   // 2. Check payments array
   if (row.payments && row.payments.length > 0) {
     row.payments.forEach((p: any) => {
       if (p.paymentMethod && p.paymentMethod !== 'N/A') {
-        methods.push(p.paymentMethod);
+        methods.push(mapMethodName(p.paymentMethod));
       }
     });
   }
@@ -39,13 +57,13 @@ const getPaymentMethod = (row: any) => {
   const hasVoucherRedemption = row.voucherDiscount > 0 || (row.discount > 0 && !hasPackageRedemption);
 
   if (hasPackageRedemption) {
-    if (!methods.includes('PACKAGE')) {
-      methods.push('PACKAGE');
+    if (!methods.includes('Package')) {
+      methods.push('Package');
     }
   }
   if (hasVoucherRedemption) {
-    if (!methods.includes('VOUCHER')) {
-      methods.push('VOUCHER');
+    if (!methods.includes('Voucher')) {
+      methods.push('Voucher');
     }
   }
 
@@ -61,6 +79,62 @@ const getPaymentMethod = (row: any) => {
 
 const Reports: React.FC = () => {
   const { symbol, formatPrice } = useCurrency();
+  const dispatch = useDispatch<AppDispatch>();
+  const { settings: reduxSettings } = useSelector((state: RootState) => state.settings);
+
+  useEffect(() => {
+    dispatch(fetchSettings());
+  }, [dispatch]);
+
+  const paymentMethods = useMemo(() => {
+    if (!reduxSettings || !reduxSettings.activePaymentMethods) {
+      return [];
+    }
+    try {
+      const parsed = typeof reduxSettings.activePaymentMethods === 'string'
+        ? JSON.parse(reduxSettings.activePaymentMethods)
+        : reduxSettings.activePaymentMethods;
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((m: any) => m.status === 1)
+          .map((m: any) => {
+            const name = String(m.name || '').trim();
+            const upperName = name.toUpperCase();
+            let id = upperName.replace(/[^A-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+            if (upperName === 'CASH') id = 'CASH';
+            if (!id) id = name;
+            return { id, name };
+          });
+      }
+    } catch (e) {
+      console.error('Failed to parse active payment methods in reports', e);
+    }
+    return [];
+  }, [reduxSettings]);
+
+  const dropdownOptions = useMemo(() => {
+    const baseOptions = [
+      { value: 'ALL', label: 'All Methods' },
+      { value: 'Package Redemption', label: 'Package Redemption' },
+      { value: 'Voucher', label: 'Vouchers' }
+    ];
+
+    const dynamicOptions = paymentMethods.map(m => {
+      let label = m.name;
+      if (m.id === 'CDC_VOUCHER') label = 'CDC';
+      return {
+        value: m.name,
+        label: label
+      };
+    });
+
+    const filteredDynamic = dynamicOptions.filter(opt => {
+      const valUpper = opt.value.toUpperCase();
+      return valUpper !== 'VOUCHER' && valUpper !== 'PACKAGE' && valUpper !== 'PACKAGE REDEMPTION';
+    });
+
+    return [...baseOptions, ...filteredDynamic];
+  }, [paymentMethods]);
 
   const toLocalYYYYMMDD = (date: Date) => {
     const year = date.getFullYear();
@@ -94,6 +168,12 @@ const Reports: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeReport, setActiveReport] = useState<string>('sales');
+  
+  // Staff Daily Collection specific states
+  const [staffDailyData, setStaffDailyData] = useState<any[]>([]);
+  const [staffDailyTotals, setStaffDailyTotals] = useState<Record<string, number>>({});
+  const [staffDailyGrandTotal, setStaffDailyGrandTotal] = useState<number>(0);
+  const [fetchingStaffDaily, setFetchingStaffDaily] = useState(false);
   
   // Customer-specific reports states
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
@@ -170,6 +250,7 @@ const Reports: React.FC = () => {
         { value: "staff_pkg_sales", label: "One Month Staff Package Sales History", description: "Packages sold by each staff member" },
         { value: "staff_pkg_used", label: "One Month Staff Package Used History", description: "Package redemptions served by staff" },
         { value: "staff_sales_details", label: "One Month Staff Sales Details", description: "Granular service-by-service sales per staff member" },
+        { value: "staff_daily_collection", label: "Staff Daily Collection", description: "Collection amounts grouped by payment method for a staff" },
         { value: "top_selling_items", label: "Top Selling Service / Product", description: "Most popular salon items ranked by quantity" },
       ]
     },
@@ -301,6 +382,35 @@ const Reports: React.FC = () => {
       setDatePreset('custom');
     }
   }, [activeReport]);
+
+  // Fetch staff daily collection
+  useEffect(() => {
+    if (activeReport === 'staff_daily_collection') {
+      const fetchStaffDaily = async () => {
+        setFetchingStaffDaily(true);
+        try {
+          const reqStartDate = startDate || new Date().toISOString().split('T')[0];
+          const reqEndDate = endDate || reqStartDate;
+          const reqStaffId = selectedStaff === 'ALL' ? '' : selectedStaff;
+          const res = await api.get(`/reports/staff-daily?startDate=${reqStartDate}&endDate=${reqEndDate}&staffId=${reqStaffId}`);
+          if (res.data?.data) {
+            setStaffDailyData(res.data.data.report || []);
+            setStaffDailyTotals(res.data.data.totals || {});
+            setStaffDailyGrandTotal(res.data.data.grandTotal || 0);
+          } else {
+            setStaffDailyData(res.data.paymentGroups || []);
+            setStaffDailyTotals({});
+            setStaffDailyGrandTotal(0);
+          }
+        } catch (err) {
+          console.error('Error fetching staff daily collection:', err);
+        } finally {
+          setFetchingStaffDaily(false);
+        }
+      };
+      fetchStaffDaily();
+    }
+  }, [activeReport, startDate, endDate, selectedStaff]);
 
   // Fetch selected customer package/usage details
   useEffect(() => {
@@ -439,7 +549,7 @@ const Reports: React.FC = () => {
         // Item Type filter (SERVICE, PRODUCT, PACKAGE, VOUCHER)
         if (selectedItemType !== 'ALL') {
           const items = Array.isArray(sale.items) ? sale.items : [];
-          const paymentMethod = getPaymentMethod(sale).toUpperCase();
+          const paymentMethod = getPaymentMethod(sale, paymentMethods).toUpperCase();
           
           if (selectedItemType === 'SERVICE') {
             const hasService = items.some((item: any) => {
@@ -605,29 +715,41 @@ const Reports: React.FC = () => {
 
             // Determine method of payment/consumption:
             let method = 'Cash';
-            const directMethod = String(sale.paymentMethod || '').toUpperCase();
+            const directMethod = String(sale.paymentMethod || '').toUpperCase().trim();
 
             if (item.redeemedFromPackageId || item.redeemedQuantity > 0) {
               method = 'Package Redemption';
-            } else if (sale.voucherCode || sale.voucherDiscount > 0 || directMethod.includes('VOUCHER')) {
-              method = 'Voucher';
-            } else if (directMethod === 'CASH') {
-              method = 'Cash';
-            } else if (directMethod && directMethod !== 'N/A') {
-              method = directMethod.charAt(0) + directMethod.slice(1).toLowerCase();
             } else if (sale.payments && sale.payments.length > 0) {
               const paymentMethodsList = sale.payments
                 .map((p: any) => String(p.paymentMethod || '').trim().toUpperCase())
                 .filter((m: string) => m && m !== 'N/A');
               
-              if (paymentMethodsList.includes('CASH')) {
-                method = 'Cash';
-              } else if (paymentMethodsList.length > 0) {
+              if (paymentMethodsList.length > 0) {
                 const uniqMethods = Array.from(new Set(paymentMethodsList));
-                method = uniqMethods.map((m: string) => m.charAt(0) + m.slice(1).toLowerCase()).join(', ');
+                const mapped = uniqMethods.map((m: string) => {
+                  if (m === 'CDC_VOUCHER') return 'CDC';
+                  if (m === 'CASH') return 'Cash';
+                  if (m === 'VOUCHER') return 'Voucher';
+                  const foundMethod = paymentMethods.find(pm => pm.id === m);
+                  return foundMethod ? foundMethod.name : (m.charAt(0) + m.slice(1).toLowerCase());
+                });
+                method = mapped.join(', ');
               } else {
                 method = 'Dynamic/Other';
               }
+            } else if (directMethod) {
+              if (directMethod === 'CDC_VOUCHER') {
+                method = 'CDC';
+              } else if (directMethod === 'VOUCHER') {
+                method = 'Voucher';
+              } else if (directMethod === 'CASH') {
+                method = 'Cash';
+              } else {
+                const foundMethod = paymentMethods.find(pm => pm.id === directMethod);
+                method = foundMethod ? foundMethod.name : (directMethod.charAt(0) + directMethod.slice(1).toLowerCase());
+              }
+            } else if (sale.voucherCode || sale.voucherDiscount > 0) {
+              method = 'Voucher';
             } else {
               method = 'Dynamic/Other';
             }
@@ -895,7 +1017,7 @@ const Reports: React.FC = () => {
                 price: item.price,
                 quantity: item.quantity,
                 totalAmount: item.price * item.quantity,
-                paymentMethod: getPaymentMethod(sale)
+                paymentMethod: getPaymentMethod(sale, paymentMethods)
               });
             }
           });
@@ -1078,6 +1200,9 @@ const Reports: React.FC = () => {
         return staffDetails;
       }
 
+      case 'staff_daily_collection':
+        return staffDailyData;
+
       case 'top_selling_items': {
         const popularityMap: Record<string, { name: string; type: string; quantity: number; revenue: number }> = {};
         fSales.forEach((sale: any) => {
@@ -1172,7 +1297,7 @@ const Reports: React.FC = () => {
       default:
         return [];
     }
-  }, [activeReport, sales, customers, appointments, products, services, packages, vouchers, claims, customerStats, selectedCustomerDetail, startDate, endDate, selectedStaff, selectedItemType, selectedRedemptionMethod]);
+  }, [activeReport, sales, customers, appointments, products, services, packages, vouchers, claims, customerStats, selectedCustomerDetail, startDate, endDate, selectedStaff, selectedItemType, selectedRedemptionMethod, staffDailyData, paymentMethods]);
 
   // Filter & Search Logic
   const filteredData = useMemo(() => {
@@ -1210,6 +1335,9 @@ const Reports: React.FC = () => {
     const lowerSearch = searchTerm.toLowerCase();
 
     return data.filter((row: any) => {
+      if (activeReport === 'staff_daily_collection') {
+        return String(row.paymentMode || '').toLowerCase().includes(lowerSearch);
+      }
       if (activeReport === 'service_consumption_by_payment') {
         return (
           String(row.invoiceId || '').toLowerCase().includes(lowerSearch) ||
@@ -1420,8 +1548,8 @@ const Reports: React.FC = () => {
       },
       { 
         header: 'Payment Method', 
-        accessor: row => <span className="badge badge-neutral">{getPaymentMethod(row)}</span>,
-        textAccessor: row => getPaymentMethod(row),
+        accessor: row => <span className="badge badge-neutral">{getPaymentMethod(row, paymentMethods)}</span>,
+        textAccessor: row => getPaymentMethod(row, paymentMethods),
         sortKey: 'paymentMethod'
       },
       { 
@@ -1922,7 +2050,7 @@ const Reports: React.FC = () => {
       { header: 'Discount', accessor: row => formatPrice(row.discount), textAccessor: row => String(row.discount), sortKey: 'discount' },
       { header: 'Tax', accessor: row => formatPrice(row.tax), textAccessor: row => String(row.tax), sortKey: 'tax' },
       { header: 'Total Paid', accessor: row => formatPrice(row.paidAmount), textAccessor: row => String(row.paidAmount), sortKey: 'paidAmount' },
-      { header: 'Payment Method', accessor: row => <span className="badge badge-neutral">{getPaymentMethod(row)}</span>, textAccessor: row => getPaymentMethod(row), sortKey: 'paymentMethod' }
+      { header: 'Payment Method', accessor: row => <span className="badge badge-neutral">{getPaymentMethod(row, paymentMethods)}</span>, textAccessor: row => getPaymentMethod(row, paymentMethods), sortKey: 'paymentMethod' }
     ],
     pkg_sales_history: [
       { header: 'Invoice ID', accessor: row => <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{row.saleNumber}</span>, textAccessor: row => row.saleNumber, sortKey: 'saleNumber' },
@@ -1932,7 +2060,7 @@ const Reports: React.FC = () => {
       { header: 'Price', accessor: row => formatPrice(row.price), textAccessor: row => String(row.price), sortKey: 'price' },
       { header: 'Qty', accessor: row => row.quantity, textAccessor: row => String(row.quantity), sortKey: 'quantity' },
       { header: 'Total Amount', accessor: row => formatPrice(row.totalAmount), textAccessor: row => String(row.totalAmount), sortKey: 'totalAmount' },
-      { header: 'Payment Method', accessor: row => <span className="badge badge-neutral">{getPaymentMethod(row)}</span>, textAccessor: row => getPaymentMethod(row), sortKey: 'paymentMethod' }
+      { header: 'Payment Method', accessor: row => <span className="badge badge-neutral">{getPaymentMethod(row, paymentMethods)}</span>, textAccessor: row => getPaymentMethod(row, paymentMethods), sortKey: 'paymentMethod' }
     ],
     pkg_qty_history: [
       { header: 'Package Name', accessor: row => <span style={{ fontWeight: 600 }}>{row.name}</span>, textAccessor: row => row.name, sortKey: 'name' },
@@ -1973,6 +2101,27 @@ const Reports: React.FC = () => {
       { header: 'Unit Price', accessor: row => formatPrice(row.price), textAccessor: row => String(row.price), sortKey: 'price' },
       { header: 'Quantity', accessor: row => row.quantity, textAccessor: row => String(row.quantity), sortKey: 'quantity' },
       { header: 'Total Price', accessor: row => <span style={{ fontWeight: 700 }}>{formatPrice(row.totalPrice)}</span>, textAccessor: row => String(row.totalPrice), sortKey: 'totalPrice' }
+    ],
+    staff_daily_collection: [
+      { header: 'Payment Method', accessor: row => <span style={{ fontWeight: 600 }}>{row.paymentMode}</span>, textAccessor: row => row.paymentMode, sortKey: 'paymentMode' },
+      { header: 'Items Summary', accessor: row => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '250px' }}>
+          {row.items?.length > 0 ? row.items.map((item: any, i: number) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border-color)', paddingBottom: '4px', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-color)' }}>{item.serviceName}</span>
+              <span style={{ fontWeight: 500, color: 'var(--text-light)' }}>
+                {String(row.paymentMode).toUpperCase() === 'PACKAGE' ? '1 session' : formatPrice(item.amount)}
+              </span>
+            </div>
+          )) : <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>No items</span>}
+        </div>
+      ), textAccessor: row => row.items?.map((i:any) => i.serviceName).join(', '), sortKey: 'items' },
+      { header: 'Total Amount', accessor: row => {
+          if (String(row.paymentMode).toUpperCase() === 'PACKAGE') {
+            return <span style={{ fontWeight: 700 }}>{row.items?.length || row.totalAmount} sessions</span>;
+          }
+          return <span style={{ fontWeight: 700 }}>{formatPrice(row.totalAmount)}</span>;
+      }, textAccessor: row => String(row.totalAmount), sortKey: 'totalAmount' }
     ],
     top_selling_items: [
       { header: 'Popularity Rank', accessor: row => <span style={{ fontWeight: 800, color: row.rank === 1 ? 'gold' : row.rank === 2 ? 'silver' : row.rank === 3 ? '#cd7f32' : 'var(--text-light)' }}>#{row.rank}</span>, textAccessor: row => String(row.rank), sortKey: 'rank' },
@@ -2304,7 +2453,10 @@ const Reports: React.FC = () => {
         </div>
       )}
 
-      <Card title="Administrative Custom Business Reports" className="w-full">
+      <Card 
+        title="Administrative Custom Business Reports" 
+        className="w-full"
+      >
         {/* Controls Layout */}
         <div style={{
           display: 'flex',
@@ -3101,14 +3253,8 @@ const Reports: React.FC = () => {
                       >
                         <span>
                           {(() => {
-                            switch (selectedRedemptionMethod) {
-                              case 'ALL': return 'All Methods';
-                              case 'Package Redemption': return 'Package Redemption';
-                              case 'Voucher': return 'Vouchers';
-                              case 'Cash': return 'Cash';
-                              case 'Card': return 'Card';
-                              default: return selectedRedemptionMethod;
-                            }
+                            const found = dropdownOptions.find(opt => opt.value === selectedRedemptionMethod);
+                            return found ? found.label : selectedRedemptionMethod;
                           })()}
                         </span>
                         <ChevronDown 
@@ -3144,13 +3290,7 @@ const Reports: React.FC = () => {
                               zIndex: 100
                             }}
                           >
-                            {[
-                              { value: 'ALL', label: 'All Methods' },
-                              { value: 'Package Redemption', label: 'Package Redemption' },
-                              { value: 'Voucher', label: 'Voucher' },
-                              { value: 'Cash', label: 'Cash' },
-                              { value: 'Card', label: 'Card' }
-                            ].map((item, idx) => {
+                            {dropdownOptions.map((item, idx) => {
                               const isActive = selectedRedemptionMethod === item.value;
                               return (
                                 <button
@@ -3506,6 +3646,59 @@ const Reports: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Custom Staff Daily Collection Summary Card */}
+        {activeReport === 'staff_daily_collection' && (
+          <div style={{
+            marginTop: '2rem',
+            marginBottom: '1rem',
+            maxWidth: '380px',
+            marginLeft: 'auto',
+            borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden',
+            background: '#0A262E',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #1A3A42'
+          }}>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+              <tbody>
+                {Object.entries(staffDailyTotals).map(([mode, amt], idx) => {
+                  const isPackage = mode.toUpperCase() === 'PACKAGE';
+                  const displayAmt = isPackage 
+                      ? `${staffDailyData.find(g => g.paymentMode === mode)?.items?.length || 0} sessions`
+                      : formatPrice(amt);
+                      
+                  return (
+                      <tr key={mode} style={{ borderBottom: '1px solid #13323B' }}>
+                          <td style={{ padding: '1rem 1.25rem', fontSize: '0.9375rem', fontWeight: 700, color: '#ffffff', textTransform: 'capitalize' }}>
+                              {mode.replace(/_/g, ' ')}
+                          </td>
+                          <td style={{ padding: '1rem 1.25rem', fontSize: '0.9375rem', color: '#E0E9EB', textAlign: 'right', letterSpacing: '0.025em' }}>
+                              {displayAmt}
+                          </td>
+                      </tr>
+                  );
+                })}
+                {/* Grand Total */}
+                <tr style={{ background: '#92d050' }}>
+                    <td style={{ padding: '0.75rem 1.25rem', fontSize: '0.9375rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase' }}>
+                        Total
+                    </td>
+                    <td style={{ padding: '0.75rem 1.25rem', fontSize: '0.9375rem', fontWeight: 800, color: '#000000', textAlign: 'right' }}>
+                        {formatPrice(staffDailyGrandTotal)}
+                    </td>
+                </tr>
+                {Object.keys(staffDailyTotals).length === 0 && !fetchingStaffDaily && (
+                    <tr>
+                        <td style={{ padding: '1rem 1.25rem', fontSize: '0.9375rem', fontWeight: 700, color: '#94a3b8', fontStyle: 'italic' }} colSpan={2}>
+                            No collections found
+                        </td>
+                    </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       {/* Detail View Modal */}
@@ -3599,7 +3792,7 @@ const Reports: React.FC = () => {
                 })}
 
                 {/* Extra detailed item lists if the selected row is a Sale and contains items */}
-                {Array.isArray(selectedDetailRow.items) && selectedDetailRow.items.length > 0 && (
+                {activeReport !== 'staff_daily_collection' && Array.isArray(selectedDetailRow.items) && selectedDetailRow.items.length > 0 && (
                   <div style={{
                     marginTop: '0.5rem',
                     background: 'var(--bg-hover)',
@@ -3640,7 +3833,7 @@ const Reports: React.FC = () => {
                             boxShadow: 'var(--shadow-sm)'
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontWeight: 600, color: 'var(--text-black)' }}>{item.name}</span>
+                              <span style={{ fontWeight: 600, color: 'var(--text-black)' }}>{item.name || item.serviceName}</span>
                               <span style={{ 
                                 fontSize: '0.7rem', 
                                 fontWeight: 700, 
@@ -3653,10 +3846,12 @@ const Reports: React.FC = () => {
                               }}>
                                 {typeBadge.label}
                               </span>
-                              <span style={{ color: 'var(--text-light)' }}>x{item.quantity}</span>
+                              <span style={{ color: 'var(--text-light)' }}>
+                                {item.quantity !== undefined ? `x${item.quantity}` : (String(selectedDetailRow.paymentMode).toUpperCase() === 'PACKAGE' ? '1 session' : '')}
+                              </span>
                             </div>
                             <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
-                              {formatPrice(item.price * item.quantity)}
+                              {item.amount !== undefined ? formatPrice(item.amount) : formatPrice(item.price * item.quantity)}
                             </span>
                           </div>
                         );
