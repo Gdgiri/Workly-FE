@@ -28,6 +28,28 @@ const MessageLog: React.FC = () => {
     const { customers, loading: customersLoading } = useSelector((state: RootState) => state.customers);
     const { settings, loading: settingsLoading } = useSelector((state: RootState) => state.settings);
 
+    const isPersonalWhatsApp = React.useMemo(() => {
+        if (!settings?.apiIntegrations) return false;
+        try {
+            const integrations = typeof settings.apiIntegrations === 'string'
+                ? JSON.parse(settings.apiIntegrations)
+                : settings.apiIntegrations;
+            if (Array.isArray(integrations)) {
+                const wa = integrations.find((i: any) => i.type === 'whatsapp');
+                return !!(wa && wa.enabled && wa.provider === 'personal');
+            }
+        } catch (e) {
+            console.error("Failed to parse settings for provider check", e);
+        }
+        return false;
+    }, [settings]);
+
+    React.useEffect(() => {
+        if (isPersonalWhatsApp && activeTab === 'bulk') {
+            setActiveTab('automated');
+        }
+    }, [isPersonalWhatsApp, activeTab]);
+
     const loading = messagesLoading || customersLoading || settingsLoading;
 
     // Automated stats
@@ -499,23 +521,25 @@ const MessageLog: React.FC = () => {
                 >
                     Automated Logs
                 </button>
-                <button
-                    onClick={() => setActiveTab('bulk')}
-                    style={{
-                        padding: '1rem 0.5rem',
-                        fontSize: '1rem',
-                        fontWeight: activeTab === 'bulk' ? 700 : 500,
-                        color: activeTab === 'bulk' ? 'var(--primary)' : 'var(--text-black)',
-                        border: 'none',
-                        background: 'none',
-                        borderBottom: activeTab === 'bulk' ? '3.5px solid var(--primary)' : '3.5px solid transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        outline: 'none'
-                    }}
-                >
-                    WhatsApp Broadcast Campaigns
-                </button>
+                {!isPersonalWhatsApp && (
+                    <button
+                        onClick={() => setActiveTab('bulk')}
+                        style={{
+                            padding: '1rem 0.5rem',
+                            fontSize: '1rem',
+                            fontWeight: activeTab === 'bulk' ? 700 : 500,
+                            color: activeTab === 'bulk' ? 'var(--primary)' : 'var(--text-black)',
+                            border: 'none',
+                            background: 'none',
+                            borderBottom: activeTab === 'bulk' ? '3.5px solid var(--primary)' : '3.5px solid transparent',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            outline: 'none'
+                        }}
+                    >
+                        WhatsApp Broadcast Campaigns
+                    </button>
+                )}
             </div>
 
             {activeTab === 'automated' ? (
