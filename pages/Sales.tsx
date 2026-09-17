@@ -212,6 +212,7 @@ const Sales: React.FC<SalesProps> = ({
   const customerSearchTerm: string = activeOrderTab.customerSearchTerm;
   const setCustomerSearchTerm = (v: string) => updateActiveTab({ customerSearchTerm: v });
 
+  const showManualDiscount: boolean = !!activeOrderTab.showManualDiscount;
   const setShowManualDiscount = (v: boolean) => updateActiveTab({ showManualDiscount: v });
 
   const processedStateRef = useRef<string | null>(null);
@@ -257,6 +258,7 @@ const Sales: React.FC<SalesProps> = ({
       tailorOrderId: null,
       pendingSaleId: null,
       manualDiscount: '',
+      showManualDiscount: false,
       customerSearchTerm: ''
     });
   };
@@ -480,6 +482,7 @@ const Sales: React.FC<SalesProps> = ({
     setCartVoucherCode('');
     setVoucherCode('');
     setManualDiscount('');
+    setShowManualDiscount(false);
     setShowVoucherCartInput(false);
 
     if (selectedCustomerId && selectedCustomerId !== 'WALK_IN') {
@@ -735,26 +738,35 @@ const Sales: React.FC<SalesProps> = ({
     // Safest is to just reset category as requested.
   };
 
-  const manualDiscountValue = parseFloat(manualDiscount) || 0;
+  const manualDiscountValue = showManualDiscount ? (parseFloat(manualDiscount) || 0) : 0;
 
-  // Use balance from the active claim for Voucher 2.0
-  // Calculate total voucher deduction
-  const voucherDeduction = appliedVouchers.reduce((sum, v) => {
-    const claim = voucherClaims.find(c =>
-      c.voucherCode === v.code &&
+  // Use balance from active claim(s) for Voucher 2.0 (supporting multiple claims with same code)
+  const getCustomerVoucherBalance = (voucherCode: string) => {
+    const matchingClaims = voucherClaims.filter(c =>
+      c.voucherCode === voucherCode &&
+      c.customerId?.toString() === selectedCustomerId &&
+      (c.balance > 0)
+    );
+    if (matchingClaims.length > 0) {
+      return matchingClaims.reduce((sum, c) => sum + (c.balance || 0), 0);
+    }
+    const singleClaim = voucherClaims.find(c =>
+      c.voucherCode === voucherCode &&
       c.customerId?.toString() === selectedCustomerId
     );
-    return sum + (claim ? claim.balance : v.value);
-  }, 0);
+    if (singleClaim) return singleClaim.balance || 0;
+    const campaign = vouchers.find(v => v.code === voucherCode);
+    return campaign ? campaign.value || 0 : 0;
+  };
 
-  // We need a smarter way to cap the deduction at cartTotal.
-  // Actually, checking standard logic:
+  // Calculate total voucher value available
   const totalVoucherValue = appliedVouchers.reduce((sum, v) => {
-    const claim = voucherClaims.find(c => c.voucherCode === v.code);
-    return sum + (claim ? claim.balance : v.value);
+    return sum + getCustomerVoucherBalance(v.code);
   }, 0);
 
-  const actualVoucherDeduction = Math.min(cartTotal - manualDiscountValue, totalVoucherValue);
+  // Actual voucher deduction is capped at remaining bill after manual discounts
+  const actualVoucherDeduction = Math.min(Math.max(0, cartTotal - manualDiscountValue), totalVoucherValue);
+  const voucherDeduction = actualVoucherDeduction;
 
   const totalDiscount = voucherDeduction + manualDiscountValue;
   // Calculate total before deposit deduction
@@ -1675,14 +1687,35 @@ const Sales: React.FC<SalesProps> = ({
         voucherCode: null, // Legacy
         voucherDiscount: actualVoucherDeduction,
         vouchers: (() => {
-          let remainingForVouchers = subtotal - (totalDiscount || 0) + (voucherDeduction || 0);
-          return appliedVouchers.map(v => {
-            const claim = voucherClaims.find(c => c.voucherCode === v.code);
-            const balance = claim ? claim.balance : v.value;
-            const amountToRedeem = Math.min(balance, remainingForVouchers);
-            remainingForVouchers = Math.max(0, remainingForVouchers - amountToRedeem);
-            return { code: v.code, amount: amountToRedeem };
-          }).filter(v => v.amount > 0);
+          let remainingForVouchers = Math.max(0, subtotal - manualDiscountValue);
+          const result: { code: string; amount: number; claimId?: string }[] = [];
+
+          for (const v of appliedVouchers) {
+            if (remainingForVouchers <= 0) break;
+            const matchingClaims = voucherClaims
+              .filter(c => c.voucherCode === v.code && c.customerId?.toString() === selectedCustomerId && (c.balance > 0))
+              .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+
+            if (matchingClaims.length > 0) {
+              for (const claim of matchingClaims) {
+                if (remainingForVouchers <= 0) break;
+                const toDeduct = Math.min(claim.balance, remainingForVouchers);
+                if (toDeduct > 0) {
+                  result.push({ code: v.code, amount: toDeduct, claimId: claim.id });
+                  remainingForVouchers = Math.max(0, remainingForVouchers - toDeduct);
+                }
+              }
+            } else {
+              const claim = voucherClaims.find(c => c.voucherCode === v.code && c.customerId?.toString() === selectedCustomerId);
+              const balance = claim ? claim.balance : v.value;
+              const toDeduct = Math.min(balance, remainingForVouchers);
+              if (toDeduct > 0) {
+                result.push({ code: v.code, amount: toDeduct, claimId: claim?.id });
+                remainingForVouchers = Math.max(0, remainingForVouchers - toDeduct);
+              }
+            }
+          }
+          return result;
         })(),
         appointmentId: appointmentId,
         tailorOrderId: tailorOrderId,
@@ -1877,14 +1910,35 @@ const Sales: React.FC<SalesProps> = ({
         voucherCode: null,
         voucherDiscount: actualVoucherDeduction,
         vouchers: (() => {
-          let remainingForVouchers = subtotal - (totalDiscount || 0) + (voucherDeduction || 0);
-          return appliedVouchers.map(v => {
-            const claim = voucherClaims.find(c => c.voucherCode === v.code);
-            const balance = claim ? claim.balance : v.value;
-            const amountToRedeem = Math.min(balance, remainingForVouchers);
-            remainingForVouchers = Math.max(0, remainingForVouchers - amountToRedeem);
-            return { code: v.code, amount: amountToRedeem };
-          }).filter(v => v.amount > 0);
+          let remainingForVouchers = Math.max(0, calculatedSubtotal - manualDiscountValue);
+          const result: { code: string; amount: number; claimId?: string }[] = [];
+
+          for (const v of appliedVouchers) {
+            if (remainingForVouchers <= 0) break;
+            const matchingClaims = voucherClaims
+              .filter(c => c.voucherCode === v.code && c.customerId?.toString() === selectedCustomerId && (c.balance > 0))
+              .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+
+            if (matchingClaims.length > 0) {
+              for (const claim of matchingClaims) {
+                if (remainingForVouchers <= 0) break;
+                const toDeduct = Math.min(claim.balance, remainingForVouchers);
+                if (toDeduct > 0) {
+                  result.push({ code: v.code, amount: toDeduct, claimId: claim.id });
+                  remainingForVouchers = Math.max(0, remainingForVouchers - toDeduct);
+                }
+              }
+            } else {
+              const claim = voucherClaims.find(c => c.voucherCode === v.code && c.customerId?.toString() === selectedCustomerId);
+              const balance = claim ? claim.balance : v.value;
+              const toDeduct = Math.min(balance, remainingForVouchers);
+              if (toDeduct > 0) {
+                result.push({ code: v.code, amount: toDeduct, claimId: claim?.id });
+                remainingForVouchers = Math.max(0, remainingForVouchers - toDeduct);
+              }
+            }
+          }
+          return result;
         })(),
         createdBy: user?.id || user?.email || 'system',
         customerName: customerSearchTerm || null, // Pass customer name for validation
@@ -3802,11 +3856,7 @@ const Sales: React.FC<SalesProps> = ({
                 {appliedVouchers.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
                     {appliedVouchers.map(v => {
-                      const claim = voucherClaims?.find(c =>
-                        c.voucherCode === v.code &&
-                        c.customerId?.toString() === selectedCustomerId
-                      );
-                      const displayAmount = claim ? claim.balance : v.value;
+                      const displayAmount = getCustomerVoucherBalance(v.code);
                       return (
                         <motion.div
                           key={v.code}
@@ -4058,11 +4108,8 @@ const Sales: React.FC<SalesProps> = ({
             {appliedVouchers.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
                 {appliedVouchers.map(v => {
-                  const claim = voucherClaims.find(c =>
-                    c.voucherCode === v.code &&
-                    c.customerId?.toString() === selectedCustomerId
-                  );
-                  const deduction = claim ? Math.min(claim.balance, cartTotal) : v.value;
+                  const totalBal = getCustomerVoucherBalance(v.code);
+                  const deduction = Math.min(totalBal, cartTotal);
                   return (
                     <span key={v.code} style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--success)', padding: '0.25rem 0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '2rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                       {v.code} (-{formatPrice(deduction)})
@@ -4081,11 +4128,7 @@ const Sales: React.FC<SalesProps> = ({
             {appliedVouchers.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {appliedVouchers.map(v => {
-                  const claim = voucherClaims.find(c =>
-                    c.voucherCode === v.code &&
-                    c.customerId?.toString() === selectedCustomerId
-                  );
-                  const deduction = claim ? claim.balance : v.value; // Simplified for display
+                  const deduction = getCustomerVoucherBalance(v.code); // Full available balance for display
                   return (
                     <motion.div
                       key={v.code}
